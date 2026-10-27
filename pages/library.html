@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>百舸文库 · 百舸数智平台</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="../library.css?v=20261026-store" />
+</head>
+<body class="module-page" data-page="library">
+  <main class="module-main">
+    <div class="content-scroll" id="contentScroll">
+      <div class="content-inner library-page" id="content">
+        <section class="banner" aria-labelledby="libraryTitle">
+          <h1 id="libraryTitle">百舸文库</h1>
+          <div class="sub">已收录各行业高质量文档 <b class="num">10,899,321</b> 份</div>
+          <div class="search-zone">
+            <div class="search-wrap">
+              <div class="search-type" id="searchType">
+                <button class="cur" type="button" id="typeButton" data-action="toggle-type" aria-haspopup="listbox" aria-expanded="false" aria-controls="typeMenu"><span id="typeLabel">全部</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>
+                <div class="type-menu" id="typeMenu" role="listbox" aria-label="检索类型"></div>
+              </div>
+              <label class="sr-only" for="kw">搜索关键词或自然语言问题</label>
+              <input class="search-input" id="kw" placeholder="请输入关键词 / 自然语言问题" autocomplete="off" />
+              <button class="kw-btn" type="button" data-action="search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 2a8 8 0 1 0 4.9 14.3l5 5 1.4-1.4-5-5A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/></svg>关键词检索</button>
+              <button class="ai-btn" type="button" data-action="ai-search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>AI智能检索</button>
+            </div>
+          </div>
+          <div class="scope-row">
+            <label for="libraryDept">当前部门</label>
+            <select id="libraryDept" aria-label="当前部门"></select>
+            <label for="libraryUser">当前人员</label>
+            <select id="libraryUser" aria-label="当前人员"></select>
+            <span class="scope-hint">按部门与个人权限展示文档</span>
+          </div>
+        </section>
+
+        <div class="wrap" id="homeContent">
+          <div class="cat-row" id="catRow" role="group" aria-label="文库分类"></div>
+          <div class="section">
+            <div class="sec-head">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <div class="tabs" id="hotTabs" role="tablist" aria-label="文档排序">
+                  <button class="tab" type="button" data-action="tab" data-tab="new" role="tab" aria-selected="false">最新</button>
+                  <button class="tab active" type="button" data-action="tab" data-tab="hot" role="tab" aria-selected="true">热门</button>
+                </div>
+                <span class="hot-cat-ind" id="hotCatInd"></span>
+              </div>
+              <button class="more" type="button" data-action="more">更多 ›</button>
+            </div>
+            <div class="card-grid" id="hotGrid"></div>
+          </div>
+        </div>
+
+        <div class="wrap" id="listSection" hidden>
+          <div class="section">
+            <div class="list-topbar">
+              <button class="kb-back" type="button" data-action="close-list"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 4l-8 8 8 8 1.4-1.4L9.8 12l6.6-6.6z"/></svg>返回首页</button>
+              <b id="listTitle" style="font-size:15px;color:var(--text)">热门</b>
+              <span style="font-size:12px;color:var(--muted)" id="listTotal"></span>
+            </div>
+            <div class="card-grid" id="listGrid" style="padding-top:14px"></div>
+            <div class="pager" id="listPager"></div>
+          </div>
+        </div>
+
+        <div class="wrap" id="srSection" hidden>
+          <div class="section">
+            <div class="sec-head" style="border-bottom:none;padding-bottom:0">
+              <div class="tabs"><div class="tab active" id="srTitle">检索结果</div></div>
+              <button class="more" type="button" data-action="close-search" style="color:var(--primary)">× 清除检索，返回首页</button>
+            </div>
+            <div class="sr-meta" id="srMeta" style="margin:14px 0 4px"></div>
+            <div class="card-grid" id="srGrid"></div>
+            <div class="pager" id="srPager"></div>
+          </div>
+        </div>
+
+        <div class="viewer" id="viewerView" role="dialog" aria-modal="true" aria-label="文库文档阅读器">
+          <div class="viewer-top">
+            <button class="v-back" type="button" data-action="close-viewer"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15 4l-8 8 8 8 1.4-1.4L9.8 12l6.6-6.6z"/></svg>返回文库首页</button>
+            <button class="v-toggle" type="button" id="vToggle" data-action="toggle-side">收起搜索</button>
+            <div class="idea-tabs" id="ideaTabs">
+              <div class="idea-tabbar" id="ideaTabbar" role="tablist" aria-label="已打开文档"></div>
+              <button class="idea-collapse" type="button" id="ideaCollapse" data-action="toggle-ideas" aria-expanded="false" aria-controls="ideaPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg><span class="badge" id="ideaBadge">0</span></button>
+              <div class="idea-panel" id="ideaPanel"><div class="idea-list" id="ideaList"></div></div>
+            </div>
+            <button class="v-download" type="button" data-action="download">下载原文</button>
+          </div>
+          <div class="viewer-body">
+            <aside class="v-side" id="vSide" aria-label="文档搜索">
+              <div class="v-search">
+                <div class="v-search-input">
+                  <label class="sr-only" for="vKw">搜索文档或关键词</label>
+                  <input id="vKw" placeholder="搜索文档或关键词" autocomplete="off" />
+                  <button class="v-clear" type="button" id="vClear" data-action="v-clear" aria-label="清空搜索">×</button>
+                </div>
+                <button class="v-sbtn" type="button" data-action="v-search">检索</button>
+                <button class="v-sbtn ai" type="button" data-action="v-ai-search">AI</button>
+              </div>
+              <div class="v-result" id="vResult"></div>
+            </aside>
+            <div class="v-doc">
+              <div class="v-doc-head">
+                <h3 id="dTitle">文档详情</h3>
+                <div class="v-meta" id="vMeta"></div>
+              </div>
+              <div class="preview-box" id="pvBox"></div>
+            </div>
+            <div class="qa-resizer" id="qaResizer" role="separator" aria-orientation="vertical" aria-label="调整问答栏宽度" title="拖拽调整宽度，双击恢复 1:1"></div>
+            <aside class="qa-panel" id="qaPanel" aria-label="单文档智能问答">
+              <div class="qa-head">
+                <div class="qa-title"><b id="qaTitle">单文档智能问答</b><span>AI 基于本文档内容回答，可定位引用原文</span></div>
+                <div class="qa-actions">
+                  <button class="qa-history-btn" type="button" id="qaHistoryBtn" data-action="toggle-history" title="查看历史对话" aria-label="查看历史对话"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 9.9 12H20a8 8 0 1 1-2.3-5.7L14 12h8V4l-3.2 3.2A9.9 9.9 0 0 0 12 2z"/></svg></button>
+                  <button class="qa-toggle" type="button" data-action="toggle-qa">收起 ›</button>
+                </div>
+              </div>
+              <div class="session-panel" id="sessionPanel">
+                <div class="session-title"><svg viewBox="0 0 24 24" class="st-ic" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.7 15L2 22l5.2-1.3A10 10 0 1 0 12 2zm0 18a8 8 0 0 1-4-1.1l-.3-.2-3.1.8.8-3.1-.2-.3A8 8 0 1 1 12 20z"/></svg>历史对话 · <span id="sessionDocName">本文档</span></div>
+                <div class="session-list" id="sessionList"></div>
+                <div class="session-tip">以上为该文档全部历史对话</div>
+              </div>
+              <div class="qa-hint"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8zm1-12h-2v2h2zm0 4h-2v6h2z"/></svg><span>历史上下文不影响本地对话，本次对话是新的对话</span></div>
+              <div class="qa-stream" id="qaStream" aria-live="polite"></div>
+              <div class="qa-input">
+                <label class="sr-only" for="qaInput">针对本文档提问</label>
+                <input id="qaInput" placeholder="针对本文档提问…" autocomplete="off" />
+                <button class="ai-btn" type="button" data-action="send-qa">发送</button>
+              </div>
+              <button class="qa-expand-btn" type="button" data-action="toggle-qa">展 开 问 答</button>
+            </aside>
+          </div>
+        </div>
+
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+  </main>
+  <script src="../src/data.js"></script>
+  <script src="../src/ui.js"></script>
+  <script src="../src/page-bridge.js"></script>
+  <script src="../src/library-data.js?v=20261026-library"></script>
+  <script src="../src/library-store.js?v=20261026-store"></script>
+  <script src="../src/pages/library.js?v=20261026-store"></script>
+</body>
+</html>

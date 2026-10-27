@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="180 0 540 320">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1a3a58"/><stop offset="1" stop-color="#0b1734"/></linearGradient>
+    <linearGradient id="sheet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b5eeed" stop-opacity=".86"/><stop offset=".48" stop-color="#59c9d5" stop-opacity=".65"/><stop offset="1" stop-color="#078b98" stop-opacity=".24"/></linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5f9f6"/><stop offset="1" stop-color="#55bfda" stop-opacity=".4"/></linearGradient>
+    <linearGradient id="flow" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#8ac6ff"/><stop offset=".6" stop-color="#83e1e4"/><stop offset="1" stop-color="#329dbb"/></linearGradient>
+  </defs>
+  
+  <g fill="none" stroke="url(#flow)" stroke-linecap="round">
+    <path d="M208 58C289 58 239 163 326 163" opacity=".18"/>
+    <path d="M202 71C283 71 245 170 326 170" opacity=".25"/>
+    <path d="M196 84C277 84 251 177 326 177" opacity=".35"/>
+    <path d="M190 97C271 97 257 184 326 184" opacity=".45"/>
+    <path d="M428 157C465 157 458 72 512 72M428 157H567M428 157C465 157 458 248 512 248" stroke-width="2.8"/>
+  </g>
+  <g fill="#050d23" opacity=".2">
+    <rect x="332" y="129" width="102" height="76" rx="13"/>
+    <rect x="518" y="46" width="106" height="64" rx="10"/>
+    <rect x="573" y="131" width="106" height="64" rx="10"/>
+    <rect x="518" y="222" width="106" height="64" rx="10"/>
+  </g>
+  <g fill="url(#sheet)" stroke="url(#edge)" stroke-width="1.4">
+    <rect x="326" y="119" width="102" height="76" rx="13"/>
+    <rect x="512" y="36" width="106" height="64" rx="10"/>
+    <rect x="567" y="121" width="106" height="64" rx="10"/>
+    <rect x="512" y="212" width="106" height="64" rx="10"/>
+  </g>
+  <g fill="none" stroke="#e4faf8" stroke-linecap="round">
+    <path d="M349 140h52M349 154h38M349 168h46" stroke-width="4" opacity=".85"/>
+    <path d="M546 57h51M546 70h36M601 142h51M601 155h36M546 233h51M546 246h36" stroke-width="3" opacity=".8"/>
+  </g>
+  <g fill="#d8fbf4">
+    <circle cx="533" cy="57" r="3"/>
+    <circle cx="588" cy="142" r="3"/>
+    <circle cx="533" cy="233" r="3"/>
+    <circle cx="428" cy="157" r="4"/>
+  </g>
+</svg>

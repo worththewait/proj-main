@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>百舸问答 · 百舸数智平台</title>
+  <link rel="stylesheet" href="../styles.css?v=20261026-xd" />
+  <link rel="stylesheet" href="../qa-visual.css?v=20261026-xd" />
+</head>
+<body class="module-page qa-module" data-page="qa">
+  <main class="module-main">
+    <div class="content-scroll" id="contentScroll">
+      <div class="content-inner qa-page" id="content">
+        <section class="qa-conversation" id="conversationView" aria-labelledby="conversationTitle">
+          <header class="qa-welcome">
+            <div class="qa-brand-visual" aria-hidden="true">
+              <span class="qa-brand-sheet"></span>
+              <img class="qa-brand-mark" src="../assets/baige-logo.svg" width="62" height="70" alt="" />
+            </div>
+            <div class="qa-welcome-copy">
+              <h1 id="conversationTitle">你好，欢迎使用百舸问答</h1>
+              <p>从日常问题到专业知识，让每一次提问都有方向。</p>
+            </div>
+          </header>
+
+          <div class="qa-introductions" aria-label="问答能力介绍">
+            <article class="qa-intro-card qa-general-intro">
+              <div class="qa-general-figure" aria-hidden="true">
+                <span class="qa-message-back"><span></span><span></span></span>
+                <span class="qa-message-front"><span data-icon="chat"></span><i></i><i></i><i></i></span>
+              </div>
+              <h2><span data-icon="chat" aria-hidden="true"></span>通用问答</h2>
+              <p>理解问题、梳理思路，辅助完成日常工作。</p>
+              <ul class="qa-example-list" aria-label="通用问答示例">
+                <li>如何快速梳理一份研究报告的核心观点？</li>
+                <li>船舶行业的绿色发展有哪些研究方向？</li>
+                <li>怎样为一项研究任务搭建分析框架？</li>
+              </ul>
+            </article>
+            <article class="qa-intro-card qa-knowledge-intro">
+              <div class="qa-knowledge-figure" aria-hidden="true">
+                <span class="qa-document-back"></span>
+                <span class="qa-document-middle"></span>
+                <span class="qa-knowledge-symbol"><span data-icon="book"></span><i></i><i></i></span>
+                <span class="qa-document-search"><span data-icon="search"></span></span>
+              </div>
+              <h2>知识库问答</h2>
+              <p>选择与你工作相关的知识库，围绕专业资料展开提问。</p>
+              <span class="qa-intro-note">在下方切换「知识问答」，选择知识库后开始。</span>
+            </article>
+          </div>
+
+          <div class="qa-composer-area">
+            <form class="qa-composer" id="conversationForm">
+              <div class="qa-selected-sources" id="selectedSources" hidden>
+                <span class="qa-sources-label">已选知识库</span>
+                <div class="qa-source-tags" id="selectedSourceTags"></div>
+                <button class="qa-text-action" type="button" id="changeKnowledge">更换</button>
+              </div>
+              <label class="sr-only" for="homePrompt">输入你的问题</label>
+              <textarea id="homePrompt" rows="3" placeholder="请输入你的问题，Enter 发送，Shift + Enter 换行" aria-describedby="conversationFeedback"></textarea>
+              <div class="qa-composer-toolbar">
+                <div class="qa-modes" role="group" aria-label="问答模式">
+                  <button class="qa-mode-button is-active" type="button" id="generalMode" aria-pressed="true"><span data-icon="chat" aria-hidden="true"></span>通用问答</button>
+                  <button class="qa-mode-button" type="button" id="knowledgeMode" aria-pressed="false" aria-haspopup="dialog" aria-expanded="false" aria-controls="knowledgePicker"><span data-icon="book" aria-hidden="true"></span><span id="knowledgeModeLabel">知识问答</span></button>
+                </div>
+                <button class="qa-send-button" type="submit" id="sendQuestion" aria-label="发送问题" title="发送问题（Enter）" disabled><span data-icon="send" aria-hidden="true"></span></button>
+              </div>
+            </form>
+            <p class="qa-form-feedback" id="conversationFeedback" role="status"></p>
+            <p class="qa-disclaimer">AI 生成内容仅供参考，请结合专业判断核实。</p>
+          </div>
+        </section>
+
+        <section id="qaPending" hidden>
+          <div class="page-header"><div><h1>智能问数</h1><p>百舸问答</p></div></div>
+          <section class="integration-panel"><div class="empty-state"><span data-icon="layers" aria-hidden="true"></span><h2>正在集成</h2><p>相关内容接入后，将在这里呈现。</p></div></section>
+        </section>
+      </div>
+    </div>
+  </main>
+  <dialog class="qa-knowledge-dialog" id="knowledgePicker" aria-labelledby="knowledgePickerTitle" aria-describedby="knowledgePickerDescription">
+    <div class="qa-picker-heading"><h2 id="knowledgePickerTitle">选择知识库</h2><button class="icon-button" type="button" id="closeKnowledgePicker" aria-label="关闭知识库选择"><span data-icon="close" aria-hidden="true"></span></button></div>
+    <p class="qa-picker-description" id="knowledgePickerDescription">可跨分类选择多个知识库，共同作为本次问答的参考范围。</p>
+    <div class="category-tabs qa-picker-scopes" id="knowledgePickerScopes" role="group" aria-label="知识库分类"></div>
+    <div class="qa-picker-search"><span data-icon="search" aria-hidden="true"></span><label class="sr-only" for="knowledgeSearch">搜索知识库名称</label><input type="search" id="knowledgeSearch" placeholder="搜索知识库名称" autocomplete="off" autofocus /></div>
+    <div class="qa-picker-results" id="knowledgePickerResults" role="region" aria-label="可选知识库" tabindex="0"></div>
+    <p class="sr-only" id="knowledgeResultCount" role="status"></p>
+    <footer class="qa-picker-footer">
+      <div><p class="qa-picker-count" id="knowledgeSelectionCount" role="status">已选 0 个知识库</p><p class="qa-picker-demo-note">演示知识库，实际内容待接入。</p></div>
+      <div class="qa-picker-actions"><button class="qa-picker-cancel" type="button" id="cancelKnowledgePicker">取消</button><button class="qa-picker-confirm" type="button" id="confirmKnowledgePicker" disabled>确定</button></div>
+    </footer>
+  </dialog>
+  <script src="../src/data.js"></script>
+  <script src="../src/ui.js"></script>
+  <script src="../src/page-bridge.js?v=20261023-comments"></script>
+  <script src="../src/qa-session.js"></script>
+  <script src="../src/pages/home.js?v=20261023-comments"></script>
+</body>
+</html>

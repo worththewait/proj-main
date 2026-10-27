@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>智能工具 · 百舸数智平台</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="../tools-visual.css" />
+</head>
+<body class="module-page" data-page="smart-tools">
+  <main class="module-main">
+    <div id="toolWorkspaceBar" class="tool-workspace-bar" hidden></div>
+    <div class="content-scroll" id="contentScroll">
+      <div class="content-inner smart-tools-page" id="content">
+
+      </div>
+    </div>
+    <!-- 修改目录布局在此处；工具名称、分类与说明统一维护在 src/data.js。 -->
+    <template id="catalogTemplate">
+      <section class="featured-section" aria-labelledby="featuredTitle">
+        <div class="featured-heading"><h1 id="featuredTitle">热门工具</h1>
+          <label class="search-field"><span data-icon="search" aria-hidden="true"></span><span class="sr-only">搜索工具</span>
+            <input id="toolSearch" type="search" placeholder="搜索工具名称或用途" /></label>
+        </div>
+        <div class="featured-grid">
+      <button class="featured-tool" data-tool="OCR识别" data-tool-group="文档处理">
+        <span class="featured-art"><img src="../assets/document-layers.svg" alt="" /><span class="featured-art-title">让资料，成为知识</span></span>
+        <span class="featured-tool-name">OCR识别<span data-icon="arrow" aria-hidden="true"></span></span>
+        <span class="featured-tool-description" data-featured-description></span>
+      </button>
+      <button class="featured-tool" data-tool="文档翻译" data-tool-group="文档处理">
+        <span class="featured-art"><img src="../assets/language-wave.svg" alt="" /><span class="featured-art-title">跨越语言，连接洞见</span></span>
+        <span class="featured-tool-name">文档翻译<span data-icon="arrow" aria-hidden="true"></span></span>
+        <span class="featured-tool-description" data-featured-description></span>
+      </button>
+      <button class="featured-tool" data-tool="思维导图生成" data-tool-group="研究辅助">
+        <span class="featured-art"><img src="../assets/research-flow.svg" alt="" /><span class="featured-art-title">让思路，清晰展开</span></span>
+        <span class="featured-tool-name">思维导图生成<span data-icon="arrow" aria-hidden="true"></span></span>
+        <span class="featured-tool-description" data-featured-description></span>
+      </button>
+        </div>
+      </section>
+      <section class="catalog-section" aria-label="工具目录">
+        <div class="catalog-toolbar"><div id="toolCategories" class="category-tabs" role="group" aria-label="工具分类"></div><span class="page-meta" id="totalTools"></span></div>
+        <div id="toolResults" class="tool-results"></div>
+        <p id="resultCount" class="result-count" aria-live="polite"></p>
+      </section>
+    </template>
+    <!-- 每个工具实例各自克隆此模板，后续在这里接入实际内容。 -->
+    <template id="toolTemplate">
+      <button class="tool-back-link" data-shortcut="smart-tools"><span data-icon="back" aria-hidden="true"></span>返回工具目录</button>
+      <div class="page-header tool-page-header"><div class="tool-page-identity"><span class="tool-icon" data-detail-icon></span><div><h1 data-tool-name></h1><p data-tool-description></p></div></div></div>
+      <section class="integration-panel"><div class="empty-state"><span data-detail-icon></span><h2>正在集成</h2><p>相关内容接入后，将在这里呈现。</p><button class="secondary-button" data-shortcut="smart-tools">继续浏览工具<span data-icon="arrow" aria-hidden="true"></span></button></div></section>
+    </template>
+  </main>
+  <script src="../src/data.js"></script>
+  <script src="../src/ui.js"></script>
+  <script src="../src/page-bridge.js"></script>
+  <script src="../src/tool-workspace.js"></script>
+  <script src="../src/pages/smart-tools.js"></script>
+</body>
+</html>

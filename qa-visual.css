@@ -1,0 +1,105 @@
+/* 对话页视觉层：介绍区只作说明，操作色集中于输入与知识范围选择。 */
+.qa-module .module-main { background: var(--canvas); }
+.qa-page { padding-top: clamp(30px, 5.5vh, 56px); }
+.qa-welcome { display: flex; align-items: center; gap: 20px; margin-bottom: 30px; }
+.qa-welcome-copy { min-width: 0; }
+.qa-welcome h1 { color: var(--ink); font-size: 30px; line-height: 1.45; letter-spacing: -.6px; }
+.qa-welcome p { margin-top: 7px; color: var(--muted); font-size: 13px; }
+.qa-brand-visual { position: relative; display: grid; place-items: center; flex: 0 0 72px; height: 76px; }
+.qa-brand-sheet { position: absolute; top: 4px; right: 0; width: 51px; height: 63px; border-radius: 12px; background: var(--ai-soft, #f0edff); transform: rotate(11deg); }
+.qa-brand-sheet::after { content: ""; position: absolute; top: 14px; right: 7px; width: 13px; height: 4px; border-radius: 2px; background: var(--ai, #6d5ef7); }
+.qa-brand-mark { position: relative; display: block; width: 62px; height: 70px; margin: 0 10px 0 0; padding: 10px 11px; object-fit: contain; overflow: visible; border-radius: 13px; background: var(--surface); }
+
+/* 桌面内页最小宽 900px：836 = 447.27 + 16 + 372.73；
+   1230px 时 1134 = 649.8 + 20 + 464.2；1710px 时居中 1280px，
+   内宽 1184 = 679 + 20 + 485。两列始终共用欢迎区与输入区的左右边缘。 */
+.qa-introductions { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; }
+.qa-intro-card { position: relative; min-height: 238px; padding: 24px; overflow: hidden; border: 0; border-radius: 14px; cursor: default; }
+.qa-general-intro { background: #eaf0ff; }
+.qa-intro-card h2 { position: relative; gap: 9px; color: #173e9a; font-size: 18px; line-height: 1.5; }
+.qa-intro-card h2 > .icon { width: 19px; height: 19px; color: var(--accent); }
+.qa-intro-card p { position: relative; max-width: calc(100% - 130px); margin-top: 8px; color: #455d8a; font-size: 13px; line-height: 1.8; }
+.qa-example-list { position: relative; display: grid; gap: 9px; margin-top: 20px; }
+.qa-example-list li { position: relative; padding: 0 0 0 13px; border-radius: 0; background: transparent; color: #354d78; font-size: 13px; line-height: 1.7; cursor: text; }
+.qa-example-list li::before { content: ""; position: absolute; left: 0; top: .73em; width: 4px; height: 4px; border-radius: 50%; background: #7394e2; }
+.qa-general-figure { position: absolute; top: 22px; right: 24px; width: 124px; height: 90px; pointer-events: none; }
+.qa-message-back { position: absolute; top: 0; right: 0; display: flex; flex-direction: column; gap: 7px; width: 92px; height: 57px; padding: 15px; border-radius: 10px 10px 3px 10px; background: #cbdcff; }
+.qa-message-back > span { display: block; width: 59px; height: 4px; border-radius: 2px; background: #7d9fe9; }
+.qa-message-back > span:last-child { width: 38px; }
+.qa-message-front { position: absolute; left: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: 5px; width: 94px; height: 56px; border-radius: 10px 10px 10px 3px; background: #fff; color: var(--accent); }
+.qa-message-front > .icon { width: 23px; height: 23px; margin-right: 3px; stroke-width: 1.6; }
+.qa-message-front > i { width: 4px; height: 4px; border-radius: 50%; background: #7195ef; }
+.qa-knowledge-intro { justify-content: flex-start; background: var(--ai-soft, #f0edff); }
+.qa-knowledge-intro h2 { color: #453594; font-size: 18px; }
+.qa-knowledge-intro p { max-width: calc(100% - 112px); color: #61518b; }
+.qa-intro-note { position: relative; display: block; margin-top: auto; padding-top: 26px; color: #61518b; font-size: 12px; line-height: 1.8; }
+.qa-knowledge-figure { position: absolute; top: 24px; right: 24px; width: 106px; height: 111px; pointer-events: none; }
+.qa-document-back, .qa-document-middle, .qa-knowledge-symbol { position: absolute; display: block; width: 65px; height: 87px; border-radius: 8px; }
+.qa-document-back { top: 0; right: 0; background: #c3baf8; transform: rotate(12deg); }
+.qa-document-middle { top: 8px; left: 17px; background: #d9d2fd; transform: rotate(5deg); }
+.qa-knowledge-symbol { top: 16px; left: 5px; margin: 0; padding: 13px 12px; background: #fff; color: var(--ai, #6d5ef7); }
+.qa-knowledge-symbol .icon { display: block; width: 25px; height: 25px; margin-bottom: 11px; stroke-width: 1.5; }
+.qa-knowledge-symbol > i { display: block; width: 35px; height: 4px; margin-top: 6px; border-radius: 2px; background: #c0b6f6; }
+.qa-knowledge-symbol > i:last-child { width: 23px; }
+.qa-document-search { position: absolute; right: 0; bottom: 0; display: grid; place-items: center; width: 37px; height: 37px; border-radius: 10px; background: var(--ai, #6d5ef7); color: #fff; }
+.qa-document-search .icon { width: 23px; height: 23px; stroke-width: 1.7; }
+
+.qa-composer-area { padding-top: 42px; }
+.qa-composer { border-color: #8093b7; background: #fff; }
+.qa-composer:focus-within { border-color: var(--accent); outline: 2px solid var(--accent-soft); outline-offset: 2px; }
+.qa-composer textarea { color: var(--ink); caret-color: var(--accent); }
+.qa-composer textarea::placeholder { color: var(--muted); opacity: 1; }
+.qa-mode-button { border-color: #dce2ed; color: #526078; }
+.qa-mode-button:hover { border-color: #a5bcf7; background: #f1f5ff; color: var(--accent-hover); }
+.qa-mode-button.is-active { border-color: var(--accent-soft); background: var(--accent-soft); color: var(--accent-hover); }
+.qa-send-button:disabled { background: #dfe7f8; color: #7b8fb7; }
+.qa-send-button:active:not(:disabled) { transform: translateY(1px); }
+.qa-sources-label, .qa-source-more, .qa-disclaimer { color: var(--muted); }
+.qa-source-tag { background: var(--accent-soft); color: #244dba; }
+.qa-form-feedback { color: #496188; }
+.qa-module ::selection { background: #d5e1ff; color: #173e9a; }
+.qa-module .content-scroll, .qa-picker-results { scrollbar-color: #c2cce1 transparent; }
+.qa-picker-search:focus-within { border-color: var(--accent); }
+.qa-knowledge-option:hover { background: #f4f6fb; }
+.qa-knowledge-option:has(input:checked) { background: var(--accent-soft); }
+.qa-knowledge-option:has(input:checked) > .icon { color: var(--accent); }
+.qa-knowledge-option:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+@media (max-width: 1100px) {
+  .qa-introductions { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; }
+  .qa-intro-card { padding: 22px; }
+  .qa-intro-card p { max-width: calc(100% - 108px); }
+  .qa-general-figure { top: 24px; right: 22px; width: 100px; height: 79px; }
+  .qa-message-back { width: 80px; height: 50px; padding: 13px; }
+  .qa-message-back > span { width: 51px; }
+  .qa-message-front { width: 79px; height: 48px; gap: 4px; }
+  .qa-message-front > .icon { width: 20px; height: 20px; margin-right: 0; }
+  .qa-knowledge-intro p { max-width: calc(100% - 100px); }
+  .qa-knowledge-figure { top: 23px; right: 20px; transform: scale(.87); transform-origin: top right; }
+}
+@media (max-height: 760px) {
+  .qa-page { padding-top: 24px; }
+  .qa-welcome { gap: 17px; margin-bottom: 24px; }
+  .qa-brand-visual { flex-basis: 62px; height: 64px; }
+  .qa-brand-sheet { width: 45px; height: 55px; }
+  .qa-brand-mark { width: 54px; height: 60px; padding: 12px 13px; border-radius: 11px; }
+  .qa-welcome h1 { font-size: 28px; }
+  .qa-intro-card { min-height: 224px; }
+  .qa-example-list { gap: 7px; margin-top: 17px; }
+  .qa-composer-area { padding-top: 28px; }
+}
+@media (max-height: 620px) {
+  .qa-page { padding-top: 20px; padding-bottom: 14px; }
+  .qa-welcome { margin-bottom: 20px; }
+  .qa-intro-card { min-height: 214px; padding-top: 20px; padding-bottom: 20px; }
+  .qa-general-figure { top: 20px; }
+  .qa-example-list { gap: 6px; margin-top: 14px; }
+  .qa-composer-area { padding-top: 24px; }
+  .qa-composer { padding-top: 16px; padding-bottom: 14px; }
+  .qa-composer textarea { min-height: 64px; }
+  .qa-disclaimer { margin-top: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qa-composer, .qa-mode-button, .qa-send-button { transition: none; }
+  .qa-send-button:active:not(:disabled) { transform: none; }
+}

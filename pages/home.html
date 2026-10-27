@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>首页 · 百舸数智平台</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="../home-dashboard.css?v=20261027-title-edge" />
+</head>
+<body class="module-page" data-page="home">
+  <main class="module-main">
+    <div class="content-scroll" id="contentScroll">
+      <div class="content-inner home-landing home-dashboard" id="content">
+        <p class="home-settings-status" id="homepageSettingsStatus" role="status"></p>
+        <section class="home-quick-section" aria-labelledby="dashboardIntroTitle">
+          <h1 class="home-question-title" id="dashboardIntroTitle" tabindex="-1">专业问题找百舸</h1>
+          <p class="sr-only" id="dashboardIntroDescription">输入您的问题，百舸为您解答</p>
+          <form class="home-quick-composer" id="quickQuestionForm">
+            <label class="sr-only" for="quickQuestion">输入你的问题</label>
+            <textarea id="quickQuestion" rows="3" maxlength="16000" placeholder="输入您的问题，百舸为您解答" aria-describedby="dashboardIntroDescription"></textarea>
+            <div class="home-quick-sources" id="quickSelectedSources" hidden><span id="quickSelectedTags"></span><button class="qa-text-action" id="quickChangeKnowledge" type="button">更换知识库</button></div>
+            <div class="home-quick-actions"><div class="home-quick-modes" role="group" aria-label="快捷问答模式"><button class="home-quick-mode is-active" id="quickGeneralMode" type="button" aria-pressed="true"><span data-icon="chat" aria-hidden="true"></span>通用问答</button><button class="home-quick-mode" id="quickKnowledgeMode" type="button" aria-pressed="false" aria-haspopup="dialog" aria-expanded="false" aria-controls="quickKnowledgePicker"><span data-icon="book" aria-hidden="true"></span><span id="quickKnowledgeLabel">知识库问答</span></button></div><small>Enter 发送 · Shift + Enter 换行</small><button class="home-quick-send" id="quickQuestionSend" type="submit" disabled>发送<span data-icon="arrow" aria-hidden="true"></span></button></div>
+          </form>
+          <p class="home-quick-feedback" id="quickQuestionFeedback" role="status"></p>
+        </section>
+
+        <section class="home-common-section" aria-labelledby="commonFunctionsTitle">
+          <div class="home-dashboard-section-heading"><div class="home-common-tabs" id="commonFunctionTabs" role="group" aria-label="快捷入口分类"><button class="home-common-tab" id="commonFunctionsTitle" type="button" data-home-tab="mine" aria-pressed="true" aria-controls="commonFunctions">我的常用</button><button class="home-common-tab" type="button" data-home-tab="recommended" aria-pressed="false" aria-controls="commonFunctions">推荐</button></div><a class="home-view-all" href="#featureDirectory">全部功能<span data-icon="arrow" aria-hidden="true"></span></a></div>
+          <div class="home-common-grid" id="commonFunctions" aria-label="我的常用入口"></div>
+        </section>
+
+        <section class="home-updates-section" aria-labelledby="productUpdatesTitle">
+          <div class="home-dashboard-section-heading"><h2 id="productUpdatesTitle">产品动态</h2><span class="home-demo-label">演示内容</span></div>
+          <div class="home-updates-grid">
+            <div class="home-carousel" id="homeCarousel" role="region" aria-roledescription="轮播图" aria-label="平台功能推荐">
+              <button class="home-update-feature home-carousel-link" id="homeCarouselLink" type="button"></button>
+              <div id="homeCarouselControls"><button class="home-carousel-arrow is-previous" id="homeCarouselPrevious" type="button" aria-label="上一张轮播图"><span data-icon="chevron" aria-hidden="true"></span></button><button class="home-carousel-arrow is-next" id="homeCarouselNext" type="button" aria-label="下一张轮播图"><span data-icon="chevron" aria-hidden="true"></span></button><div class="home-carousel-dots" id="homeCarouselDots" role="group" aria-label="选择轮播图"></div><button class="home-carousel-toggle" id="homeCarouselToggle" type="button" aria-label="暂停轮播"></button></div>
+              <span class="sr-only" id="homeCarouselStatus" role="status" aria-live="off"></span>
+            </div>
+            <div class="home-updates-list" id="homeUpdatesList"></div>
+          </div>
+        </section>
+
+        <section class="home-directory" id="featureDirectory" aria-labelledby="directoryTitle" tabindex="-1">
+          <div class="home-directory-controls">
+            <div class="home-directory-heading">
+              <h2 id="directoryTitle">了解平台功能</h2>
+              <p class="sr-only">查看功能用途，直接进入；未开通的功能可申请使用。</p>
+            </div>
+            <div class="home-group-switch" id="featureGroups" role="group" aria-label="功能分类"></div>
+            <div class="home-directory-actions">
+              <div class="home-feature-search"><span data-icon="search" aria-hidden="true"></span><label class="sr-only" for="featureSearch">搜索功能或工具</label><input id="featureSearch" type="search" placeholder="搜索功能或工具" autocomplete="off" /><button class="icon-button" id="featureClear" type="button" aria-label="清除搜索" hidden><span data-icon="close" aria-hidden="true"></span></button></div>
+              <label class="home-available-filter"><input type="checkbox" id="availableOnly" />仅看已开通</label>
+            </div>
+          </div>
+          <div class="home-explorer">
+            <p class="home-search-summary" id="featureSearchSummary" role="status"></p>
+            <div id="featureResults"></div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+  <dialog class="home-updates-dialog" id="productUpdatesDialog" aria-labelledby="productUpdateDialogTitle">
+    <header><div><h2 id="productUpdateDialogTitle">产品动态</h2><p>以下内容用于原型演示。</p></div><button class="icon-button" id="closeProductUpdates" type="button" aria-label="关闭产品动态"><span data-icon="close" aria-hidden="true"></span></button></header>
+    <div class="home-update-detail" id="productUpdateContent"></div>
+    <footer><button class="secondary-button" id="dismissProductUpdates" type="button">关闭</button></footer>
+  </dialog>
+  <dialog class="qa-knowledge-dialog" id="quickKnowledgePicker" aria-labelledby="quickKnowledgeTitle" aria-describedby="quickKnowledgeDescription">
+    <div class="qa-picker-heading"><h2 id="quickKnowledgeTitle">选择知识库</h2><button class="icon-button" id="quickKnowledgeClose" type="button" aria-label="关闭知识库选择"><span data-icon="close" aria-hidden="true"></span></button></div>
+    <p class="qa-picker-description" id="quickKnowledgeDescription">可跨分类选择多个知识库，作为本次问答的参考范围。</p>
+    <div class="category-tabs qa-picker-scopes" id="quickKnowledgeScopes" role="group" aria-label="知识库分类"></div>
+    <div class="qa-picker-search"><span data-icon="search" aria-hidden="true"></span><label class="sr-only" for="quickKnowledgeSearch">搜索知识库名称</label><input type="search" id="quickKnowledgeSearch" placeholder="搜索知识库名称" autocomplete="off" /></div>
+    <div class="qa-picker-results" id="quickKnowledgeResults" role="region" aria-label="可选知识库" tabindex="0"></div>
+    <footer class="qa-picker-footer"><div><p class="qa-picker-count" id="quickKnowledgeCount" role="status">已选 0 个知识库</p><p class="qa-picker-demo-note">演示知识库，实际内容待接入。</p></div><div class="qa-picker-actions"><button class="qa-picker-cancel" id="quickKnowledgeCancel" type="button">取消</button><button class="qa-picker-confirm" id="quickKnowledgeConfirm" type="button" disabled>确定</button></div></footer>
+  </dialog>
+  <dialog class="home-access-dialog" id="homeAccessDialog" aria-labelledby="homeAccessTitle" aria-describedby="homeAccessDescription">
+    <h2 id="homeAccessTitle">暂无该功能权限</h2>
+    <p id="homeAccessDescription"></p>
+    <p class="home-access-feedback" id="homeAccessFeedback" role="status"></p>
+    <div class="home-access-actions">
+      <button class="home-access-dismiss" type="button" id="closeHomeAccess" autofocus>关闭</button>
+      <button class="primary-button" type="button" id="applyHomeAccess">申请权限</button>
+    </div>
+  </dialog>
+  <script src="../src/data.js?v=20261027-management"></script>
+  <script src="../src/ui.js"></script>
+  <script src="../src/page-bridge.js?v=20261026-lifecycle"></script>
+  <script src="../src/home-access.js"></script>
+  <script src="../src/qa-session.js"></script>
+  <script src="../src/pages/home-knowledge.js?v=20261026-xd"></script>
+  <script src="../src/home-card-images.js?v=20261026-carousel"></script>
+  <script src="../src/home-directory-icons.js?v=20261024-directory"></script>
+  <script src="../src/home-carousel-model.js?v=20261027-management"></script>
+  <script src="../src/home-config.js?v=20261027-management"></script>
+  <script src="../src/pages/home-carousel.js?v=20261027-management"></script>
+  
+  <script src="../src/pages/home-dashboard.js?v=20261027-management"></script>
+  <script src="../src/pages/home-updates.js?v=20261027-management"></script>
+  <script src="../src/pages/landing.js?v=20261027-management"></script>
+</body>
+</html>

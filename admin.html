@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f4f6fb" />
+  <title>后台系统 · 百舸数智平台</title>
+  <link rel="stylesheet" href="./styles.css?v=20261027-management" />
+  <link rel="stylesheet" href="./admin.css?v=20261027-admin" />
+</head>
+<body class="admin-page">
+  <div class="app-shell admin-shell">
+    <header class="app-topbar admin-topbar">
+      <a class="brand" href="./admin.html" aria-label="百舸后台系统">
+        <img class="brand-mark" src="./assets/baige-logo.svg" width="32" height="34" alt="" />
+        <span>百舸<span class="brand-subtitle">后台系统</span></span>
+      </a>
+      <div class="admin-topbar-meta">
+        <span class="admin-context">管理工作台</span>
+        <a class="admin-return" href="./index.html"><span data-icon="back" aria-hidden="true"></span>返回客户端</a>
+      </div>
+    </header>
+
+    <aside class="sidebar admin-sidebar" aria-label="后台导航">
+      <nav id="adminNav" aria-label="后台主菜单">
+        <div class="nav-section-label">百舸文库</div>
+        <button class="nav-item is-active" type="button" data-admin-view="files" aria-current="page">
+          <span data-icon="file" aria-hidden="true"></span><span class="nav-label">文件管理</span>
+        </button>
+        <button class="nav-item" type="button" data-admin-view="perm">
+          <span data-icon="shield" aria-hidden="true"></span><span class="nav-label">权限管理</span>
+        </button>
+        <div class="nav-section-label">界面</div>
+        <button class="nav-item" type="button" data-admin-view="settings">
+          <span data-icon="panel" aria-hidden="true"></span><span class="nav-label">自定义界面</span>
+        </button>
+      </nav>
+      <div class="sidebar-footer"><span class="admin-version">后台系统 · 原型演示</span></div>
+    </aside>
+
+    <main class="main-area admin-main">
+      <iframe class="admin-frame" id="adminFrame" title="文件管理"></iframe>
+    </main>
+  </div>
+  <script src="./src/ui.js"></script>
+  <script src="./admin.js?v=20261027-admin"></script>
+</body>
+</html>

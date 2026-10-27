@@ -1,0 +1,274 @@
+/* 智能工具：配图负责介绍，蓝／紫／青分别标识三类业务；操作始终使用百舸蓝。 */
+body[data-page="smart-tools"] {
+  --tool-tone: var(--accent-hover);
+  --tool-tint: var(--accent-soft);
+  background: var(--canvas);
+}
+
+[data-page="smart-tools"] [data-tool-group="文档处理"] {
+  --tool-tone: var(--accent-hover);
+  --tool-tint: var(--accent-soft);
+}
+
+[data-page="smart-tools"] [data-tool-group="写作创作"] {
+  --tool-tone: var(--ai-ink, #5842cf);
+  --tool-tint: var(--ai-soft);
+}
+
+[data-page="smart-tools"] [data-tool-group="研究辅助"] {
+  --tool-tone: var(--research-ink, #066d78);
+  --tool-tint: var(--research-soft);
+}
+
+[data-page="smart-tools"] .smart-tools-page {
+  padding-top: 32px;
+}
+
+[data-page="smart-tools"] .featured-heading {
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+[data-page="smart-tools"] .featured-heading h1 {
+  font-size: 23px;
+  font-weight: 600;
+}
+
+[data-page="smart-tools"] .search-field {
+  width: 280px;
+  min-height: 40px;
+  border-radius: 9px;
+  padding: 0 13px;
+}
+
+[data-page="smart-tools"] .search-field input {
+  min-height: 38px;
+  font-size: 13px;
+}
+
+[data-page="smart-tools"] .featured-grid {
+  gap: 24px;
+}
+
+[data-page="smart-tools"] .featured-art {
+  aspect-ratio: 1.89;
+  background: #101b3b;
+  border-radius: 14px;
+}
+
+[data-page="smart-tools"] .featured-art img {
+  object-position: center;
+}
+
+[data-page="smart-tools"] .featured-art-title {
+  left: 20px;
+  right: 16px;
+  bottom: 18px;
+  font-size: clamp(16px, 1.45vw, 21px);
+  line-height: 1.45;
+  text-wrap: balance;
+  text-shadow: none;
+}
+
+[data-page="smart-tools"] .featured-tool-name {
+  margin-top: 15px;
+  gap: 12px;
+  line-height: 1.6;
+}
+
+[data-page="smart-tools"] .featured-tool-name .icon {
+  flex-shrink: 0;
+  opacity: .7;
+}
+
+[data-page="smart-tools"] .featured-tool:is(:hover, :focus-visible) .featured-tool-name .icon {
+  opacity: 1;
+}
+
+[data-page="smart-tools"] .featured-tool-description {
+  margin-top: 5px;
+  font-size: 13px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+}
+
+[data-page="smart-tools"] .catalog-section {
+  margin-top: 34px;
+}
+
+[data-page="smart-tools"] .catalog-toolbar {
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+[data-page="smart-tools"] .category-tabs {
+  gap: 26px;
+}
+
+[data-page="smart-tools"] .category-tab {
+  min-height: 40px;
+  padding-bottom: 9px;
+  font-size: 14px;
+}
+
+[data-page="smart-tools"] .category-tab.is-active {
+  font-weight: 600;
+}
+
+[data-page="smart-tools"] .page-meta {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-page="smart-tools"] .tool-group {
+  margin-top: 22px;
+  padding: 23px 24px 20px;
+  background: var(--surface);
+  border-radius: 14px;
+}
+
+[data-page="smart-tools"] .tool-group:first-child {
+  margin-top: 0;
+}
+
+[data-page="smart-tools"] .tool-group h2 {
+  margin-bottom: 13px;
+  color: var(--tool-tone);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+[data-page="smart-tools"] .tool-list {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 16px;
+}
+
+[data-page="smart-tools"] .tool-entry {
+  gap: 12px;
+  padding: 12px 8px;
+  border-radius: 10px;
+}
+
+[data-page="smart-tools"] .tool-icon {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--tool-tint);
+  color: var(--tool-tone);
+}
+
+[data-page="smart-tools"] .tool-icon .icon {
+  width: 23px;
+  height: 23px;
+  stroke-width: 1.7;
+}
+
+[data-page="smart-tools"] .tool-entry-copy {
+  padding-top: 0;
+}
+
+[data-page="smart-tools"] .tool-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+[data-page="smart-tools"] .tool-description {
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+[data-page="smart-tools"] .tool-entry:is(:hover, :focus-visible) {
+  background: var(--tool-tint);
+}
+
+[data-page="smart-tools"] .tool-entry:hover .tool-icon {
+  background: var(--tool-tint);
+}
+
+[data-page="smart-tools"] .result-count {
+  margin-top: 21px;
+  font-size: 12px;
+}
+
+[data-page="smart-tools"] .search-empty {
+  padding: 54px 24px;
+  border-radius: 14px;
+}
+
+[data-page="smart-tools"] .search-empty h2 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+[data-page="smart-tools"] .search-empty p {
+  max-width: 44ch;
+  margin: 10px auto 24px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+[data-page="smart-tools"] .tool-back-link {
+  margin-bottom: 24px;
+}
+
+[data-page="smart-tools"] .tool-page-identity {
+  min-width: 0;
+}
+
+[data-page="smart-tools"] .tool-page-identity > div {
+  min-width: 0;
+}
+
+[data-page="smart-tools"] .tool-page-identity .tool-icon {
+  flex-basis: 60px;
+  width: 60px;
+  height: 60px;
+  border-radius: 16px;
+}
+
+[data-page="smart-tools"] .tool-page-identity .tool-icon .icon {
+  width: 30px;
+  height: 30px;
+}
+
+[data-page="smart-tools"] .tool-page-identity h1 {
+  overflow-wrap: anywhere;
+}
+
+[data-page="smart-tools"] .integration-panel {
+  border: 0;
+}
+
+[data-page="smart-tools"] .integration-panel .empty-state > .icon {
+  background: var(--tool-tint);
+  color: var(--tool-tone);
+}
+
+@media (max-width: 1199px) {
+  [data-page="smart-tools"] .smart-tools-page {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  [data-page="smart-tools"] .featured-grid {
+    gap: 18px;
+  }
+
+  [data-page="smart-tools"] .featured-art-title {
+    left: 16px;
+    right: 12px;
+    bottom: 16px;
+  }
+
+  [data-page="smart-tools"] .tool-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 28px;
+  }
+}

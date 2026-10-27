@@ -1,0 +1,2970 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>百舸文库 · 后台管理</title>
+<style>
+  :root{--primary:#1976D2;--primary-light:#E3F2FD;--primary-hover:#1565C0;--success:#43A047;--success-light:#E8F5E9;--warning:#F57C00;--warning-light:#FFF3E0;--danger:#E53935;--danger-light:#FFEBEE;--text:#333;--text-sec:#666;--text-tri:#999;--border:#E0E0E0;--bg:#F5F5F5;--white:#fff;--shadow:0 1px 2px rgba(0,0,0,.06);--radius:4px}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;display:flex;height:100vh;overflow:hidden}
+
+  /* ── Sidebar: two-column layout ── */
+  .sidebar-wrap{display:flex;flex-shrink:0;height:100vh}
+  .sidebar{width:200px;background:var(--white);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+  .sidebar-logo{padding:16px 18px;font-size:18px;font-weight:700;color:var(--primary);letter-spacing:2px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .sidebar-logo .logo-icon{width:26px;height:26px;background:var(--primary);border-radius:4px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:700}
+  .sidebar-nav{flex:1;overflow-y:auto;padding:6px 0}
+  .nav-item{display:flex;align-items:center;padding:10px 18px;cursor:pointer;transition:all .12s;font-size:13.5px;gap:8px;color:var(--text-sec);border-left:3px solid transparent}
+  .nav-item:hover{background:#F5F5F5;color:var(--text)}
+  .nav-item.active{background:var(--primary-light);color:var(--primary);font-weight:500;border-left-color:var(--primary)}
+  .nav-item .ni{width:18px;text-align:center;font-size:14px;opacity:.7}
+  .nav-item.active .ni{opacity:1}
+  .sidebar-sub{width:160px;background:#FAFAFA;border-right:1px solid var(--border);padding:0;flex-shrink:0;overflow-y:auto}
+  .sidebar-sub .sub-title{padding:14px 16px 8px;font-size:12px;font-weight:600;color:var(--text-tri);letter-spacing:.5px}
+  .nav-sub-item{display:flex;align-items:center;padding:10px 16px;cursor:pointer;font-size:13px;color:var(--text-sec);transition:all .12s;gap:8px;border-left:3px solid transparent}
+  .nav-sub-item:hover{color:var(--text);background:#F0F0F0}
+  .nav-sub-item.active{color:var(--primary);font-weight:500;background:var(--primary-light);border-left-color:var(--primary)}
+  .nav-sub-item .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.4}
+  .nav-sub-item.active .dot{opacity:1;background:var(--primary)}
+
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .topbar{background:var(--white);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;height:48px;flex-shrink:0}
+  .topbar-title{font-size:15px;font-weight:600;color:var(--text)}
+  .topbar-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+  .topbar-icon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:50%;cursor:pointer;font-size:16px;color:var(--text-sec);transition:background .12s}
+  .topbar-icon:hover{background:#F0F0F0}
+  .topbar-right .uavatar{width:30px;height:30px;border-radius:50%;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+  .content{flex:1;overflow-y:auto;padding:18px 24px}
+
+  /* ── Buttons: flat bordered ── */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:0 14px;height:32px;border-radius:var(--radius);font-size:13px;cursor:pointer;border:1px solid transparent;transition:all .12s;font-weight:500;white-space:nowrap}
+  .btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+  .btn-outline{background:var(--white);color:var(--text-sec);border:1px solid var(--border)}.btn-outline:hover{border-color:var(--primary);color:var(--primary)}
+  .btn-danger{background:var(--danger);color:#fff;border-color:var(--danger)}.btn-danger:hover{background:#C62828}
+  .btn-success{background:var(--success);color:#fff;border-color:var(--success)}.btn-success:hover{background:#388E3C}
+  .btn-sm{height:28px;padding:0 10px;font-size:12px}
+  .btn-lg{height:36px;padding:0 20px;font-size:13.5px}
+
+  .list-header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+  .search-box{display:flex;align-items:center;flex:1;max-width:400px;height:34px;background:var(--white);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;padding:0 4px 0 12px}
+  .search-box input{flex:1;border:none;outline:none;font-size:13px;color:var(--text);background:transparent;height:100%}
+  .search-box .sbtn{height:26px;padding:0 12px;background:var(--primary);color:#fff;border:none;border-radius:3px;font-size:12px;cursor:pointer;font-weight:500}
+  .list-header .spacer{flex:1}
+
+  /* ── Tabs: underline style ── */
+  .tabs-row{display:flex;gap:0;margin-bottom:18px;border-bottom:2px solid var(--border);width:fit-content}
+  .tab-btn{padding:9px 22px;cursor:pointer;font-size:13.5px;color:var(--text-sec);transition:all .12s;display:flex;align-items:center;gap:6px;user-select:none;border-bottom:2px solid transparent;margin-bottom:-2px}
+  .tab-btn:hover{color:var(--primary)}
+  .tab-btn.active{color:var(--primary);font-weight:500;border-bottom-color:var(--primary)}
+  .tab-btn .badge{background:var(--danger);color:#fff;font-size:10px;border-radius:10px;padding:1px 6px;font-weight:500}
+  .tab-btn.active .badge{background:var(--danger)}
+
+  .kb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px}
+  .kb-card{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:16px 18px;cursor:pointer;transition:all .15s}
+  .kb-card:hover{border-color:var(--primary);box-shadow:0 2px 8px rgba(25,118,210,.1)}
+  .kb-card .card-top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .kb-card .card-icon{width:36px;height:36px;border-radius:6px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .kb-card .card-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kb-card .card-desc{font-size:12px;color:var(--text-sec);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .kb-card .card-meta{font-size:12px;color:var(--text-sec);display:flex;align-items:center;gap:6px;margin-bottom:4px}
+  .kb-card .card-time{font-size:12px;color:var(--text-tri)}
+  .kb-card .card-actions{display:flex;align-items:center;gap:6px;margin-top:12px;border-top:1px solid #F0F0F0;padding-top:10px}
+  .kb-card .card-actions .cbtn{font-size:12px;color:var(--primary);background:var(--primary-light);padding:3px 10px;border-radius:3px;cursor:pointer;border:none;font-weight:500}
+  .kb-card .card-actions .cbtn:hover{background:#BBDEFB}
+  .kb-card .card-actions .more{margin-left:auto;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:4px;cursor:pointer;color:var(--text-sec);font-size:15px}
+  .kb-card .card-actions .more:hover{background:#F0F0F0}
+
+  .panel{display:none}.panel.active{display:block}
+  .review-stats{display:flex;gap:14px;margin-bottom:16px}
+  .stat-card{background:var(--white);border-radius:var(--radius);padding:14px 18px;border:1px solid var(--border);flex:1;display:flex;align-items:center;gap:12px}
+  .stat-card .si{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+  .stat-card .si.blue{background:var(--primary-light);color:var(--primary)}
+  .stat-card .si.orange{background:var(--warning-light);color:var(--warning)}
+  .stat-card .si.green{background:var(--success-light);color:var(--success)}
+  .stat-card .si.red{background:var(--danger-light);color:var(--danger)}
+  .stat-card .sn{font-size:22px;font-weight:700}
+  .stat-card .sl{font-size:12px;color:var(--text-sec);margin-top:2px}
+
+  .filter-bar{background:var(--white);border-radius:var(--radius);padding:12px 16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;border:1px solid var(--border)}
+  .filter-bar input,.filter-bar select{height:32px;border:1px solid var(--border);border-radius:var(--radius);padding:0 10px;font-size:13px;color:var(--text);background:var(--white);outline:none}
+  .filter-bar input:focus,.filter-bar select:focus{border-color:var(--primary)}
+  .filter-bar input[type="text"]{width:150px}
+  .filter-bar select{min-width:120px}
+  .filter-bar .date-range{display:flex;align-items:center;gap:6px}
+  .filter-bar .date-range input{width:125px}
+  .filter-bar .date-range .arrow{color:var(--text-sec);font-size:12px}
+
+  /* ── Table: flat, border-based ── */
+  .dtw{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);overflow-x:auto;overflow-y:hidden}
+  .dt{width:100%;border-collapse:collapse;min-width:max-content}
+  .dt th{background:#FAFAFA;font-weight:500;text-align:left;padding:10px 14px;font-size:13px;color:var(--text-sec);border-bottom:1px solid var(--border);white-space:nowrap}
+  .dt td{padding:10px 14px;border-bottom:1px solid #F0F0F0;font-size:13px;vertical-align:middle}
+  .dt td:last-child{white-space:nowrap}
+  .dt th:last-child,.dt td:last-child{position:sticky;right:0;z-index:1}
+  .dt th:last-child{background:#FAFAFA}
+  .dt td:last-child{background:var(--white);box-shadow:-2px 0 4px rgba(0,0,0,.05)}
+  .dt tr:last-child td{border-bottom:none}
+  .dt tr:hover td{background:#FAFAFA}
+  .dt tr:hover td:last-child{background:#FAFAFA}
+  .fn-cell{display:flex;align-items:center;gap:8px}
+  .fn-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+  .fn-icon.doc{background:#E3F2FD;color:#1565C0}.fn-icon.pdf{background:#FFEBEE;color:#C62828}
+  .fn-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px}
+  .action-icons{display:flex;gap:4px}
+  .ai{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--text-sec);transition:all .12s;border:none;background:none}
+  .ai:hover{background:#F0F0F0;color:var(--primary)}.ai.danger:hover{background:var(--danger-light);color:var(--danger)}
+
+  .status-tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:3px;font-size:12px;font-weight:500;white-space:nowrap}
+  .status-tag.success{background:var(--success-light);color:#2E7D32}.status-tag.warning{background:var(--warning-light);color:#E65100}
+  .status-tag.danger{background:var(--danger-light);color:#C62828}.status-tag.info{background:var(--primary-light);color:var(--primary)}
+  .sdot{width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+  .sdot.green{background:var(--success)}.sdot.orange{background:var(--warning)}.sdot.red{background:var(--danger)}.sdot.blue{background:var(--primary)}
+
+  .pagi{display:flex;align-items:center;justify-content:flex-end;padding:12px 16px;gap:8px;font-size:13px;color:var(--text-sec);border-top:1px solid #F0F0F0}
+  .pagi .pi{margin-right:auto}
+  .pagi select{height:28px;border:1px solid var(--border);border-radius:var(--radius);padding:0 8px;font-size:12px}
+  .pagi .pb{display:flex;gap:4px}
+  .pagi .pbtn{width:28px;height:28px;border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;cursor:pointer;background:var(--white);font-size:12px;color:var(--text)}
+  .pagi .pbtn.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .pagi .pbtn.dis{opacity:.4;pointer-events:none}
+  .batch-bar{display:flex;gap:8px;padding:8px 16px;background:var(--primary-light);align-items:center;font-size:13px;border-top:1px solid #BBDEFB}
+  .batch-bar .sc{color:var(--primary);font-weight:500}
+
+  /* ── Toggle: green ON / gray OFF ── */
+  .toggle{width:36px;height:20px;border-radius:10px;background:#BDBDBD;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+  .toggle.on{background:var(--success)}
+  .toggle::after{content:'';position:absolute;width:16px;height:16px;border-radius:50%;background:#fff;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+  .toggle.on::after{left:18px}
+  .checkbox{width:16px;height:16px;border:2px solid #BDBDBD;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0}
+  .checkbox.checked{background:var(--primary);border-color:var(--primary)}
+  .checkbox.checked::after{content:'✓';color:#fff;font-size:11px;font-weight:700}
+  .kw-tag{background:var(--danger-light);color:#C62828;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:500;display:inline-block;margin:1px 2px}
+
+  .secret-cell{display:flex;align-items:center;gap:8px}
+  .secret-cell .status-tag{cursor:default}
+  .eye-btn{width:24px;height:24px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid var(--border);background:var(--white);color:var(--primary);font-size:13px;transition:all .12s}
+  .eye-btn:hover{background:var(--primary-light);border-color:var(--primary)}
+  .hit-preview{background:#FAFAFA;border:1px solid var(--border);border-radius:var(--radius);padding:14px;font-size:13px;line-height:1.8;color:var(--text);max-height:260px;overflow-y:auto}
+  .hit-preview .hp-line{margin-bottom:8px}
+  .hit-preview .hp-line:last-child{margin-bottom:0}
+  .hit-preview-actions{margin-top:10px;display:flex;justify-content:flex-end}
+
+  /* Level 2 */
+  #kbDetail{display:none}
+  .detail-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+  .detail-header .back-btn{display:flex;align-items:center;gap:4px;font-size:13px;color:var(--text-sec);cursor:pointer;background:none;border:1px solid var(--border);border-radius:var(--radius);padding:5px 12px;transition:all .12s}
+  .detail-header .back-btn:hover{border-color:var(--primary);color:var(--primary)}
+  .detail-header .kb-title{font-size:17px;font-weight:600}
+
+  .upload-zone{background:var(--white);border-radius:var(--radius);padding:16px;border:1px solid var(--border);margin-bottom:14px}
+  .upload-zone-title{font-size:14px;font-weight:500;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .upload-drop{border:2px dashed var(--border);border-radius:var(--radius);padding:32px 20px;text-align:center;cursor:pointer;transition:all .15s}
+  .upload-drop:hover{border-color:var(--primary);background:var(--primary-light)}
+  .upload-drop .ui{font-size:32px;color:var(--primary);margin-bottom:6px}
+  .upload-drop .ut{color:var(--text-sec);font-size:13px}
+  .upload-drop .ut em{color:var(--primary);font-style:normal;font-weight:500}
+  .upload-drop .uh{font-size:12px;color:var(--text-tri);margin-top:4px}
+  .upload-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #F0F0F0}
+  .upload-item:last-child{border-bottom:none}
+  .upload-item .fi{width:34px;height:34px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+  .fi.doc,.wr-icon.doc,.ru-icon.doc{background:#E3F2FD;color:#1565C0}.fi.pdf,.wr-icon.pdf,.ru-icon.pdf{background:#FFEBEE;color:#C62828}
+  .upload-item .uinfo{flex:1;min-width:0}
+  .upload-item .uname{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .upload-item .umeta{font-size:12px;color:var(--text-sec);margin-top:2px}
+  .upload-item .ust{flex-shrink:0;font-size:12.5px}
+  .pbar{height:4px;background:#E0E0E0;border-radius:2px;margin-top:5px;overflow:hidden}
+  .pbar .fill{height:100%;border-radius:2px;transition:width .3s}
+  .fill.blue{background:var(--primary)}.fill.green{background:var(--success)}.fill.orange{background:var(--warning)}
+
+  /* Role tag */
+  .role-tag{font-size:11px;padding:2px 8px;border-radius:3px;font-weight:500;margin-left:6px;vertical-align:middle}
+  .role-tag.admin{background:var(--primary-light);color:var(--primary)}
+  .role-tag.dept{background:var(--success-light);color:#2E7D32}
+  .role-tag.personal{background:#F3E5F5;color:#7B1FA2}
+
+  /* ── Modals ── */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:1000;display:none;align-items:center;justify-content:center}
+  .modal-overlay.show{display:flex}
+  .modal{background:var(--white);border-radius:6px;width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 12px 40px rgba(0,0,0,.18);animation:mIn .2s}
+  .modal.wide{width:640px}
+  @keyframes mIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+  .mh{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .mh h3{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .mc{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;color:var(--text-sec);border:none;background:none}
+  .mc:hover{background:#F0F0F0}
+  .mb{padding:18px 20px}.mf{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+
+  .danger-alert{background:var(--warning-light);border:1px solid #FFCC80;border-radius:var(--radius);padding:14px;margin-bottom:14px;display:flex;gap:12px}
+  .danger-alert .ai-icon{font-size:26px;flex-shrink:0;line-height:1}
+  .danger-alert .at{font-weight:600;font-size:14px;color:#E65100;margin-bottom:4px}
+  .danger-alert .ad{font-size:13px;color:#BF360C;line-height:1.6}
+  .matched-kw{margin-top:10px}.matched-kw .kw-t{font-size:12.5px;font-weight:500;color:var(--text-sec);margin-bottom:6px}
+  .fd-card{background:#FAFAFA;border:1px solid #F0F0F0;border-radius:var(--radius);padding:12px;margin-bottom:12px}
+  .fd-row{display:flex;gap:20px;font-size:13px;margin-bottom:5px}
+  .fd-row:last-child{margin-bottom:0}
+  .fd-row .fl{color:var(--text-sec);width:72px;flex-shrink:0}
+  .fd-row .fv{color:var(--text);font-weight:500}
+
+  .tl{margin-top:14px}
+  .tl-item{display:flex;gap:12px;padding-bottom:14px;position:relative}
+  .tl-item:last-child{padding-bottom:0}
+  .tl-item::before{content:'';position:absolute;left:13px;top:28px;bottom:0;width:1px;background:#E0E0E0}
+  .tl-item:last-child::before{display:none}
+  .tl-dot{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;z-index:1}
+  .tl-dot.upload{background:var(--primary-light);color:var(--primary)}
+  .tl-dot.detect{background:var(--warning-light);color:#E65100}
+  .tl-dot.review{background:var(--success-light);color:#2E7D32}
+  .tl-dot.reject{background:var(--danger-light);color:#C62828}
+  .tl-dot.wait{background:#FFF8E1;color:#F57F17}
+  .tl-body{flex:1}
+  .tl-body .tlt{font-size:13px;font-weight:500}
+  .tl-body .tlt.warn{color:#E65100}.tl-body .tlt.ok{color:#2E7D32}.tl-body .tlt.fail{color:#C62828}
+  .tl-body .tltime{font-size:12px;color:var(--text-sec);margin-top:2px}
+  .tl-body .tldesc{font-size:12px;color:var(--text-sec);margin-top:3px;line-height:1.5}
+
+  /* Preview modal — tab style, no highlight */
+  .modal.fullview{width:760px;height:600px;display:flex;flex-direction:column}
+  .preview-body{display:flex;flex-direction:column;flex:1;overflow:hidden}
+  .preview-tabs{display:flex;border-bottom:1px solid var(--border);background:#FAFAFA}
+  .preview-tab{flex:1;text-align:center;padding:10px 0;font-size:13px;color:var(--text-sec);cursor:pointer;position:relative}
+  .preview-tab:hover{color:var(--text)}
+  .preview-tab.active{color:var(--primary);font-weight:500;background:#fff}
+  .preview-tab.active::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--primary)}
+  .preview-panel{display:none;flex:1;overflow-y:auto;padding:20px 24px;background:#fff;position:relative}
+  .preview-panel.active{display:block}
+  .preview-doc{position:relative}
+  .preview-doc .pd-title{font-size:18px;font-weight:700;margin-bottom:6px;color:var(--text)}
+  .preview-doc .pd-meta{font-size:12px;color:var(--text-sec);margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid #EEEEEE}
+  .preview-doc .pd-content{font-size:14px;line-height:2;color:#333}
+  .preview-doc .pd-content p{margin-bottom:12px;text-indent:2em}
+  .preview-doc .pd-content h4{font-size:15px;font-weight:600;margin:16px 0 8px;color:var(--text)}
+  .preview-doc .pd-watermark{position:absolute;inset:0;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='160'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle' fill='%23c62828' fill-opacity='0.06' font-size='14' font-family='sans-serif' transform='rotate(-30 120 80)'%3E仅供审核预览%3C/text%3E%3C/svg%3E");background-repeat:repeat}
+  .preview-kw-bar{background:var(--warning-light);border:1px solid #FFCC80;border-radius:var(--radius);padding:8px 12px;margin-bottom:14px;font-size:12.5px;color:#E65100;display:flex;align-items:center;gap:8px}
+  .preview-kw-bar .pkb-label{font-weight:600;flex-shrink:0}
+  .preview-kw-bar .kw-tag{font-size:11px}
+  .preview-page-ctrl{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-sec);padding-top:10px;border-top:1px solid #EEEEEE;margin-top:18px}
+  .preview-info-card{background:#FAFAFA;border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+  .preview-info-row{display:flex;padding:10px 0;border-bottom:1px solid #EEEEEE;font-size:13px}
+  .preview-info-row:last-child{border-bottom:none}
+  .preview-info-row .pi-label{width:90px;color:var(--text-sec);flex-shrink:0}
+  .preview-info-row .pi-val{flex:1;color:var(--text)}
+  .preview-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+  .preview-footer .pf-left{font-size:12.5px;color:var(--text-sec);display:flex;align-items:center;gap:10px}
+  .preview-footer .pf-actions{display:flex;gap:10px}
+
+  .form-textarea{width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;font-size:13px;font-family:inherit;resize:vertical;min-height:76px;outline:none}
+  .form-textarea:focus{border-color:var(--primary)}
+  .form-label{font-size:13px;font-weight:500;margin-bottom:6px;display:block}
+  .form-hint{font-size:12px;color:var(--text-sec);margin-top:4px}
+  .wizard-tag-selector{max-height:240px;overflow-y:auto;padding-right:4px}
+  .tag-category{border:1px solid var(--border);border-radius:var(--radius);margin-bottom:8px;background:var(--white);overflow:hidden}
+  .tag-cat-header{display:flex;align-items:center;justify-content:space-between;padding:8px 10px;font-size:13px;color:var(--text);background:#FAFAFA;cursor:pointer;user-select:none}
+  .tag-cat-header:hover{background:#F0F0F0}
+  .tag-cat-arrow{font-size:12px;color:var(--text-sec);transition:transform .2s}
+  .tag-category.open .tag-cat-arrow{transform:rotate(90deg)}
+  .tag-cat-body{display:none;padding:10px}
+  .tag-category.open .tag-cat-body{display:block}
+  .tag-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .tag-chip{position:relative;cursor:pointer}
+  .tag-chip input{position:absolute;opacity:0;width:0;height:0}
+  .tag-chip span{display:inline-block;padding:4px 10px;border:1px solid var(--border);border-radius:var(--radius);font-size:12px;color:var(--text);background:var(--white);transition:all .12s}
+  .tag-chip:hover span{border-color:var(--primary);color:var(--primary)}
+  .tag-chip input:checked + span{background:var(--primary-light);border-color:var(--primary);color:var(--primary);font-weight:500}
+  .tag-chip input:focus-visible + span{box-shadow:0 0 0 2px rgba(25,118,210,.2)}
+
+  .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:2000;background:var(--text);color:#fff;padding:8px 22px;border-radius:var(--radius);font-size:13px;box-shadow:0 4px 12px rgba(0,0,0,.15);display:none;align-items:center;gap:8px;animation:tIn .2s}
+  .toast.show{display:flex}
+  .toast.success{background:#2E7D32}.toast.warning{background:#E65100}
+  @keyframes tIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+  .wm{position:fixed;inset:0;pointer-events:none;z-index:9999;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200'%3E%3Ctext x='50%25' y='50%25' text-anchor='middle' dominant-baseline='middle' fill='%23000' fill-opacity='0.03' font-size='13' font-family='sans-serif' transform='rotate(-25 150 100)'%3EZKJINwenhui.xian 2026-08-12%3C/text%3E%3C/svg%3E");background-repeat:repeat}
+  .hidden{display:none!important}
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#CCC;border-radius:3px}
+
+  /* ── Upload Wizard ── */
+  .wizard-steps{display:flex;align-items:center;justify-content:center;margin-bottom:22px;padding:0 20px}
+  .wizard-step{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-sec)}
+  .wizard-step .wn{width:28px;height:28px;border-radius:50%;background:#E0E0E0;color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;transition:all .2s}
+  .wizard-step.active .wn,.wizard-step.done .wn{background:var(--primary)}
+  .wizard-step.done .wn{background:var(--success)}
+  .wizard-step .wl{color:var(--text-sec);white-space:nowrap}
+  .wizard-step.active .wl,.wizard-step.done .wl{color:var(--text);font-weight:500}
+  .wizard-step-arr{color:#BDBDBD;margin:0 12px;font-size:14px}
+  .wizard-body{min-height:260px}
+  .wizard-step-title{font-size:14px;font-weight:600;margin-bottom:12px}
+  /* 补充信息：左侧文件列表 + 右侧文件详情 */
+  .wizard-files-layout{display:flex;gap:14px;align-items:flex-start}
+  .wf-side{width:210px;flex-shrink:0;background:#FAFAFA;border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+  .wf-side-title{font-size:13px;font-weight:600;color:var(--text)}
+  .wf-side-sub{font-size:11px;color:var(--text-tri);margin:2px 0 8px}
+  .wf-side-list{display:flex;flex-direction:column;gap:2px;max-height:250px;overflow-y:auto}
+  .wf-file-item{padding:7px 10px;font-size:12.5px;color:var(--text-sec);border-radius:6px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wf-file-item:hover{background:#F0F0F0}
+  .wf-file-item.active{background:var(--primary-light);color:var(--primary);font-weight:500}
+  .wf-main{flex:1;min-width:0;background:#FAFAFA;border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+  .wf-field{display:flex;align-items:center;gap:10px;font-size:13px}
+  .wf-lbl{color:var(--text-sec);width:64px;flex-shrink:0;text-align:right}
+  .wf-input{flex:1;min-width:0;border:1px solid var(--border);border-radius:6px;padding:5px 9px;font-size:12.5px;outline:none}
+  .wf-input:focus{border-color:var(--primary)}
+  .wf-val{color:var(--text);font-weight:500;flex:1;min-width:0}
+  .wf-type-chip{display:inline-block;background:var(--primary-soft);color:var(--primary);font-size:11px;padding:2px 10px;border-radius:3px;font-weight:500}
+  .wf-cover-field{align-items:flex-start}
+  .wf-cover{flex:1;min-width:0;height:96px;border:2px dashed var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;overflow:hidden}
+  .wf-cover:hover{border-color:var(--primary);background:var(--primary-light)}
+  .wf-cover-empty{text-align:center;color:var(--text-tri);font-size:12px;line-height:1.7}
+  .wf-cover-empty .ci{font-size:26px;display:block;color:var(--primary);margin-bottom:2px}
+  .wf-cover-img{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:40px;background:linear-gradient(135deg,#e8f0fe,#d6e4fb);color:var(--primary);font-weight:600}
+  .wf-cover-wrap{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+  .wf-preset-covers{display:flex;gap:8px;flex-wrap:wrap}
+  .wf-preset-item{width:56px;height:56px;border-radius:6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:22px;border:2px solid transparent;transition:all .15s;user-select:none}
+  .wf-preset-item:hover{transform:translateY(-2px);box-shadow:0 3px 8px rgba(0,0,0,.18)}
+  .wf-preset-item.sel{border-color:var(--primary);box-shadow:0 0 0 2px rgba(25,118,210,.3)}
+  .wf-preset-item .pn{font-size:9px;margin-top:2px;line-height:1;opacity:.92}
+  .wf-cover-acts{display:flex;align-items:center;gap:8px}
+  .wf-cover-opt{margin-left:auto;font-size:11px;color:var(--text-tri)}
+  .wizard-result{padding:14px 16px;background:#FAFAFA;border-radius:var(--radius);border:1px solid var(--border);margin-top:14px}
+  .wizard-result .wr-item{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #F0F0F0}
+  .wizard-result .wr-item:last-child{border-bottom:none;padding-bottom:0}
+  .wizard-result .wr-icon{width:34px;height:34px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;flex-shrink:0}
+  .wizard-result .wr-info{flex:1;min-width:0}
+  .wizard-result .wr-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wizard-result .wr-meta{font-size:12px;color:var(--text-sec);margin-top:2px}
+  .wizard-result .wr-actions{display:flex;gap:8px;margin-top:8px}
+  .wizard-summary-row{display:flex;gap:20px;font-size:13px;margin-bottom:8px;color:var(--text-sec)}
+  .wizard-summary-row span{color:var(--text);font-weight:500;margin-left:4px}
+  .wizard-tip{font-size:12px;color:var(--text-sec);background:var(--primary-light);border-left:3px solid var(--primary);padding:10px 12px;border-radius:var(--radius);margin-top:14px;line-height:1.6}
+
+  /* ── Recent Upload Activity ── */
+  .recent-uploads{background:var(--white);border-radius:var(--radius);border:1px solid var(--border);padding:14px 16px;margin-bottom:16px}
+  .recent-uploads .ru-title{font-size:13px;font-weight:600;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .recent-uploads .ru-empty{font-size:12px;color:var(--text-sec);padding:8px 0}
+  .recent-uploads .ru-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #F0F0F0;font-size:13px}
+  .recent-uploads .ru-item:last-child{border-bottom:none;padding-bottom:0}
+  .recent-uploads .ru-icon{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+  .recent-uploads .ru-info{flex:1;min-width:0}
+  .recent-uploads .ru-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+  .recent-uploads .ru-meta{font-size:12px;color:var(--text-sec);margin-top:1px}
+  .recent-uploads .ru-status{flex-shrink:0}
+#libPermRoot{--primary-h:#1565C0;--primary-soft:#E3F2FD;--card:#fff;--bg:#F5F5F5;--text2:#666;--muted:#999;--faint:#b6c0cc;--line:#E0E0E0;--line2:#E0E0E0;--green:#43A047;--orange:#F57C00;--red:#E53935;--purple:#7c5cd6;--r:10px;--tr:.18s ease;--shadow:0 1px 2px rgba(0,0,0,.06)}
+#libPermRoot a{ text-decoration:none; color:inherit; cursor:pointer; }
+#libPermRoot .topbar{ height:52px; background:var(--card); border-bottom:1px solid var(--line); display:flex; align-items:center; padding:0 24px; gap:12px; box-shadow:0 1px 8px rgba(30,60,120,.04); position:sticky; top:0; z-index:50; }
+#libPermRoot .topbar .logo{ width:28px; height:28px; border-radius:8px; background:linear-gradient(135deg,#3b82f6,#1a56db); display:flex; align-items:center; justify-content:center; flex-shrink:0; box-shadow:0 2px 6px rgba(26,86,219,.28); }
+#libPermRoot .topbar .logo svg{ width:16px; height:16px; fill:#fff; }
+#libPermRoot .topbar .crumb{ font-size:12px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+#libPermRoot .topbar .crumb b{ color:var(--text); font-size:14px; font-weight:600; }
+#libPermRoot .topbar .crumb .sep{ color:var(--faint); }
+#libPermRoot .topbar .spacer{ flex:1; }
+#libPermRoot .badge{ display:flex; align-items:center; gap:5px; font-size:11px; background:var(--primary-soft); color:var(--primary); border-radius:6px; padding:4px 11px; }
+#libPermRoot .badge svg{ width:13px; height:13px; fill:var(--primary); }
+#libPermRoot .layout{ display:flex; max-width:1320px; margin:16px auto; gap:14px; padding:0 16px; }
+/* 部门树 */
+#libPermRoot .side{ width:248px; flex-shrink:0; background:var(--card); border-radius:var(--r); padding:14px 10px; box-shadow:var(--shadow); align-self:flex-start; }
+#libPermRoot .side .tt{ font-size:11px; color:var(--muted); padding:0 8px 10px; border-bottom:1px solid var(--line); margin-bottom:8px; letter-spacing:.5px; display:flex; align-items:center; justify-content:space-between; }
+#libPermRoot .side .tt .cnt{ font-size:10.5px; background:#f1f3f6; color:var(--muted); border-radius:8px; padding:1px 7px; }
+#libPermRoot .side-search{ position:relative; margin:0 2px 8px; }
+#libPermRoot .side-search input{ width:100%; box-sizing:border-box; border:1px solid var(--line2); border-radius:7px; padding:6px 24px 6px 9px; font-size:12px; outline:none; transition:border-color var(--tr), box-shadow var(--tr); }
+#libPermRoot .side-search input:focus{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(26,86,219,.08); }
+#libPermRoot .side-search svg{ position:absolute; right:8px; top:50%; transform:translateY(-50%); width:13px; height:13px; fill:var(--muted); }
+#libPermRoot .dept-lv{ display:flex; align-items:center; gap:7px; padding:8px 10px; border-radius:7px; cursor:pointer; font-size:13px; color:var(--text2); transition:all var(--tr); position:relative; }
+#libPermRoot .dept-lv:hover{ background:#f6f9ff; }
+#libPermRoot .dept-lv.active{ background:var(--primary-soft); color:var(--primary); font-weight:600; }
+#libPermRoot .dept-lv.active::before{ content:""; position:absolute; left:-10px; top:8px; bottom:8px; width:3px; background:var(--primary); border-radius:0 3px 3px 0; }
+#libPermRoot .dept-lv .arr{ width:12px; height:12px; color:var(--muted); font-size:10px; transition:transform var(--tr); }
+#libPermRoot .dept-lv.open .arr{ transform:rotate(-90deg); }
+#libPermRoot .dept-lv .ic{ width:16px; height:16px; fill:var(--muted); flex-shrink:0; }
+#libPermRoot .dept-lv.active .ic{ fill:var(--primary); }
+#libPermRoot .dept-sub{ margin-left:18px; border-left:1px dashed var(--line2); padding-left:7px; }
+#libPermRoot .main{ flex:1; min-width:0; background:var(--card); border-radius:var(--r); padding:16px 22px 20px; box-shadow:var(--shadow); }
+#libPermRoot .m-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; border-bottom:1px solid var(--line); padding-bottom:10px; }
+#libPermRoot .m-head .dept-name{ font-size:15px; font-weight:700; color:var(--text); }
+#libPermRoot .m-head .dept-info{ position:relative; width:16px; height:16px; border-radius:50%; background:#d6dde8; color:#fff; display:inline-flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; font-weight:700; line-height:1; flex-shrink:0; transition:background var(--tr); }
+#libPermRoot .m-head .dept-info:hover{ background:var(--primary); }
+#libPermRoot .m-head .dept-info .tip-pop{ position:absolute; top:24px; left:0; width:320px; background:#fff; border:1px solid var(--line2); border-radius:10px; box-shadow:0 12px 36px rgba(0,0,0,.16); padding:12px 14px; font-size:12px; color:var(--text2); line-height:1.7; display:none; z-index:80; }
+#libPermRoot .m-head .dept-info:hover .tip-pop{ display:block; }
+#libPermRoot .m-head .dept-info .tip-pop .tp-tt{ font-size:12.5px; font-weight:600; color:var(--primary); margin-bottom:5px; }
+#libPermRoot .m-head .dept-info .tip-pop .tp-bd{ color:var(--text2); }
+/* 未选部门空态 */
+#libPermRoot .empty-state{ display:flex; flex-direction:column; align-items:center; justify-content:center; padding:70px 0; color:var(--muted); gap:10px; }
+#libPermRoot .empty-state svg{ width:44px; height:44px; fill:#d6dde8; }
+#libPermRoot .empty-state .t{ font-size:14px; color:var(--text2); font-weight:600; }
+#libPermRoot .empty-state .s{ font-size:12px; }
+/* 搜索 */
+#libPermRoot .search-row{ display:flex; margin-top:10px; gap:8px; }
+#libPermRoot .search-wrap{ flex:1; position:relative; }
+#libPermRoot .search-wrap input{ width:100%; box-sizing:border-box; border:1px solid var(--line2); border-radius:7px; padding:7px 28px 7px 12px; font-size:12.5px; outline:none; transition:border-color var(--tr), box-shadow var(--tr); }
+#libPermRoot .search-wrap input:focus{ border-color:var(--primary); box-shadow:0 0 0 3px rgba(26,86,219,.08); }
+#libPermRoot .search-wrap .clear{ position:absolute; right:8px; top:50%; transform:translateY(-50%); width:16px; height:16px; border-radius:50%; background:#d6dde8; color:#fff; display:none; align-items:center; justify-content:center; cursor:pointer; font-size:13px; line-height:1; transition:background var(--tr); }
+#libPermRoot .search-wrap .clear:hover{ background:#9aa7ba; }
+#libPermRoot .kw-btn{ background:#fff; color:var(--primary); border:1px solid var(--primary); border-radius:7px; padding:7px 16px; font-size:12.5px; cursor:pointer; white-space:nowrap; transition:all var(--tr); }
+#libPermRoot .kw-btn:hover{ background:var(--primary-soft); }
+#libPermRoot .ai-btn{ background:linear-gradient(135deg,#3b82f6,#1a56db); color:#fff; border:none; border-radius:7px; padding:7px 16px; font-size:12.5px; cursor:pointer; white-space:nowrap; transition:all var(--tr); }
+#libPermRoot .ai-btn:hover{ filter:brightness(1.06); box-shadow:0 3px 8px rgba(26,86,219,.25); }
+/* 分类 */
+#libPermRoot .src-row{ display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap; }
+#libPermRoot .src-row .lb{ font-size:11.5px; color:var(--muted); }
+#libPermRoot .src-tabs{ display:flex; gap:5px; background:#f1f4f8; padding:3px; border-radius:18px; }
+#libPermRoot .src-tab{ padding:4px 14px; font-size:12px; border-radius:15px; cursor:pointer; color:var(--text2); transition:all var(--tr); }
+#libPermRoot .src-tab:hover{ color:var(--primary); }
+#libPermRoot .src-tab.active{ background:#fff; color:var(--primary); font-weight:600; box-shadow:0 1px 4px rgba(30,60,120,.12); }
+#libPermRoot .type-row{ display:flex; align-items:center; gap:6px; margin-top:8px; flex-wrap:wrap; }
+#libPermRoot .type-row .lb{ font-size:11.5px; color:var(--muted); margin-right:2px; }
+#libPermRoot .type-chip{ padding:3px 12px; font-size:11.5px; border:1px solid var(--line2); border-radius:13px; cursor:pointer; color:var(--text2); background:#fff; transition:all var(--tr); }
+#libPermRoot .type-chip:hover{ border-color:var(--primary); color:var(--primary); }
+#libPermRoot .type-chip.active{ background:var(--primary-soft); border-color:var(--primary); color:var(--primary); }
+/* 范围操作条 */
+#libPermRoot .scope-bar{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:#f8fafd; border:1px solid var(--line); border-radius:8px; padding:8px 13px; margin-top:10px; }
+#libPermRoot .scope-bar .info{ font-size:12px; color:var(--text2); }
+#libPermRoot .scope-bar .info b{ color:var(--primary); }
+#libPermRoot .scope-bar .info .adj{ color:var(--orange); }
+#libPermRoot .scope-bar .acts{ margin-left:auto; display:flex; gap:8px; flex-wrap:wrap; }
+#libPermRoot .btn{ padding:6px 15px; border-radius:7px; font-size:12.5px; cursor:pointer; border:1px solid var(--line2); background:#fff; color:var(--text2); white-space:nowrap; transition:all var(--tr); }
+#libPermRoot .btn:hover{ border-color:var(--primary); color:var(--primary); }
+#libPermRoot .btn.primary{ background:var(--primary); border-color:var(--primary); color:#fff; }
+#libPermRoot .btn.primary:hover{ background:var(--primary-h); color:#fff; }
+#libPermRoot .btn.warn{ color:var(--orange); border-color:#f0d5a8; }
+#libPermRoot .btn.warn:hover{ background:#fdf6ec; border-color:var(--orange); color:var(--orange); }
+#libPermRoot .btn.danger{ color:var(--red); border-color:#f0c0c0; }
+#libPermRoot .btn.danger:hover{ background:#fdecec; border-color:var(--red); color:var(--red); }
+#libPermRoot .btn:disabled{ opacity:.45; cursor:not-allowed; }
+#libPermRoot .btn:disabled:hover{ border-color:var(--line2); color:var(--text2); background:#fff; }
+#libPermRoot .btn.primary:disabled:hover{ background:var(--primary); color:#fff; }
+/* 表格 */
+#libPermRoot .doc-table{ width:100%; border-collapse:collapse; font-size:12.5px; margin-top:12px; }
+#libPermRoot .doc-table th{ text-align:left; color:var(--muted); font-weight:400; font-size:11.5px; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+#libPermRoot .doc-table td{ padding:10px; border-bottom:1px solid #f6f8fa; color:var(--text2); vertical-align:middle; }
+#libPermRoot .doc-table tr:hover td{ background:#f8fafd; }
+#libPermRoot .doc-table tr.denied td{ background:#fdf1f1; }
+#libPermRoot .doc-table tr.adjusted td{ background:#fdf9f0; }
+#libPermRoot .doc-table .d-name{ font-weight:600; color:#2a3a4d; max-width:260px; font-size:13px; }
+#libPermRoot .doc-table .d-sub{ font-size:11px; color:var(--muted); margin-top:3px; }
+#libPermRoot .doc-table .d-src{ display:inline-block; padding:2px 8px; font-size:10.5px; border-radius:4px; }
+#libPermRoot .src-crawl{ background:var(--primary-soft); color:var(--primary); }
+#libPermRoot .src-upload{ background:#e6f6ec; color:var(--green); }
+#libPermRoot .src-type{ color:var(--muted); font-size:11.5px; }
+#libPermRoot .pbadge{ display:inline-block; padding:2px 8px; border-radius:5px; font-size:10.5px; margin-right:4px; }
+#libPermRoot .pbadge.on{ background:var(--primary-soft); color:var(--primary); font-weight:600; }
+#libPermRoot .pbadge.off{ background:#f1f3f6; color:var(--faint); }
+#libPermRoot .pbadge.none{ background:#fde8e8; color:var(--red); font-weight:600; }
+#libPermRoot .act-cell{ text-align:right; white-space:nowrap; }
+#libPermRoot .row-act{ font-size:11.5px; cursor:pointer; padding:3px 11px; border:1px solid var(--line2); border-radius:6px; color:var(--text2); display:inline-block; transition:all var(--tr); }
+#libPermRoot .row-act:hover{ border-color:var(--primary); color:var(--primary); }
+#libPermRoot .row-act.restore{ color:var(--primary); }
+#libPermRoot .row-act.restore:hover{ border-color:var(--primary); background:var(--primary-soft); }
+#libPermRoot .empty{ text-align:center; color:var(--muted); font-size:12.5px; padding:36px 0; }
+#libPermRoot .pager{ display:flex; align-items:center; justify-content:space-between; margin-top:14px; flex-wrap:wrap; gap:10px; }
+#libPermRoot .pager .pinfo{ font-size:11.5px; color:var(--muted); }
+#libPermRoot .pager .pgs{ display:flex; gap:5px; }
+#libPermRoot .pager .pg{ min-width:28px; height:28px; padding:0 8px; border:1px solid var(--line2); border-radius:7px; background:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; color:var(--text2); transition:all var(--tr); }
+#libPermRoot .pager .pg:hover{ border-color:var(--primary); color:var(--primary); }
+#libPermRoot .pager .pg.cur{ background:var(--primary); border-color:var(--primary); color:#fff; }
+#libPermRoot .pager .pg.dis{ color:var(--faint); cursor:not-allowed; }
+#libPermRoot .pager select{ border:1px solid var(--line2); border-radius:7px; padding:5px 8px; font-size:12px; outline:none; background:#fff; }
+/* 弹窗 */
+#libPermRoot .mask{ position:fixed; inset:0; background:rgba(20,30,50,.45); display:none; align-items:center; justify-content:center; z-index:180; }
+#libPermRoot .mask.show{ display:flex; }
+#libPermRoot .modal{ width:460px; max-width:92vw; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.2); }
+#libPermRoot .modal-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); }
+#libPermRoot .modal-head b{ font-size:15px; color:var(--text); }
+#libPermRoot .close{ cursor:pointer; color:var(--muted); font-size:20px; line-height:1; transition:color var(--tr); }
+#libPermRoot .close:hover{ color:var(--text); }
+#libPermRoot .modal-body{ padding:18px 20px; }
+#libPermRoot .scope-desc{ font-size:12px; color:var(--text2); background:#f8fafd; border-radius:9px; padding:11px 14px; margin-bottom:14px; line-height:1.7; }
+#libPermRoot .scope-desc b{ color:var(--red); }
+#libPermRoot .level-list{ display:flex; flex-direction:column; gap:8px; }
+#libPermRoot .level-item{ display:flex; align-items:center; gap:12px; border:1px solid var(--line2); border-radius:10px; padding:11px 14px; cursor:pointer; transition:all var(--tr); position:relative; }
+#libPermRoot .level-item:hover{ border-color:var(--primary); }
+#libPermRoot .level-item.sel{ border-color:var(--primary); background:#f5f9ff; }
+#libPermRoot .level-item .lv-ic{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; background:#f1f3f6; transition:all var(--tr); }
+#libPermRoot .level-item .lv-ic svg{ width:15px; height:15px; fill:var(--muted); }
+#libPermRoot .level-item.sel .lv-ic{ background:var(--primary-soft); } .level-item.sel .lv-ic svg { fill:var(--primary); }
+#libPermRoot .level-item .lv-body{ flex:1; min-width:0; }
+#libPermRoot .level-item .lv-name{ font-size:13px; font-weight:600; color:#2a3a4d; }
+#libPermRoot .level-item.sel .lv-name{ color:var(--primary); }
+#libPermRoot .level-item .lv-desc{ font-size:11px; color:var(--muted); margin-top:2px; }
+#libPermRoot .level-item .lv-check{ width:18px; height:18px; border-radius:50%; border:1px solid var(--line2); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all var(--tr); }
+#libPermRoot .level-item .lv-check svg{ width:10px; height:10px; fill:#fff; opacity:0; }
+#libPermRoot .level-item.sel .lv-check{ background:var(--primary); border-color:var(--primary); }
+#libPermRoot .level-item.sel .lv-check svg{ opacity:1; }
+#libPermRoot .level-none{ display:flex; align-items:center; gap:8px; margin-top:11px; font-size:11.5px; color:var(--red); cursor:pointer; padding:7px 6px; border:1px dashed #f0c0c0; border-radius:8px; transition:all var(--tr); }
+#libPermRoot .level-none:hover{ background:#fdecec; }
+#libPermRoot .modal-foot{ padding:13px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px; }
+#libPermRoot .toast{ position:fixed; top:64px; left:50%; transform:translateX(-50%); background:rgba(30,40,60,.88); color:#fff; padding:10px 22px; border-radius:8px; font-size:12.5px; z-index:200; opacity:0; transition:opacity .3s; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.2); }
+#libPermRoot .toast.show{ opacity:1; }
+</style>
+
+<style id="library-admin-adapt">
+  :root{
+    --primary:#245bff;--primary-light:#e7eeff;--primary-hover:#1546d8;
+    --success:#1f9d55;--success-light:#e8f6ee;--warning:#c8751a;--warning-light:#fdf2e5;
+    --danger:#d43a3a;--danger-light:#fdeaea;--text:#202735;--text-sec:#687187;--text-tri:#98a4b5;
+    --border:#e9edf5;--bg:#f4f8ff;--white:#fff;--shadow:0 2px 12px rgba(30,60,120,.05);--radius:10px;
+  }
+  html,body{width:100%;height:100%}
+  body{display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;font-size:13px}
+  .sidebar-wrap,.topbar,.wm{display:none!important}
+  #kbList,#kbDetail,#reviewCenter,#reviewAdmin{display:none!important}
+  .main{flex:1;min-width:0;height:100vh;margin:0;display:flex;flex-direction:column;overflow:hidden}
+  .admin-backbar{height:54px;flex-shrink:0;display:flex;align-items:center;gap:14px;padding:0 28px;background:rgba(255,255,255,.94);border-bottom:1px solid var(--border)}
+  .admin-back{height:30px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text-sec);font:inherit;cursor:pointer}
+  .admin-back:hover{color:var(--primary);border-color:#c9d6f5;background:#f7f9ff}
+  .admin-back:focus-visible{outline:3px solid rgba(36,91,255,.25);outline-offset:2px}
+  .admin-title{font-size:14px;font-weight:600;color:var(--text)}
+  .admin-context{margin-left:auto;color:var(--text-tri);font-size:12px}
+  .content{flex:1;min-height:0;overflow:auto;padding:22px 28px 30px;background:var(--bg)}
+  .dtw{overflow-x:auto}
+  .toast{top:68px}
+  .btn,.sbtn,.kw-btn,.form-input,.form-textarea,.modal,.dtw,.list-header,.review-stats{border-radius:var(--radius)}
+  .list-header{background:transparent}
+  @media (max-width:1100px){.admin-backbar{padding:0 20px}.content{padding:18px 20px 24px}}
+</style>
+<style id="library-admin-responsive">
+  #libPermRoot{--primary:#245bff;--primary-h:#1546d8;--primary-soft:#e7eeff;--bg:#f4f8ff;--text2:#687187;--muted:#98a4b5;--faint:#b6c0cc;--line:#e9edf5;--line2:#e9edf5;--green:#1f9d55;--orange:#c8751a;--red:#d43a3a;--shadow:0 2px 12px rgba(30,60,120,.05)}
+  #libPanel-upload .dt{min-width:980px}
+  @media (max-width:1100px){
+    #libPermRoot .layout{display:block;max-width:none;margin:0;padding:0}
+    #libPermRoot .side{width:100%;margin-bottom:12px}
+    #libPermRoot .main{width:100%;overflow-x:auto}
+    #libPermRoot .doc-table{min-width:720px}
+  }
+</style>
+<style id="library-admin-table-narrow">
+  @media (max-width:1100px){
+    #libPanel-upload .dt th:last-child,
+    #libPanel-upload .dt td:last-child{position:static;box-shadow:none}
+  }
+</style>
+<style id="library-admin-table-narrow-2">
+  @media (max-width:1100px){
+    #libPanel-upload .dt{min-width:0}
+    #libPanel-upload .dt th,#libPanel-upload .dt td{padding:8px 7px;font-size:12px}
+    #libPanel-upload .action-icons{gap:2px}
+    #libPanel-upload .action-icons .ai{width:22px;height:22px;font-size:11px}
+  }
+</style>
+<style id="library-admin-perm-table-scroll">
+  #libPermRoot .perm-table-wrap{margin-top:12px;max-height:max(220px,calc(100dvh - 430px));overflow:auto;border-radius:8px}
+  #libPermRoot .perm-table-wrap .doc-table{margin-top:0}
+  #libPermRoot .perm-table-wrap thead th{position:sticky;top:0;background:#fff;z-index:2}
+  #libPermRoot .perm-table-wrap:focus-visible{outline:3px solid rgba(36,91,255,.22);outline-offset:2px}
+</style>
+<style id="library-admin-publish-cover">
+  .wf-publish-field{align-items:flex-start}
+  .wf-publish-field .wf-lbl{margin-top:6px}
+  .wf-publish-wrap{flex:1;min-width:0}
+  .wf-publish-options{display:flex;gap:8px;flex-wrap:wrap}
+  .wf-publish-option{display:flex;align-items:flex-start;gap:7px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;min-width:190px;transition:all .15s}
+  .wf-publish-option:hover{border-color:#b9c9eb;background:#f8faff}
+  .wf-publish-option.sel{border-color:var(--primary);background:var(--primary-light);box-shadow:0 0 0 2px rgba(36,91,255,.08)}
+  .wf-publish-option input{margin-top:3px;accent-color:var(--primary)}
+  .wf-publish-option span{display:flex;flex-direction:column;gap:2px;color:var(--text)}
+  .wf-publish-option b{font-size:12.5px;font-weight:600}
+  .wf-publish-option small{font-size:10.5px;color:var(--text-sec);line-height:1.5}
+  .wf-publish-hint{margin-top:6px;font-size:11px;color:var(--text-tri);line-height:1.6}
+  .wf-cover-acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .wf-cover-acts .wf-cover-opt{margin-left:0;font-size:10.5px}
+  .wf-cover-pdf{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;background:linear-gradient(135deg,#fff4e5,#ffe7c7);color:#9a5512;text-align:center;padding:6px}
+  .wf-cover-pdf .pdf-badge{font-size:10px;font-weight:700;letter-spacing:.5px;background:#d94b3d;color:#fff;border-radius:4px;padding:2px 7px}
+  .wf-cover-pdf b{font-size:10.5px;font-weight:600;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .wf-cover-pdf small{font-size:9.5px;color:#a96b31}
+</style>
+<style id="library-admin-perm-expiry">
+  #libPermRoot .m-head .admin-dept{margin-left:auto;font-size:11px;color:var(--muted);background:#f5f8ff;border:1px solid #e3eaf8;border-radius:999px;padding:3px 9px;white-space:nowrap}
+  #libPermRoot .perm-expiry-box{margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:8px;background:#fafbfe}
+  #libPermRoot .perm-expiry-box .pe-head{font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:7px}
+  #libPermRoot .perm-expiry-box select{border:1px solid var(--line2);border-radius:7px;padding:6px 8px;font-size:12px;background:#fff;color:var(--text2);outline:none}
+  #libPermRoot .perm-expiry-box select:focus{border-color:var(--primary)}
+  #libPermRoot .perm-expiry-box input[type=date]{margin-left:8px;border:1px solid var(--line2);border-radius:7px;padding:5px 8px;font-size:12px;background:#fff;color:var(--text2)}
+  #libPermRoot .perm-expiry-box .pe-hint{margin-top:6px;font-size:10.5px;color:var(--muted);line-height:1.6}
+  #libPermRoot .perm-expiry{font-size:10.5px;color:var(--orange);margin-top:4px;white-space:nowrap}
+  #libPermRoot .row-act.grant{border-color:var(--primary);color:var(--primary);background:var(--primary-light);font-weight:600}
+  #libPermRoot .perm-expiry.expired{color:var(--red)}
+  @media (max-width:1100px){#libPermRoot .m-head .admin-dept{margin-left:0;width:100%;border-radius:7px}}
+</style>
+<style id="library-admin-wizard-height">
+  #uploadWizardModal .modal{max-height:min(880px,92vh);display:flex;flex-direction:column;overflow:hidden}
+  #uploadWizardModal .mh,#uploadWizardModal .mf{flex:0 0 auto}
+  #uploadWizardModal .mb{flex:1 1 auto;min-height:0;overflow-y:auto}
+</style>
+<style id="library-admin-access-pill">
+  #libPermRoot .doc-table .d-name{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  #libPermRoot .access-pill{font-size:9.5px;font-weight:500;border-radius:4px;padding:1px 5px;white-space:nowrap}
+  #libPermRoot .access-pill.limited{background:#fff4e5;color:#a45a12}
+  #libPermRoot .access-pill.public{background:#eef3fb;color:#5b6b82}
+</style>
+<style id="library-admin-people-tree">
+  #libPermRoot .dept-node{margin:1px 0}
+  #libPermRoot .dept-lv .dept-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #libPermRoot .dept-lv .dept-people-count{font-size:9.5px;color:var(--faint);background:#f3f5f9;border-radius:8px;padding:1px 6px;flex-shrink:0}
+  #libPermRoot .dept-people{margin-left:17px;border-left:1px dashed var(--line2);padding-left:7px;margin-bottom:4px}
+  #libPermRoot .person-lv{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--text2);transition:all .15s}
+  #libPermRoot .person-lv:hover{background:#f6f9ff;color:var(--text)}
+  #libPermRoot .person-lv.active{background:var(--primary-light);color:var(--primary);font-weight:600}
+  #libPermRoot .person-lv .ic{width:13px;height:13px;fill:currentColor;opacity:.66;flex-shrink:0}
+  #libPermRoot .person-lv.active .ic{opacity:1}
+</style>
+<style id="library-admin-dept-collapse">
+  #libPermRoot .dept-toggle{width:14px;height:20px;padding:0;border:0;background:transparent;color:var(--muted);font-size:10px;line-height:1;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:transform .15s}
+  #libPermRoot .dept-toggle:hover{color:var(--primary)}
+  #libPermRoot .dept-node:not(.collapsed) .dept-toggle{transform:rotate(90deg)}
+  #libPermRoot .dept-node.collapsed .dept-people{display:none}
+</style>
+</head>
+<body data-page="library">
+
+<!-- ═══════ Sidebar ═══════ -->
+<div class="sidebar-wrap">
+  <div class="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon">百</div>百舸</div>
+    <div class="sidebar-nav">
+      <div class="nav-item"><span class="ni">🏠</span>首页</div>
+      <div class="nav-item"><span class="ni">💬</span>对话</div>
+      <div class="nav-item"><span class="ni">✍</span>写作</div>
+      <div class="nav-item"><span class="ni">📝</span>审校</div>
+      <div class="nav-item"><span class="ni">🔍</span>问数</div>
+      <div class="nav-item" id="navReviewAdmin" onclick="openSubPanel('ra')"><span class="ni">⚙</span>审核管理</div>
+      <div class="nav-item active" id="navKb" onclick="openSubPanel('kb')"><span class="ni">📚</span>知识库</div>
+      <div class="nav-item" id="navLib" onclick="openSubPanel('lib')"><span class="ni">🗂</span>百舸文库</div>
+      <div class="nav-item"><span class="ni">🛒</span>应用广场</div>
+      <div class="nav-item"><span class="ni">🤖</span>Agentclaw</div>
+    </div>
+  </div>
+  <!-- Sub-panel: 审核管理 -->
+  <div class="sidebar-sub" id="subRa" style="display:none">
+    <div class="sub-title">审核管理</div>
+    <div class="nav-sub-item" onclick="openReviewAdmin('sensitive')"><span class="dot"></span>涉密审核</div>
+    <div class="nav-sub-item" onclick="openReviewAdmin('permission')"><span class="dot"></span>权限申请</div>
+    <div class="nav-sub-item" onclick="openReviewAdmin('other')"><span class="dot"></span>其他审批</div>
+  </div>
+  <!-- Sub-panel: 知识库 -->
+  <div class="sidebar-sub" id="subKb" style="display:none">
+    <div class="sub-title">知识库</div>
+    <div class="nav-sub-item active" onclick="switchKbType('enterprise')"><span class="dot"></span>企业知识库</div>
+    <div class="nav-sub-item" onclick="switchKbType('department')" style="display:none"><span class="dot"></span>部门知识库</div>
+    <div class="nav-sub-item" onclick="switchKbType('personal')"><span class="dot"></span>个人知识库</div>
+  </div>
+  <!-- Sub-panel: 百舸文库 -->
+  <div class="sidebar-sub" id="subLib" style="display:none">
+    <div class="sub-title">百舸文库</div>
+    <div class="nav-sub-item active" onclick="openLibView('upload')"><span class="dot"></span>文件管理</div>
+    <div class="nav-sub-item" onclick="openLibView('perm')"><span class="dot"></span>权限管理</div>
+  </div>
+</div>
+
+<!-- ═══════ Main ═══════ -->
+<div class="main">
+  <div class="topbar">
+    <div class="topbar-title" id="topbarTitle">知识库</div>
+    <div class="topbar-right">
+      <span class="topbar-icon" onclick="showToast('返回首页','')">🏠</span>
+      <span class="topbar-icon">☰</span>
+      <div class="uavatar">WX</div>
+    </div>
+  </div>
+
+  <div class="admin-backbar">
+  <button class="admin-back" id="adminBack" type="button">← 返回文库首页</button>
+  <span class="admin-title" id="adminViewTitle">文件管理</span>
+  <span class="admin-context">百舸文库 · 后台管理</span>
+</div>
+<div class="content">
+
+    <!-- ╔═══════════════════════════════════════════════╗ -->
+    <!-- ║  LEVEL 1 — 知识库列表（按类型切换）             ║ -->
+    <!-- ╚═══════════════════════════════════════════════╝ -->
+    <div id="kbList">
+      <div class="list-header">
+        <div class="search-box">
+          <input type="text" placeholder="搜索知识库名称">
+          <button class="sbtn">智能搜索</button>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" style="height:34px;padding:0 20px;">+ 新建知识库</button>
+      </div>
+
+      <div class="tabs-row" id="mainTabs">
+        <div class="tab-btn active" onclick="switchTab(this,'all')">全部</div>
+        <div class="tab-btn" onclick="switchTab(this,'mine')">我创建的</div>
+      </div>
+
+      <!-- ── 全部 ── -->
+      <div class="panel active" id="panel-all">
+        <div class="kb-grid" id="kbGrid"></div>
+      </div>
+
+      <!-- ── 我创建的 ── -->
+      <div class="panel" id="panel-mine">
+        <div class="kb-grid" id="kbGridMine"></div>
+      </div>
+    </div>
+
+    <!-- ╔═══════════════════════════════════════╗ -->
+    <!-- ║  审核中心 — 聚合所有审核事项             ║ -->
+    <!-- ╚═══════════════════════════════════════╝ -->
+    <div id="reviewCenter" style="display:none">
+      <div class="list-header">
+        <div style="font-size:18px;font-weight:600" id="rcTitle">涉密审核</div>
+        <div class="spacer"></div>
+      </div>
+
+      <!-- 涉密审核 -->
+      <div class="panel active" id="rcPanel-sensitive">
+        <div class="review-stats" id="rcStats"></div>
+        <div class="filter-bar" id="rcFilter"></div>
+        <div class="dtw">
+          <table class="dt" id="rcSenTable"><thead></thead><tbody></tbody></table>
+          <div class="pagi"><span class="pi" id="rcSenPagiInfo">共 0 条数据</span><select><option>10 / 页</option></select><div class="pb"><div class="pbtn dis">‹</div><div class="pbtn active">1</div><div class="pbtn dis">›</div></div></div>
+        </div>
+      </div>
+
+      <!-- 权限申请（占位） -->
+      <div class="panel" id="rcPanel-permission">
+        <div style="color:var(--text-sec);padding:60px 20px;text-align:center">
+          <div style="font-size:32px;margin-bottom:12px">🔐</div>
+          <div style="font-size:14px">权限申请审核 — 暂无数据（占位）</div>
+        </div>
+      </div>
+
+      <!-- 其他审批（占位） -->
+      <div class="panel" id="rcPanel-other">
+        <div style="color:var(--text-sec);padding:60px 20px;text-align:center">
+          <div style="font-size:32px;margin-bottom:12px">📋</div>
+          <div style="font-size:14px">其他审批 — 暂无数据（占位）</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔═══════════════════════════════════════╗ -->
+    <!-- ║  审核管理 — 管理员处理审核               ║ -->
+    <!-- ╚═══════════════════════════════════════╝ -->
+    <div id="reviewAdmin" style="display:none">
+      <div class="list-header">
+        <div style="font-size:18px;font-weight:600" id="raTitle">涉密审核</div>
+        <div class="spacer"></div>
+      </div>
+
+      <!-- 涉密审核（管理员） -->
+      <div class="panel active" id="raPanel-sensitive">
+        <div class="review-stats" id="raStats"></div>
+        <div class="filter-bar" id="raFilter"></div>
+        <div class="dtw">
+          <table class="dt" id="raTable"><thead></thead><tbody></tbody></table>
+          <div class="pagi"><span class="pi" id="raPagiInfo">共 0 条数据</span><select><option>10 / 页</option></select><div class="pb"><div class="pbtn dis">‹</div><div class="pbtn active">1</div><div class="pbtn dis">›</div></div></div>
+        </div>
+      </div>
+
+      <!-- 权限申请（占位） -->
+      <div class="panel" id="raPanel-permission">
+        <div style="color:var(--text-sec);padding:60px 20px;text-align:center">
+          <div style="font-size:32px;margin-bottom:12px">🔐</div>
+          <div style="font-size:14px">权限申请管理 — 暂无数据（占位）</div>
+        </div>
+      </div>
+
+      <!-- 其他审批（占位） -->
+      <div class="panel" id="raPanel-other">
+        <div style="color:var(--text-sec);padding:60px 20px;text-align:center">
+          <div style="font-size:32px;margin-bottom:12px">📋</div>
+          <div style="font-size:14px">其他审批管理 — 暂无数据（占位）</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔═══════════════════════════════════════╗ -->
+    <!-- ║  LEVEL 2 — 知识库详情                   ║ -->
+    <!-- ╚═══════════════════════════════════════╝ -->
+    <div id="kbDetail">
+      <div class="detail-header">
+        <button class="back-btn" onclick="backToList()">← 返回</button>
+        <span class="kb-title" id="detailTitle">test0019090</span>
+      </div>
+
+      <div class="panel active" id="panel-dFiles">
+        <div class="list-header" style="margin-bottom:12px">
+          <div style="font-size:15px;font-weight:600">文件列表</div>
+          <div class="spacer"></div>
+          <button class="btn btn-primary" style="height:34px;padding:0 16px" onclick="openUploadWizard()"><span style="font-size:20px;line-height:1;margin-right:2px">+</span> 上传文件</button>
+        </div>
+
+        <div id="kbDetailTab-files">
+          <div class="filter-bar">
+            <div class="date-range"><input type="date" placeholder="开始日期"><span class="arrow">→</span><input type="date" placeholder="结束日期"></div>
+            <select><option>选择解析状态</option><option>未解析</option><option>解析中</option><option>已解析</option><option>解析失败</option></select>
+            <select><option>选择涉密审查状态</option><option>检测中</option><option>已通过</option><option>涉密可疑</option><option>审核中</option><option>已驳回</option></select>
+            <select><option>选择解析策略</option><option>通用解析策略</option><option>表格解析策略</option></select>
+            <select><option>选择启用状态</option><option>启用</option><option>禁用</option></select>
+            <input type="text" placeholder="输入文件名称">
+            <button class="btn btn-primary">查询</button>
+          </div>
+          <div class="dtw">
+            <table class="dt">
+              <thead><tr><th style="width:36px"><div class="checkbox" onclick="this.classList.toggle('checked')"></div></th><th>文件名</th><th>版本号</th><th>解析策略</th><th>创建时间</th><th>解析状态</th><th>涉密审查状态</th><th>最近更新</th><th>操作</th></tr></thead>
+              <tbody id="kbFileListBody">
+                <!-- rendered by renderFileList() -->
+              </tbody>
+            </table>
+            <div class="pagi"><span class="pi" id="kbFileListCount">共 0 条数据</span><select><option>10 / 页</option></select><div class="pb"><div class="pbtn dis">‹</div><div class="pbtn active">1</div><div class="pbtn dis">›</div></div></div>
+            <div class="batch-bar"><span class="sc">已选 0 项</span><button class="btn btn-primary btn-sm">批量启用</button><button class="btn btn-outline btn-sm">批量禁用</button><button class="btn btn-danger btn-sm">批量删除</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  
+  <div id="libView" style="display:none">
+      <!-- 文件管理（迁移自企业知识库：选择知识库 → 文件列表 → 上传向导） -->
+      <div class="panel" id="libPanel-upload">
+        <div id="libUploadRoot">
+
+          <!-- 文件列表 -->
+          <div id="libKbFiles">
+            <div class="list-header" style="margin-bottom:12px">
+              <div style="font-size:15px;font-weight:600">文件列表</div>
+              <div class="spacer"></div>
+              <button class="btn btn-primary" style="height:34px;padding:0 16px" onclick="libOpenUploadWizard()"><span style="font-size:20px;line-height:1;margin-right:2px">+</span> 上传文件</button>
+            </div>
+
+            <div class="filter-bar">
+              <div class="date-range"><input type="date" id="libFDateStart" placeholder="开始日期"><span class="arrow">→</span><input type="date" id="libFDateEnd" placeholder="结束日期"></div>
+              <select id="libFParse"><option value="">选择解析状态</option><option value="unparsed">未解析</option><option value="parsing">解析中</option><option value="parsed">已解析</option><option value="failed">解析失败</option></select>
+              <select id="libFSecret"><option value="">选择涉密审查状态</option><option value="detecting">检测中</option><option value="passed">已通过</option><option value="hit">涉密可疑</option><option value="submitted">审核中</option><option value="rejected">已驳回</option></select>
+              <input type="text" id="libFName" placeholder="输入文件名称">
+              <button class="btn btn-primary" onclick="libApplyFilter()">查询</button>
+            </div>
+            <div class="dtw">
+              <table class="dt">
+                <thead><tr><th style="width:36px"><div class="checkbox" onclick="this.classList.toggle('checked')"></div></th><th>文件名</th><th>文件来源</th><th>版本号</th><th>创建时间</th><th>解析状态</th><th>涉密审查状态</th><th>最近更新</th><th>操作</th></tr></thead>
+                <tbody id="libKbFileListBody"></tbody>
+              </table>
+              <div class="pagi"><span class="pi" id="libKbFileListCount">共 0 条数据</span><select id="libKbFileListSize" onchange="libChangeFileSize(this.value)"><option value="10" selected>10 / 页</option><option value="24">24 / 页</option><option value="48">48 / 页</option></select><div class="pb" id="libKbFileListPager"></div></div>
+              <div class="batch-bar"><span class="sc" id="libBatchCount">已选 0 项</span><button class="btn btn-danger btn-sm" onclick="libDeleteSelected()">批量删除</button></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+      <!-- 权限管理（百舸文库权限设置 · 迁移） -->
+      <div class="panel" id="libPanel-perm">
+        <div id="libPermRoot">
+  <div class="layout">
+    <div class="side">
+      <div class="tt">授权对象 · 企业 › 部门 / 人员 <span class="cnt" id="deptCount">6</span></div>
+      <div class="side-search">
+        <input id="deptKw" placeholder="搜索部门或人员…" oninput="filterDepts(this.value)">
+        <svg viewBox="0 0 24 24"><path d="M10 2a8 8 0 1 0 4.9 14.3l5 5 1.4-1.4-5-5A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/></svg>
+      </div>
+      <div class="dept-lv" id="entNode" onclick="selectDept('enterprise', this)">
+        <span class="arr">▾</span><svg class="ic" viewBox="0 0 24 24"><path d="M3 21h18V5h-7l-2-2H3v18z"/></svg>船舶研究院（企业）
+      </div>
+      <div class="dept-sub" id="deptList"></div>
+    </div>
+  
+    <div class="main">
+      <!-- 未选部门空态 -->
+      <div class="empty-state" id="emptyState">
+        <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg>
+        <span class="t">请先选择部门</span>
+        <span class="s">左侧选择授权对象；列表仅显示当前部门上传的文档</span>
+      </div>
+  
+      <!-- 权限配置区（选部门后显示） -->
+      <div id="permArea" style="display:none">
+        <div class="m-head">
+          <span class="dept-name" id="curDept">—</span>
+          <span class="dept-info">!
+            <span class="tip-pop">
+            <div class="tp-tt">部门管理员授权</div>
+            <div class="tp-bd">列表只显示当前部门上传的文档。左侧部门节点设置部门整体权限，展开到人员可设置单人权限；个人权限与部门权限取较高值，个人设置不会降低部门已授予权限。可设置权限级别和有效期，到期自动回收。</div>
+            </span>
+          </span>
+          <span class="admin-dept" id="adminDeptLabel">管理身份：—</span>
+        </div>
+  
+        <div class="search-row">
+          <div class="search-wrap">
+            <input id="kw" placeholder="搜索文档标题、分类、时间" onkeydown="if(event.key==='Enter')doSearch()" oninput="onKwInput()">
+            <span class="clear" id="kwClear" onclick="clearKw()">×</span>
+          </div>
+          <button class="kw-btn" onclick="doSearch()">检索</button>
+        </div>
+  
+        <div class="src-row">
+          <span class="lb">文档来源</span>
+          <div class="src-tabs">
+            <div class="src-tab active" data-src="all" onclick="setSource('all')">全部文档</div>
+            <div class="src-tab" data-src="crawl" onclick="setSource('crawl')">爬虫平台公开文档</div>
+            <div class="src-tab" data-src="upload" onclick="setSource('upload')">部门上传内部文档</div>
+          </div>
+        </div>
+        <div class="type-row" id="typeRow"></div>
+  
+        <div class="scope-bar">
+          <span class="info" id="scopeInfo"></span>
+          <div class="acts">
+            <button class="btn warn" id="btnRevokeSel" onclick="revokeSelected()" disabled>赋予所选</button>
+            <button class="btn danger" id="btnScope" onclick="revokeScope()">赋予当前筛选全部</button>
+            <button class="btn primary" onclick="restoreAll()">全部设为默认</button>
+          </div>
+        </div>
+  
+        <div class="perm-table-wrap" tabindex="0" aria-label="文档权限列表，可滚动">
+        <table class="doc-table">
+          <thead><tr>
+            <th style="width:28px"><input type="checkbox" id="ckAll" title="全选当前页" onchange="toggleAll(this.checked)"></th>
+            <th style="width:34%">文档</th>
+            <th>来源</th>
+            <th>类型</th>
+            <th style="width:150px">当前权限</th>
+            <th style="width:90px" align="right">操作</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+        </div>
+  
+        <div class="pager">
+          <span class="pinfo" id="pinfo"></span>
+          <div class="pgs" id="pgs"></div>
+          <select id="sizeSel" onchange="changeSize(this.value)">
+            <option value="12">12 条/页</option>
+            <option value="24">24 条/页</option>
+            <option value="48">48 条/页</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- 设置权限弹窗 -->
+  <div class="mask" id="revokeMask" onclick="if(event.target===this)closeRevoke()">
+    <div class="modal">
+      <div class="modal-head"><b>设置权限</b><span class="close" onclick="closeRevoke()">×</span></div>
+      <div class="modal-body">
+        <div class="scope-desc" id="revokeDesc"></div>
+        <div class="level-list" id="levelList"></div>
+        <div class="level-none" onclick="pickNone()"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:var(--red)"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm4.2 12.8-1.4 1.4L12 13.4l-2.8 2.8-1.4-1.4L10.6 12 7.8 9.2l1.4-1.4L12 10.6l2.8-2.8 1.4 1.4L13.4 12z"/></svg>不赋予（无全文权限，有限公开仅可试读前 2 页）</div>
+        <div class="perm-expiry-box" id="permExpiryBox">
+          <div class="pe-head">授权有效期</div>
+          <select id="revokeExpiry" onchange="onRevokeExpiryChange(this.value)" aria-label="授权有效期">
+            <option value="permanent">永久有效</option>
+            <option value="7">7 天后自动回收</option>
+            <option value="30">30 天后自动回收</option>
+            <option value="90">90 天后自动回收</option>
+            <option value="custom">自定义到期日期</option>
+          </select>
+          <input type="date" id="revokeExpiryDate" onchange="onRevokeExpiryDateChange(this.value)" aria-label="自定义到期日期" hidden />
+          <div class="pe-hint" id="revokeExpiryHint">权限到期后自动回收，无需手动操作。</div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn" onclick="closeRevoke()">取消</button>
+        <button class="btn primary" onclick="confirmRevoke()">确认赋予</button>
+      </div>
+    </div>
+  </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MODALS ═══════ -->
+<div class="modal-overlay" id="reviewModal"><div class="modal"><div class="mh"><h3 id="rvTitle">审核操作</h3><button class="mc" onclick="closeModal('reviewModal')">✕</button></div><div class="mb"><div class="fd-card"><div class="fd-row"><span class="fl">文件名</span><span class="fv" id="rvFile">—</span></div><div class="fd-row"><span class="fl">上传人</span><span class="fv">zhang.san</span></div><div class="fd-row"><span class="fl">上传时间</span><span class="fv">2026-08-12 14:30:05</span></div><div class="fd-row"><span class="fl">知识库</span><span class="fv" id="rvKbName">企业知识库 / test0019090</span></div><div class="fd-row"><span class="fl">涉密关键词</span><span class="fv"><span class="kw-tag">秘密</span><span class="kw-tag">内部</span></span></div></div><div id="rvReject" class="hidden" style="margin-top:16px"><label class="form-label">驳回意见 <span style="color:var(--danger)">*</span></label><textarea class="form-textarea" id="rvRejectReason" placeholder="请填写驳回原因…"></textarea><div class="form-hint">驳回意见将通知上传人</div></div><div id="rvApprove" class="hidden" style="margin-top:16px"><label class="form-label">审核备注</label><textarea class="form-textarea" id="rvApproveNote" placeholder="可填写审核备注，将记录到审核时间线中"></textarea></div></div><div class="mf"><button class="btn btn-outline btn-lg" onclick="closeModal('reviewModal')">取消</button><button class="btn btn-lg" id="rvSubmit" onclick="submitReview()">确认</button></div></div></div>
+
+<div class="modal-overlay" id="detailModal"><div class="modal wide"><div class="mh"><h3>📋 审核详情</h3><button class="mc" onclick="closeModal('detailModal')">✕</button></div><div class="mb"><div class="fd-card"><div class="fd-row"><span class="fl">文件名</span><span class="fv">XX项目技术方案_v3.pdf</span></div><div class="fd-row"><span class="fl">上传人</span><span class="fv">wenhui.xian</span></div><div class="fd-row"><span class="fl">当前状态</span><span class="fv"><span class="status-tag warning"><span class="sdot orange"></span>审核中</span></span></div></div><div style="font-size:14px;font-weight:500;margin-bottom:12px">流转记录</div><div class="tl"><div class="tl-item"><div class="tl-dot upload">⬆</div><div class="tl-body"><div class="tlt">用户发起上传</div><div class="tltime">2026-08-12 14:28:30</div></div></div><div class="tl-item"><div class="tl-dot detect">🔍</div><div class="tl-body"><div class="tlt">系统检测到涉密内容</div><div class="tltime">2026-08-12 14:28:45</div><div class="tldesc">命中关键词：秘密、内部</div></div></div><div class="tl-item"><div class="tl-dot upload">✅</div><div class="tl-body"><div class="tlt">用户确认继续上传</div><div class="tltime">2026-08-12 14:30:05</div></div></div><div class="tl-item"><div class="tl-dot wait">⏳</div><div class="tl-body"><div class="tlt warn">等待管理员审核</div><div class="tltime">当前</div><div class="tldesc">文档处于解析前状态，审核通过后方可入库并解析</div></div></div></div></div><div class="mf"><button class="btn btn-outline btn-lg" onclick="closeModal('detailModal')">关闭</button></div></div></div>
+
+<div class="modal-overlay" id="approvedModal"><div class="modal wide"><div class="mh"><h3>📋 审核详情 — 已通过</h3><button class="mc" onclick="closeModal('approvedModal')">✕</button></div><div class="mb"><div class="fd-card"><div class="fd-row"><span class="fl">文件名</span><span class="fv">系统安全评估报告.pdf</span></div><div class="fd-row"><span class="fl">审核状态</span><span class="fv"><span class="status-tag success"><span class="sdot green"></span>已通过</span></span></div></div><div style="font-size:14px;font-weight:500;margin-bottom:12px">流转记录</div><div class="tl"><div class="tl-item"><div class="tl-dot upload">⬆</div><div class="tl-body"><div class="tlt">用户发起上传</div><div class="tltime">2026-08-09 11:18:20</div></div></div><div class="tl-item"><div class="tl-dot detect">🔍</div><div class="tl-body"><div class="tlt">系统检测到涉密内容</div><div class="tltime">2026-08-09 11:18:35</div></div></div><div class="tl-item"><div class="tl-dot upload">✅</div><div class="tl-body"><div class="tlt">用户确认继续上传</div><div class="tltime">2026-08-09 11:20:00</div></div></div><div class="tl-item"><div class="tl-dot review">✅</div><div class="tl-body"><div class="tlt ok">管理员审核通过</div><div class="tltime">2026-08-09 14:10:30</div><div class="tldesc" id="approvedTimelineDesc">审核人：wenhui.xian，文档正式入库并开始解析</div></div></div></div></div><div class="mf"><button class="btn btn-outline btn-lg" onclick="closeModal('approvedModal')">关闭</button></div></div></div>
+
+<div class="modal-overlay" id="rejectedModal"><div class="modal wide"><div class="mh"><h3>📋 审核详情 — 已驳回</h3><button class="mc" onclick="closeModal('rejectedModal')">✕</button></div><div class="mb"><div class="fd-card"><div class="fd-row"><span class="fl">文件名</span><span class="fv">核心算法设计文档.docx</span></div><div class="fd-row"><span class="fl">审核状态</span><span class="fv"><span class="status-tag danger"><span class="sdot red"></span>已驳回</span></span></div><div class="fd-row"><span class="fl">驳回意见</span><span class="fv" style="color:var(--danger)">文件包含未脱敏的核心算法参数及机密级标注，请完成脱敏处理后重新上传。</span></div></div><div style="font-size:14px;font-weight:500;margin-bottom:12px">流转记录</div><div class="tl"><div class="tl-item"><div class="tl-dot upload">⬆</div><div class="tl-body"><div class="tlt">用户发起上传</div><div class="tltime">2026-08-08 14:50:10</div></div></div><div class="tl-item"><div class="tl-dot detect">🔍</div><div class="tl-body"><div class="tlt">系统检测到涉密内容</div><div class="tltime">2026-08-08 14:50:28</div></div></div><div class="tl-item"><div class="tl-dot upload">✅</div><div class="tl-body"><div class="tlt">用户确认继续上传</div><div class="tltime">2026-08-08 14:55:00</div></div></div><div class="tl-item"><div class="tl-dot reject">❌</div><div class="tl-body"><div class="tlt fail">管理员审核驳回</div><div class="tltime">2026-08-08 17:20:15</div><div class="tldesc">审核人：wenhui.xian，文档未入库，不会进入解析流程</div></div></div></div></div><div class="mf"><button class="btn btn-outline btn-lg" onclick="closeModal('rejectedModal')">关闭</button></div></div></div>
+
+<!-- ═══════ MODAL: 涉密检测详情 ═══════ -->
+<div class="modal-overlay" id="secretDetailModal">
+  <div class="modal wide">
+    <div class="mh"><h3 id="sdTitle">涉密检测详情</h3><button class="mc" onclick="closeModal('secretDetailModal')">✕</button></div>
+    <div class="mb" id="sdBody"></div>
+    <div class="mf" id="sdFooter"></div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL: 文档预览 ═══════ -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal fullview">
+    <div class="mh">
+      <h3><span id="pvFileName">XX项目技术方案_v3.pdf</span></h3>
+      <button class="mc" onclick="closePreviewModal()">✕</button>
+    </div>
+    <div class="preview-tabs">
+      <div class="preview-tab active" id="pvTabBtnPreview" onclick="switchPreviewTab('preview')">预览</div>
+      <div class="preview-tab" id="pvTabBtnInfo" onclick="switchPreviewTab('info')">信息</div>
+    </div>
+    <div class="preview-body">
+      <div class="preview-panel active" id="pvTabPreview">
+        <div class="preview-doc">
+          <div class="pd-watermark"></div>
+          <div class="preview-kw-bar">
+            <span class="pkb-label">命中关键词：</span>
+            <span id="pvKwTags"></span>
+          </div>
+          <div class="pd-title" id="pvDocTitle">XX项目技术方案</div>
+          <div class="pd-meta" id="pvDocMeta">文档编号：XX-2026-003 &nbsp;|&nbsp; 密级标注：秘密 &nbsp;|&nbsp; 分发范围：内部资料 &nbsp;|&nbsp; 机密等级：高 &nbsp;|&nbsp; 受控分发</div>
+          <div class="pd-content" id="pvContent">
+            <h4>一、项目概述</h4>
+            <p>本技术方案旨在为XX项目提供整体技术架构设计与实施路径规划。项目涉及核心业务系统重构，覆盖用户认证、数据处理、安全审计三大模块。</p>
+            <p>根据项目保密管理要求，本方案中涉及的技术参数、接口规范、部署架构等信息均属于秘密级别，机密等级为高级别，仅限内部人员查阅，未经授权不得对外披露。本文档属于内部资料，严格按受控分发范围流转。</p>
+            <h4>二、技术架构</h4>
+            <p>系统采用微服务架构，基于 Kubernetes 容器编排平台部署。核心服务包括用户网关、业务引擎、数据中台和安全中心四个子系统，各子系统通过 gRPC 协议通信。</p>
+            <p>数据库层采用分布式架构，主库负责写入操作，从库负责查询操作，通过 binlog 实现数据同步。所有敏感数据字段在存储前进行 AES-256 加密处理。</p>
+            <h4>三、数据安全方案</h4>
+            <p>数据分级管理制度将数据分为公开、内部、秘密、机密四个等级。本方案涉及的核心算法参数、密钥管理策略、安全审计日志格式等均为秘密级数据。</p>
+            <p>访问控制采用 RBAC + ABAC 混合模式，结合用户身份、设备指纹、网络环境等多维度因素进行动态授权。所有访问行为记录至审计日志，保留期限不少于 3 年。</p>
+            <h4>四、实施计划</h4>
+            <p>项目分三期实施：一期完成基础架构搭建与核心模块开发（8周），二期完成系统集成测试与性能调优（6周），三期完成灰度发布与全量上线（4周）。</p>
+            <p>各阶段均需通过安全评审后方可进入下一阶段。评审内容包括代码安全扫描、渗透测试、秘密级数据脱敏验证等。</p>
+          </div>
+          <div class="preview-page-ctrl">
+            <span>第 <strong>1</strong> / 12 页</span>
+          </div>
+        </div>
+      </div>
+      <div class="preview-panel" id="pvTabInfo">
+        <div class="preview-info-card">
+          <div class="preview-info-row"><div class="pi-label">文件名</div><div class="pi-val" id="pvInfoFile">—</div></div>
+          <div class="preview-info-row"><div class="pi-label">格式</div><div class="pi-val">PDF</div></div>
+          <div class="preview-info-row"><div class="pi-label">大小</div><div class="pi-val">2.4 MB</div></div>
+          <div class="preview-info-row"><div class="pi-label">页数</div><div class="pi-val">12 页</div></div>
+          <div class="preview-info-row"><div class="pi-label">上传人</div><div class="pi-val" id="pvInfoUploader">—</div></div>
+          <div class="preview-info-row"><div class="pi-label">上传时间</div><div class="pi-val" id="pvInfoTime">—</div></div>
+          <div class="preview-info-row"><div class="pi-label">命中关键词</div><div class="pi-val" id="pvInfoKw">—</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="preview-footer" id="pvFooter">
+      <div class="pf-left">
+        <span style="color:var(--warning)">⚠ 此文档仅供审核预览，不可下载或外传</span>
+      </div>
+      <div class="pf-actions" id="pvActions"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ MODAL: 三步上传向导 ═══════ -->
+<div class="modal-overlay" id="uploadWizardModal">
+  <div class="modal wide" style="width:640px">
+    <div class="mh">
+      <h3>📤 上传文件</h3>
+      <button class="mc" onclick="closeUploadWizard()">✕</button>
+    </div>
+    <div class="mb">
+      <div class="wizard-steps">
+        <div class="wizard-step active" id="wizardStepInd1"><span class="wn">1</span><span class="wl">上传文件</span></div>
+        <div class="wizard-step-arr">→</div>
+        <div class="wizard-step" id="wizardStepInd2"><span class="wn">2</span><span class="wl">补充信息</span></div>
+        <div class="wizard-step-arr">→</div>
+        <div class="wizard-step" id="wizardStepInd3"><span class="wn">3</span><span class="wl">完成录入</span></div>
+      </div>
+
+      <!-- Step 1: 上传文件 -->
+      <div id="wizardStep1">
+        <div class="upload-zone" style="margin-bottom:0">
+          <div class="upload-zone-title">⬆ 上传文件至 <span id="wizardTarget">企业知识库</span></div>
+          <div class="upload-drop" onclick="simulateWizardUpload()">
+            <div class="ui">📤</div>
+            <div class="ut">将文件拖到此处，或 <em>点击上传</em></div>
+            <div class="uh">支持 Word、PDF 格式，单文件不超过 50MB</div>
+          </div>
+          <div id="wizardUploadList"></div>
+        </div>
+      </div>
+
+      <!-- Step 2: 补充信息 -->
+      <div id="wizardStep2" class="hidden">
+        <div class="wizard-step-title">补充文档信息</div>
+        <div class="wizard-files-layout">
+          <!-- 左侧：文件列表 -->
+          <div class="wf-side">
+            <div class="wf-side-title">文件名</div>
+            <div class="wf-side-sub" id="wfiTotal">0 个文件，共 0 MB</div>
+            <div class="wf-side-list" id="wfiFileList"></div>
+          </div>
+          <!-- 右侧：选中文件详情（可编辑） -->
+          <div class="wf-main">
+            <div class="wf-field wf-cover-field">
+              <span class="wf-lbl">文档封面<span style="color:var(--danger)">*</span></span>
+              <div class="wf-cover-wrap">
+                <div class="wf-cover" id="wfiCover" onclick="simulateCoverUpload()" title="点击自定义上传封面"></div>
+                <div class="wf-preset-covers" id="wfiPresetCovers"></div>
+                <div class="wf-cover-acts">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="simulateCoverUpload()">🖼 自定义上传图片</button>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="autoPdfCover()">📄 自动获取封面</button>
+                  <span class="wf-cover-opt">从上传的 PDF 自动获取首页封面</span>
+                </div>
+              </div>
+            </div>
+            <div class="wf-field">
+              <span class="wf-lbl">文件名称</span>
+              <input class="wf-input" id="wfiNameInput" placeholder="输入文件名称" oninput="onWizardNameInput(this.value)">
+            </div>
+            <div class="wf-field">
+              <span class="wf-lbl">文件类型</span>
+              <span class="wf-type-chip" id="wfiType">—</span>
+            </div>
+            <div class="wf-field">
+              <span class="wf-lbl">版本号</span>
+              <input class="wf-input" id="wfiVerInput" value="V1.0.0" oninput="onWizardVerInput(this.value)">
+            </div>
+            <div class="wf-field">
+              <span class="wf-lbl">大小</span>
+              <span class="wf-val" id="wfiSize">—</span>
+            </div>
+            <div class="wf-field">
+              <span class="wf-lbl">上传部门</span>
+              <span class="wf-val" id="wfiOwnerDept">—</span>
+            </div>
+            <div class="wf-field wf-publish-field">
+              <span class="wf-lbl">公开形式<span style="color:var(--danger)">*</span></span>
+              <div class="wf-publish-wrap">
+                <div class="wf-publish-options" id="wizardPublishOptions">
+                  <label class="wf-publish-option sel" data-mode="public">
+                    <input type="radio" name="wizardPublishMode" value="public" checked onchange="setPublishMode('public')" />
+                    <span><b>全部公开</b><small>所有部门都可查看全文</small></span>
+                  </label>
+                  <label class="wf-publish-option" data-mode="limited">
+                    <input type="radio" name="wizardPublishMode" value="limited" onchange="setPublishMode('limited')" />
+                    <span><b>有限公开</b><small>非本部门试读前 2 页，本部门可看全文</small></span>
+                  </label>
+                </div>
+                <div class="wf-publish-hint" id="wizardPublishHint">全部部门可查看全文；如需限制，请选择有限公开。</div>
+              </div>
+            </div>
+            <div style="margin-top:6px">
+              <label class="form-label">文档标签 <span style="font-weight:normal;color:var(--text-tri)">（可选）</span></label>
+              <div id="wizardTagSelector" class="wizard-tag-selector"></div>
+              <div class="form-hint">最多可选择 5 个标签</div>
+            </div>
+          </div>
+        </div>
+        <div class="form-hint" style="margin-top:8px">* 实际字段以产品最终定义为准，此处为占位。</div>
+      </div>
+
+      <!-- Step 3: 完成录入 -->
+      <div id="wizardStep3" class="hidden">
+        <div id="wizardFinishSummary" style="text-align:center;padding:8px 0 4px">
+          <div class="wizard-step-title">确认录入</div>
+          <div class="wizard-summary-row" style="justify-content:center">待录入文件数：<span id="wizardSummaryCount">—</span></div>
+          <div class="wizard-tip" style="text-align:center;border-left:none;border-top:1px solid var(--primary);max-width:440px;margin:16px auto 0">完成录入后，系统将自动对文件进行涉密内容检测，命中涉密关键词的文件需经审核后方可入库。</div>
+        </div>
+        <div id="wizardDetecting" class="hidden" style="text-align:center;padding:40px 0">
+          <div style="font-size:32px;margin-bottom:10px">⏳</div>
+          <div style="font-size:14px;font-weight:500;color:var(--text)">正在完成录入…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="mf" id="wizardFooter">
+      <button class="btn btn-outline" id="wizardPrev" onclick="prevWizardStep()">上一步</button>
+      <button class="btn btn-primary" id="wizardNext" onclick="nextWizardStep()">下一步</button>
+    </div>
+  </div>
+
+  <!-- ═══ 百舸文库（文件管理 / 权限管理）═══ -->
+
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="wm"></div>
+
+<script src="../src/library-data.js?v=20261026-library"></script>
+<script src="../src/library-store.js?v=20261026-store"></script>
+<script>
+/* ══════════════════════════════════════
+   DATA — 三类知识库各自的数据
+   ══════════════════════════════════════ */
+const KB_DATA = {
+  enterprise: {
+    label: '企业知识库',
+    cards: [
+      {name:'测试',desc:'测试',owner:'系统管理员',docs:0,time:'2026-08-07 16:14:34'},
+      {name:'世界文库',desc:'世界文库',owner:'系统管理员',docs:0,time:'2026-07-16 14:25:09'},
+      {name:'测试0714',desc:'测试0714',owner:'zkj007',docs:0,time:'2026-07-14 11:42:03'},
+      {name:'111',desc:'111',owner:'系统管理员',docs:0,time:'2026-07-13 20:11:11'},
+      {name:'测试20260703',desc:'测试20260703',owner:'系统管理员',docs:5,time:'2026-07-03 16:25:22'},
+      {name:'test0019090',desc:'test0019090',owner:'系统管理员',docs:2,time:'2026-07-02 16:56:34'},
+      {name:'法律法规',desc:'法律法规',owner:'系统管理员',docs:2,time:'2026-06-29 20:52:02'}
+    ],
+    files: {
+      'test0019090': [
+        {name:'中华人民共和国反间谍法_2...',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-13 20:16:11',updateTime:'2026-07-13 20:16:11',parseStatus:'parsed',secretStatus:'passed',enabled:true,source:'爬虫平台'},
+        {name:'喝茶时光_.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-03 10:12:10',updateTime:'2026-07-03 10:12:10',parseStatus:'parsed',secretStatus:'passed',enabled:true},
+        {name:'系统安全评估报告.pdf',type:'pdf',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-08-09 11:18:20',updateTime:'2026-08-09 14:10:30',parseStatus:'parsed',secretStatus:'passed',kw:['机密','内部'],hitPreview:['系统整体架构采用零信任设计，核心网关在<span class="kw-hl">内部</span>网络边界部署，评估结论为<span class="kw-hl">机密</span>级，未授权人员禁止查阅。','访问控制矩阵、渗透测试结果及漏洞清单均标记为<span class="kw-hl">机密</span>，仅向<span class="kw-hl">内部</span>安全团队开放。']},
+        {name:'核心算法设计文档.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-08-08 14:50:10',updateTime:'2026-08-08 17:20:15',parseStatus:'unparsed',secretStatus:'rejected',kw:['秘密','涉密'],hitPreview:['第3.2节算法参数表明确写出“密钥生成向量属于<span class="kw-hl">秘密</span>级”，同页多处出现<span class="kw-hl">涉密</span>字样。','实验对比数据引用了<span class="kw-hl">涉密</span>数据集，结论部分再次强调参数为<span class="kw-hl">秘密</span>级。']},
+        {name:'XX项目技术方案_v3.pdf',type:'pdf',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-08-12 14:28:30',updateTime:'2026-08-12 14:30:05',parseStatus:'unparsed',secretStatus:'submitted',kw:['秘密','内部'],hitPreview:['根据项目保密管理要求，本方案中涉及的技术参数、接口规范、部署架构等信息均属于<span class="kw-hl">秘密</span>级别，仅限<span class="kw-hl">内部</span>人员查阅。','数据分级管理制度将数据分为公开、<span class="kw-hl">内部</span>、<span class="kw-hl">秘密</span>、机密四个等级，本方案涉及的数据按秘密级处理。']},
+        {name:'2026年度预算报告.docx',type:'doc',version:'V1.0.0',strategy:'表格解析策略',createTime:'2026-08-10 16:40:00',updateTime:'2026-08-10 16:42:00',parseStatus:'unparsed',secretStatus:'hit',kw:['秘密'],hitPreview:['表4-2“专项资金明细”中，研发支出项备注为<span class="kw-hl">秘密</span>级，配套说明列明不得对外披露。','预算编制说明第7条指出：涉及国家补贴及战略客户返利的金额按<span class="kw-hl">秘密</span>级管理。']}
+      ],
+      '法律法规': [
+        {name:'民法典总则编解读.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-06-28 09:30:00',updateTime:'2026-06-28 09:30:00',parseStatus:'parsed',secretStatus:'passed',enabled:true,source:'爬虫平台'},
+        {name:'新公司法修订要点.pdf',type:'pdf',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-06-25 16:45:00',updateTime:'2026-06-25 16:45:00',parseStatus:'parsed',secretStatus:'passed',enabled:true,source:'爬虫平台'}
+      ],
+      '测试20260703': [
+        {name:'测试文档_A.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-03 10:00:00',updateTime:'2026-07-03 10:00:00',parseStatus:'parsed',secretStatus:'passed',enabled:true},
+        {name:'船舶设计规范汇编.pdf',type:'pdf',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-03 09:30:00',updateTime:'2026-07-03 09:30:00',parseStatus:'parsed',secretStatus:'passed',enabled:true,source:'爬虫平台'},
+        {name:'2026全球造船市场动态.pdf',type:'pdf',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-03 08:50:00',updateTime:'2026-07-03 08:50:00',parseStatus:'parsed',secretStatus:'passed',enabled:true,source:'爬虫平台'}
+      ]
+    },
+    reviewItems: [
+      {file:'XX项目技术方案_v3.pdf',type:'pdf',kb:'test0019090',uploader:'zhang.san',time:'2026-08-12 14:30',kw:['秘密','内部'],status:'pending',reviewer:'—'},
+      {file:'2026年度预算报告.docx',type:'doc',kb:'test0019090',uploader:'wang.wu',time:'2026-08-10 16:42',kw:['秘密'],status:'pending',reviewer:'—'},
+      {file:'系统安全评估报告.pdf',type:'pdf',kb:'test0019090',uploader:'zhao.liu',time:'2026-08-09 11:20',kw:['机密','内部'],status:'approved',reviewer:'wenhui.xian'},
+      {file:'核心算法设计文档.docx',type:'doc',kb:'test0019090',uploader:'sun.qi',time:'2026-08-08 14:55',kw:['秘密','涉密'],status:'rejected',reviewer:'wenhui.xian'}
+    ],
+    myrvItems: [
+      {file:'XX项目技术方案_v3.pdf',type:'pdf',kb:'test0019090',time:'2026-08-12 14:30',kw:['秘密','内部'],status:'pending',opinion:'等待管理员审核…'},
+      {file:'系统架构设计说明.docx',type:'doc',kb:'test0019090',time:'2026-08-07 10:05',kw:['内部'],status:'approved',opinion:'内容合规，已入库'},
+    ],
+    stats:{pending:2,approved:8,rejected:4,total:14}
+  },
+  department: {
+    label: '部门知识库',
+    cards: [
+      {name:'人事制度',desc:'公司人事管理制度汇编',owner:'系统管理员',docs:3,time:'2026-07-20 09:00:00'},
+      {name:'技术文档',desc:'研发部技术文档库',owner:'系统管理员',docs:8,time:'2026-07-15 14:30:00'},
+      {name:'培训资料',desc:'新员工培训材料',owner:'hr.admin',docs:5,time:'2026-06-28 10:15:00'}
+    ],
+    files: {
+      '人事制度': [
+        {name:'考勤管理制度.pdf',type:'pdf',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-20 09:00:00',updateTime:'2026-07-20 09:00:00',parseStatus:'parsed',secretStatus:'passed',enabled:true},
+        {name:'涉密人员管理办法.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-08-11 09:13:00',updateTime:'2026-08-11 09:15:00',parseStatus:'unparsed',secretStatus:'submitted',kw:['机密','涉密'],hitPreview:['第五条明确：承担<span class="kw-hl">涉密</span>岗位职责的人员，其档案密级标注为<span class="kw-hl">机密</span>，转岗时需完成脱密期管理。','附件二列出<span class="kw-hl">涉密</span>岗位清单，并在备注栏注明相应材料的<span class="kw-hl">机密</span>等级。']}
+      ],
+      '技术文档': [
+        {name:'微服务架构规范.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-15 14:30:00',updateTime:'2026-07-15 14:30:00',parseStatus:'parsed',secretStatus:'passed',enabled:true},
+        {name:'API接口文档_v2.pdf',type:'pdf',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-14 10:20:00',updateTime:'2026-07-14 10:20:00',parseStatus:'parsed',secretStatus:'passed',enabled:true}
+      ],
+      '培训资料': [
+        {name:'新员工入职培训.pptx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-06-28 10:15:00',updateTime:'2026-06-28 10:15:00',parseStatus:'parsed',secretStatus:'passed',enabled:true},
+        {name:'内部培训材料_保密篇.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-08-05 15:28:00',updateTime:'2026-08-05 15:30:00',parseStatus:'unparsed',secretStatus:'rejected',kw:['涉密','机密'],hitPreview:['第2章“保密义务”列举了<span class="kw-hl">涉密</span>载体管理要求，示例中直接引用了<span class="kw-hl">机密</span>级项目合同原文。','课件第12页截图包含标有<span class="kw-hl">机密</span>字样的系统架构图，并在旁白中重复出现<span class="kw-hl">涉密</span>提示。']}
+      ]
+    },
+    reviewItems: [
+      {file:'涉密人员管理办法.docx',type:'doc',kb:'人事制度',uploader:'li.si',time:'2026-08-11 09:15',kw:['机密','涉密'],status:'pending',reviewer:'—'},
+      {file:'内部培训材料_保密篇.docx',type:'doc',kb:'培训资料',uploader:'wenhui.xian',time:'2026-08-05 15:30',kw:['涉密','机密'],status:'rejected',reviewer:'admin.li'}
+    ],
+    myrvItems: [
+      {file:'内部培训材料_保密篇.docx',type:'doc',kb:'培训资料',time:'2026-08-05 15:30',kw:['涉密','机密'],status:'rejected',opinion:'文件含高密级内容，请脱敏后重新上传'}
+    ],
+    stats:{pending:1,approved:3,rejected:2,total:6}
+  },
+  personal: {
+    label: '个人知识库',
+    cards: [
+      {name:'我的工作笔记',desc:'日常工作记录',owner:'wenhui.xian',docs:12,time:'2026-08-01 08:30:00'},
+      {name:'学习资料',desc:'技术学习收藏',owner:'wenhui.xian',docs:6,time:'2026-07-22 16:00:00'}
+    ],
+    files: {
+      '我的工作笔记': [
+        {name:'项目复盘_7月.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-08-01 08:30:00',updateTime:'2026-08-01 08:30:00',parseStatus:'parsed',secretStatus:'passed',enabled:true},
+        {name:'个人年终总结草稿.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-08-06 10:58:00',updateTime:'2026-08-06 11:00:00',parseStatus:'unparsed',secretStatus:'submitted',kw:['内部'],hitPreview:['“三季度重点工作”一段写道：主导完成了<span class="kw-hl">内部</span>数据中台迁移，相关接口文档仍在<span class="kw-hl">内部</span>评审阶段。','“能力提升”部分提到通过<span class="kw-hl">内部</span>技术分享会学习了核心模块设计思路。']}
+      ],
+      '学习资料': [
+        {name:'Transformer论文笔记.pdf',type:'pdf',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-22 16:00:00',updateTime:'2026-07-22 16:00:00',parseStatus:'parsed',secretStatus:'passed',enabled:true},
+        {name:'RAG实践总结.docx',type:'doc',version:'V1.0.0',strategy:'通用解析策略',createTime:'2026-07-20 20:00:00',updateTime:'2026-07-20 20:00:00',parseStatus:'parsed',secretStatus:'passed',enabled:true}
+      ]
+    },
+    reviewItems: [
+      {file:'个人年终总结草稿.docx',type:'doc',kb:'我的工作笔记',uploader:'wenhui.xian',time:'2026-08-06 11:00',kw:['内部'],status:'pending',reviewer:'—'}
+    ],
+    myrvItems: [
+      {file:'个人年终总结草稿.docx',type:'doc',kb:'我的工作笔记',time:'2026-08-06 11:00',kw:['内部'],status:'pending',opinion:'等待管理员审核…'}
+    ],
+    stats:{pending:1,approved:1,rejected:0,total:2}
+  }
+};
+
+let currentType = 'enterprise';
+let currentKbName = '';
+let currentReviewAction = '';
+let currentReviewItem = null;
+
+// Upload wizard state
+let wizardStep = 1;
+let wizardFiles = [];
+let wizardDetectDone = false;
+let wizardSelectedTags = [];
+let wizardPublishMode = 'public';
+let wizardOwnerDept = '';
+
+// Backend-maintained tag categories (演示数据)
+const TAG_CATEGORIES = [
+  { key:'docType', name:'文档类型', tags:['智库成果','船舶标准','行业专利','三方研报','规则规范','专业书籍','期刊论文','更多'] }
+];
+
+// Uploaded files that are still being processed share the same table as completed files.
+
+/* ══════════════════════════════════════
+   Sidebar → Switch KB Type
+   ══════════════════════════════════════ */
+function switchKbType(type) {
+  currentType = type;
+  // Hide review center and admin, show KB
+  document.getElementById('reviewCenter').style.display = 'none';
+  document.getElementById('reviewAdmin').style.display = 'none';
+  document.getElementById('kbList').style.display = 'block';
+  document.getElementById('kbDetail').style.display = 'none';
+  // Close sub-panel after selection (subRc may have been removed)
+  ['subRc','subRa','subKb'].forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; });
+  // Update sidebar sub-item highlight
+  document.querySelectorAll('#subKb .nav-sub-item').forEach(s => s.classList.remove('active'));
+  event.target.closest('.nav-sub-item').classList.add('active');
+  // Keep KB nav-item active
+  document.querySelectorAll('.sidebar .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('navKb').classList.add('active');
+  // Update topbar title
+  document.getElementById('topbarTitle').textContent = KB_DATA[type].label;
+  // Reset tabs to "全部"
+  document.querySelectorAll('#mainTabs .tab-btn').forEach(t => t.classList.remove('active'));
+  document.querySelector('#mainTabs .tab-btn').classList.add('active');
+  document.querySelectorAll('#kbList > .panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-all').classList.add('active');
+  // Render
+  renderKbGrid();
+}
+
+/* ══════════════════════════════════════
+   Render KB Cards
+   ══════════════════════════════════════ */
+function makeCard(c) {
+  return `<div class="kb-card" onclick="enterKb('${c.name}','${c.owner}',${c.docs})">
+    <div class="card-top"><div class="card-icon">📁</div><div><div class="card-name">${c.name}</div><div class="card-desc">${c.desc}</div></div></div>
+    <div class="card-meta">${c.owner} · ${c.docs} 篇文档</div><div class="card-time">${c.time}</div>
+    <div class="card-actions"><button class="cbtn" onclick="event.stopPropagation()">问答权限</button><div class="more" onclick="event.stopPropagation()">⋮</div></div>
+  </div>`;
+}
+
+function renderKbGrid() {
+  const data = KB_DATA[currentType];
+  document.getElementById('kbGrid').innerHTML = data.cards.map(makeCard).join('');
+  // "我创建的" — show subset
+  const mine = data.cards.filter(c => c.owner === '系统管理员' || c.owner === 'wenhui.xian');
+  document.getElementById('kbGridMine').innerHTML = mine.length ? mine.map(makeCard).join('') : '<div style="color:var(--text-sec);padding:40px">暂无数据</div>';
+}
+
+/* ══════════════════════════════════════
+   审核中心 — Review Center
+   ══════════════════════════════════════ */
+const RC_LABELS = { sensitive:'涉密审核', permission:'权限申请', other:'其他审批' };
+
+function openSubPanel(type) {
+  const toggle = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+  toggle('subRc', type === 'rc');
+  toggle('subRa', type === 'ra');
+  toggle('subKb', type === 'kb');
+  toggle('subLib', type === 'lib');
+  const setActive = (id, on) => { const el = document.getElementById(id); if (el) el.classList.toggle('active', on); };
+  setActive('navReviewCenter', type === 'rc');
+  setActive('navReviewAdmin', type === 'ra');
+  setActive('navKb', type === 'kb');
+  setActive('navLib', type === 'lib');
+}
+
+/* ══════════════════════════════════════
+   百舸文库 — 文件管理 / 权限管理
+   ══════════════════════════════════════ */
+const LIB_VIEWS = { upload: '文件管理', perm: '权限管理' };
+
+function openLibView(view) {
+  // Close sub-panels after selection
+  ['subRc','subRa','subKb','subLib'].forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; });
+  // Keep lib nav-item active
+  document.querySelectorAll('.sidebar .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('navLib').classList.add('active');
+  // Highlight the correct sub-item
+  document.querySelectorAll('#subLib .nav-sub-item').forEach(s => s.classList.remove('active'));
+  const idx = { upload:0, perm:1 }[view] || 0;
+  const subItems = document.querySelectorAll('#subLib .nav-sub-item');
+  if (subItems[idx]) subItems[idx].classList.add('active');
+  // Show libView, hide other views
+  document.getElementById('libView').style.display = 'block';
+  document.getElementById('reviewCenter').style.display = 'none';
+  document.getElementById('reviewAdmin').style.display = 'none';
+  document.getElementById('kbList').style.display = 'none';
+  document.getElementById('kbDetail').style.display = 'none';
+  // Switch inner panel
+  document.querySelectorAll('#libView > .panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('libPanel-' + view);
+  if (panel) panel.classList.add('active');
+  // Update topbar
+  document.getElementById('topbarTitle').textContent = '百舸文库 / ' + (LIB_VIEWS[view] || '文件管理');
+  // 进入「文件管理」时直接打开文件列表（默认知识库 = 测试20260703）
+  if (view === 'upload') libEnterKb('百舸文库');
+  if (view === 'perm') {
+    adminDept = BaigeLibraryStore.getCurrentDept();
+    renderAdminIdentity();
+    if (curDept) { reloadDocsFromStore(); selected.clear(); page = 1; render(); }
+  }
+}
+
+/* ══════════════════════════════════════
+   百舸文库 — 文件管理模块（迁移自企业知识库）
+   文件列表 → 上传向导（复用全局上传向导/涉密检测）
+   ══════════════════════════════════════ */
+let libKbName = '测试20260703';  // 当前选中的知识库（默认）
+let libKbMode = false;      // 当前是否处于百舸文库上传流程（用于向导/检测后刷新 lib 列表）
+let libKbFilters = { name:'', parse:'', secret:'', dateStart:'', dateEnd:'' };
+
+let libFilePage = 1;
+let libFileSize = 10;
+
+function libKbFilesOf(name) {
+  return BaigeLibraryStore.loadDocs().map(d => ({
+    ...d,
+    _storeId: d.id,
+    name: d.title,
+    type: d.fileType,
+    version: d.version || 'V1.0.0',
+    strategy: d.strategy || '通用解析策略',
+    createTime: d.date,
+    updateTime: d.date,
+    source: d.source === 'crawl' ? '爬虫平台' : '部门上传',
+    parseStatus: d.parseStatus || 'parsed',
+    secretStatus: d.secretStatus || 'passed',
+    enabled: true,
+    kw: d.kw || [],
+    hitPreview: d.hitPreview || []
+  }));
+}
+
+function libEnterKb(name) {
+  libKbName = name;
+  libKbMode = true;
+  libFilePage = 1;
+  document.getElementById('libKbFiles').style.display = 'block';
+  libResetFilters();
+  libRenderFileList();
+}
+
+/* ── 文件列表：展示与筛选 ── */
+function libResetFilters() {
+  libKbFilters = { name:'', parse:'', secret:'', dateStart:'', dateEnd:'' };
+  const map = { 'libFName':'name','libFParse':'parse','libFSecret':'secret','libFDateStart':'dateStart','libFDateEnd':'dateEnd' };
+  for (const id in map) { const el = document.getElementById(id); if (el) el.value = ''; }
+  libFilePage = 1;
+}
+function libApplyFilter() {
+  libKbFilters.name = (document.getElementById('libFName').value || '').trim();
+  libKbFilters.parse = document.getElementById('libFParse').value;
+  libKbFilters.secret = document.getElementById('libFSecret').value;
+  libKbFilters.dateStart = document.getElementById('libFDateStart').value;
+  libKbFilters.dateEnd = document.getElementById('libFDateEnd').value;
+  libFilePage = 1;
+  libRenderFileList();
+}
+function libFilteredFiles() {
+  const files = libKbFilesOf(libKbName);
+  const f = libKbFilters;
+  return files.filter(x => {
+    if (f.name && !x.name.toLowerCase().includes(f.name.toLowerCase())) return false;
+    if (f.parse && x.parseStatus !== f.parse) return false;
+    if (f.secret && x.secretStatus !== f.secret) return false;
+    const t = x.createTime || x.updateTime || '';
+    if (f.dateStart && t && t.slice(0,10) < f.dateStart) return false;
+    if (f.dateEnd && t && t.slice(0,10) > f.dateEnd) return false;
+    return true;
+  });
+}
+function libRenderFileList() {
+  const tbody = document.getElementById('libKbFileListBody');
+  if (!tbody) return;
+  const all = libFilteredFiles();
+  const pages = Math.max(1, Math.ceil(all.length / libFileSize));
+  if (libFilePage > pages) libFilePage = pages;
+  const files = all.slice((libFilePage - 1) * libFileSize, libFilePage * libFileSize);
+  const countEl = document.getElementById('libKbFileListCount');
+  if (!all.length) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-sec);padding:40px 0">暂无文件，点击右上角「上传文件」开始录入</td></tr>';
+    if (countEl) countEl.textContent = '共 0 条数据';
+    const pager = document.getElementById('libKbFileListPager');
+    if (pager) pager.innerHTML = '';
+    libUpdateBatchCount();
+    return;
+  }
+  let rows = '';
+  files.forEach((f) => {
+    const icon = f.type === 'pdf' ? 'PDF' : 'DOC';
+    const eye = ['hit','submitted','rejected'].includes(f.secretStatus)
+      ? `<button class="ai eye-btn" data-file-action="secret" data-file-name="${f.name.replace(/"/g,'&quot;')}" title="查看涉密检测详情">👁</button>`
+      : '';
+    rows += `<tr>
+      <td><div class="checkbox" data-store-id="${f._storeId}" data-file-name="${f.name.replace(/"/g,'&quot;')}" onclick="this.classList.toggle('checked');libUpdateBatchCount()"></div></td>
+      <td><div class="fn-cell"><div class="fn-icon ${f.type}">${icon}</div><span class="fn-text">${f.name}</span></div></td>
+      <td>${f.source === '爬虫平台' ? '<span class="status-tag info">爬虫平台</span>' : '<span class="status-tag" style="background:#f1f3f6;color:#4a5a70">部门上传</span>'}</td>
+      <td>${f.version || 'V1.0.0'}</td>
+      <td>${f.createTime || f.updateTime || '-'}</td>
+      <td>${parseStatusHtml(f.parseStatus)}</td>
+      <td><div class="secret-cell">${secretStatusTagHtml(f.secretStatus)}${eye}</div></td>
+      <td>${f.updateTime || '-'}</td>
+      <td>${libFileActionsHtml(f)}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows;
+  if (countEl) countEl.textContent = `共 ${all.length} 条数据 · 第 ${libFilePage}/${pages} 页`;
+  renderLibFilePager(pages);
+  libUpdateBatchCount();
+}
+function renderLibFilePager(pages) {
+  const pager = document.getElementById('libKbFileListPager');
+  if (!pager) return;
+  let html = `<div class="pbtn${libFilePage === 1 ? ' dis' : ''}" onclick="libGoFilePage(${libFilePage - 1})">‹</div>`;
+  for (let p = 1; p <= pages; p += 1) html += `<div class="pbtn${p === libFilePage ? ' active' : ''}" onclick="libGoFilePage(${p})">${p}</div>`;
+  html += `<div class="pbtn${libFilePage === pages ? ' dis' : ''}" onclick="libGoFilePage(${libFilePage + 1})">›</div>`;
+  pager.innerHTML = html;
+}
+function libGoFilePage(target) {
+  const pages = Math.max(1, Math.ceil(libFilteredFiles().length / libFileSize));
+  const next = Math.max(1, Math.min(pages, Number(target) || 1));
+  if (next === libFilePage) return;
+  libFilePage = next;
+  libRenderFileList();
+}
+function libChangeFileSize(value) {
+  libFileSize = Number(value) === 24 || Number(value) === 48 ? Number(value) : 10;
+  libFilePage = 1;
+  libRenderFileList();
+}
+function libFileActionsHtml(f) {
+  if (['hit','submitted','rejected'].includes(f.secretStatus)) {
+    return '<div class="action-icons">—</div>';
+  }
+  const name = f.name.replace(/"/g,'&quot;');
+  return `<div class="action-icons">
+    <button class="ai" data-file-action="preview" data-file-name="${name}" title="预览文档">📄</button>
+    <button class="ai" data-file-action="download" data-file-name="${name}" title="下载文件">⬇</button>
+    <button class="ai" data-file-action="refresh" data-file-name="${name}" title="刷新状态">🔄</button>
+    <button class="ai" data-file-action="edit" data-file-name="${name}" title="编辑信息">✏</button>
+    <button class="ai danger" data-file-action="delete" data-file-name="${name}" title="删除文件">🗑</button>
+  </div>`;
+}
+function libUpdateBatchCount() {
+  const count = document.querySelectorAll('#libKbFileListBody .checkbox.checked').length;
+  const el = document.getElementById('libBatchCount');
+  if (el) el.textContent = '已选 ' + count + ' 项';
+}
+function libDeleteSelected() {
+  const checked = [...document.querySelectorAll('#libKbFileListBody .checkbox.checked')];
+  if (!checked.length) { showToast('请先选择要删除的文件'); return; }
+  const ids = checked.map((el) => Number(el.dataset.storeId)).filter(Boolean);
+  const removed = BaigeLibraryStore.removeDocs(ids);
+  libRenderFileList();
+  showToast('已删除 ' + removed + ' 个文件');
+}
+function libHandleFileAction(action, name) {
+  const files = libKbFilesOf(libKbName);
+  const target = files.find((f) => f.name === name);
+  if (!target) return;
+  if (action === 'secret') {
+    const idx = files.indexOf(target);
+    if (idx >= 0) libOpenSecretDetail(idx);
+    return;
+  }
+  if (action === 'delete') {
+    BaigeLibraryStore.removeDocs([target._storeId]);
+    libRenderFileList();
+    showToast('已删除《' + name + '》');
+    return;
+  }
+  if (action === 'refresh') {
+    libRenderFileList();
+    showToast('已刷新《' + name + '》状态');
+    return;
+  }
+  if (action === 'preview') showToast('《' + name + '》预览待接入');
+  else if (action === 'download') showToast('《' + name + '》下载需接入文件服务');
+  else if (action === 'edit') showToast('文件信息编辑功能待接入');
+}
+document.getElementById('libKbFileListBody')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-file-action]');
+  if (!button) return;
+  event.stopPropagation();
+  libHandleFileAction(button.dataset.fileAction, button.dataset.fileName);
+});
+function libRefreshIfVisible() {
+  const filesEl = document.getElementById('libKbFiles');
+  if (libKbMode && libKbName && filesEl && filesEl.style.display !== 'none') libRenderFileList();
+}
+
+/* ── 涉密检测详情（lib 上下文） ── */
+function libOpenSecretDetail(idx) {
+  const files = libKbFilesOf(libKbName);
+  const f = files[idx];
+  if (!f) return;
+  // 同步知识库上下文：涉密详情弹窗内的「取消上传/继续上传」依赖 getKbFiles()
+  currentType = 'enterprise';
+  currentKbName = libKbName;
+  currentSecretFileIndex = idx;
+  currentSecretFile = f;
+  const sm = SECRET_STATUS_META[f.secretStatus] || SECRET_STATUS_META.detecting;
+  document.getElementById('sdTitle').textContent = '涉密检测详情 — ' + sm.label;
+  document.getElementById('sdBody').innerHTML = buildSecretDetailBody(f);
+  document.getElementById('sdFooter').innerHTML = buildSecretDetailFooter(f);
+  openModal('secretDetailModal');
+}
+
+/* ── 上传向导（复用全局三步向导，目标指向百舸文库当前知识库） ── */
+function libOpenUploadWizard() {
+  if (!libKbName) { showToast('请先选择知识库','warning'); return; }
+  // 临时切换知识库上下文，使上传向导的写入/检测落到企业知识库的当前库
+  libKbMode = true;
+  currentType = 'enterprise';
+  currentKbName = libKbName;
+  openUploadWizard();
+}
+
+function openReviewCenter(type) {
+  // Close sub-panel after selection (subRc may have been removed)
+  ['subRc','subRa','subKb'].forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; });
+  // Keep RC nav-item active
+  document.querySelectorAll('.sidebar .nav-item').forEach(n => n.classList.remove('active'));
+  var rcNav = document.getElementById('navReviewCenter'); if (rcNav) rcNav.classList.add('active');
+  // Highlight the correct sub-item (subRc may have been removed)
+  var subRcEl = document.getElementById('subRc');
+  if (subRcEl) {
+    var rcSubs = subRcEl.querySelectorAll('.nav-sub-item');
+    rcSubs.forEach(s => s.classList.remove('active'));
+    var idx2 = { sensitive:0, permission:1, other:2 }[type] || 0;
+    if (rcSubs[idx2]) rcSubs[idx2].classList.add('active');
+  }
+  // Show review center, hide others
+  document.getElementById('reviewCenter').style.display = 'block';
+  document.getElementById('reviewAdmin').style.display = 'none';
+  document.getElementById('kbList').style.display = 'none';
+  document.getElementById('kbDetail').style.display = 'none';
+  // Update page title
+  document.getElementById('rcTitle').textContent = RC_LABELS[type] || '涉密审核';
+  // Switch panel
+  document.querySelectorAll('#reviewCenter > .panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('rcPanel-' + type);
+  if (panel) panel.classList.add('active');
+  // Update topbar title
+  document.getElementById('topbarTitle').textContent = RC_LABELS[type];
+  // Render data for sensitive
+  if (type === 'sensitive') renderReviewCenter();
+}
+
+function getAllMyrvItems() {
+  const all = [];
+  for (const type of ['enterprise','department','personal']) {
+    const data = KB_DATA[type];
+    data.myrvItems.forEach(r => {
+      all.push({ ...r, kbType: data.label });
+    });
+  }
+  return all;
+}
+
+function renderReviewCenter() {
+  const allItems = getAllMyrvItems();
+  const pending = allItems.filter(r => r.status === 'pending').length;
+  const approved = allItems.filter(r => r.status === 'approved').length;
+  const rejected = allItems.filter(r => r.status === 'rejected').length;
+
+  // Stats
+  document.getElementById('rcStats').innerHTML = `
+    <div class="stat-card"><div class="si orange">⏳</div><div><div class="sn">${pending}</div><div class="sl">审核中</div></div></div>
+    <div class="stat-card"><div class="si green">✅</div><div><div class="sn">${approved}</div><div class="sl">已通过</div></div></div>
+    <div class="stat-card"><div class="si red">❌</div><div><div class="sn">${rejected}</div><div class="sl">已驳回</div></div></div>
+    <div class="stat-card"><div class="si blue">📊</div><div><div class="sn">${allItems.length}</div><div class="sl">全部</div></div></div>`;
+
+  // Filter
+  document.getElementById('rcFilter').innerHTML = `
+    <select><option>全部状态</option><option>审核中</option><option>已通过</option><option>已驳回</option></select>
+    <select id="rcKbFilter"><option>全部知识库</option><option>企业知识库</option><option>个人知识库</option></select>
+    <div class="date-range"><input type="date"><span class="arrow">→</span><input type="date"></div>
+    <input type="text" placeholder="搜索文件名称">
+    <button class="btn btn-primary">查询</button>`;
+
+  // Sensitive review table — aggregated from all KB types
+  const thead = '<tr><th>文件名</th><th>所属知识库</th><th>提交时间</th><th>涉密关键词</th><th>审核状态</th><th>文档状态</th><th>审核意见</th><th>操作</th></tr>';
+  let rows = '';
+  allItems.forEach(r => {
+    const icon = r.type === 'pdf' ? '<div class="fn-icon pdf">PDF</div>' : '<div class="fn-icon doc">DOC</div>';
+    const kwHtml = r.kw.map(k => `<span class="kw-tag">${k}</span>`).join('');
+    let statusHtml, docStateHtml;
+    if (r.status === 'pending') {
+      statusHtml = '<span class="status-tag warning"><span class="sdot orange"></span>审核中</span>';
+      docStateHtml = '<span class="status-tag info"><span class="sdot blue"></span>解析前</span>';
+    } else if (r.status === 'approved') {
+      statusHtml = '<span class="status-tag success"><span class="sdot green"></span>已通过</span>';
+      docStateHtml = '<span class="status-tag success"><span class="sdot green"></span>已入库解析</span>';
+    } else {
+      statusHtml = '<span class="status-tag danger"><span class="sdot red"></span>已驳回</span>';
+      docStateHtml = '<span class="status-tag danger"><span class="sdot red"></span>未解析</span>';
+    }
+    const opColor = r.status === 'approved' ? '#2E7D32' : r.status === 'rejected' ? '#C62828' : 'var(--text-sec)';
+    const action = `<button class="ai" onclick="openPreview('${r.file}','${r.uploader}','${r.time}',${JSON.stringify(r.kw).replace(/"/g,"&quot;")},{isUploader:true})" title="查看命中内容">👁</button> <button class="ai" onclick="openModal('detailModal')" title="审核详情">🔍</button>`;
+    rows += `<tr><td><div class="fn-cell">${icon}<span class="fn-text">${r.file}</span></div></td><td>${r.kbType} / ${r.kb}</td><td>${r.time}</td><td>${kwHtml}</td><td>${statusHtml}</td><td>${docStateHtml}</td><td style="color:${opColor}">${r.opinion}</td><td>${action}</td></tr>`;
+  });
+  document.querySelector('#rcSenTable thead').innerHTML = thead;
+  document.querySelector('#rcSenTable tbody').innerHTML = rows;
+  document.getElementById('rcSenPagiInfo').textContent = '共 ' + allItems.length + ' 条数据';
+}
+
+/* ══════════════════════════════════════
+   审核管理 — Admin Review
+   ══════════════════════════════════════ */
+const RA_LABELS = { sensitive:'涉密审核', permission:'权限申请', other:'其他审批' };
+
+function openReviewAdmin(type) {
+  // Close sub-panel after selection (subRc may have been removed)
+  ['subRc','subRa','subKb'].forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; });
+  // Keep RA nav-item active
+  document.querySelectorAll('.sidebar .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('navReviewAdmin').classList.add('active');
+  // Highlight the correct sub-item
+  document.querySelectorAll('#subRa .nav-sub-item').forEach(s => s.classList.remove('active'));
+  const idx = { sensitive:0, permission:1, other:2 }[type] || 0;
+  document.querySelectorAll('#subRa .nav-sub-item')[idx].classList.add('active');
+  // Show reviewAdmin, hide others
+  document.getElementById('reviewAdmin').style.display = 'block';
+  document.getElementById('reviewCenter').style.display = 'none';
+  document.getElementById('kbList').style.display = 'none';
+  document.getElementById('kbDetail').style.display = 'none';
+  // Update page title
+  document.getElementById('raTitle').textContent = RA_LABELS[type] || '涉密审核';
+  // Switch panel
+  document.querySelectorAll('#reviewAdmin > .panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('raPanel-' + type);
+  if (panel) panel.classList.add('active');
+  // Update topbar
+  document.getElementById('topbarTitle').textContent = '审核管理 / ' + RA_LABELS[type];
+  // Render data for sensitive
+  if (type === 'sensitive') renderReviewAdmin();
+}
+
+function getAllReviewItems() {
+  const all = [];
+  for (const type of ['enterprise','department','personal']) {
+    const data = KB_DATA[type];
+    data.reviewItems.forEach(r => {
+      all.push({ ...r, kbType: data.label });
+    });
+  }
+  return all;
+}
+
+function renderReviewAdmin() {
+  const allItems = getAllReviewItems();
+  const pending = allItems.filter(r => r.status === 'pending').length;
+  const approved = allItems.filter(r => r.status === 'approved').length;
+  const rejected = allItems.filter(r => r.status === 'rejected').length;
+
+  // Stats
+  document.getElementById('raStats').innerHTML = `
+    <div class="stat-card"><div class="si orange">⏳</div><div><div class="sn">${pending}</div><div class="sl">待审核</div></div></div>
+    <div class="stat-card"><div class="si green">✅</div><div><div class="sn">${approved}</div><div class="sl">已通过</div></div></div>
+    <div class="stat-card"><div class="si red">❌</div><div><div class="sn">${rejected}</div><div class="sl">已驳回</div></div></div>
+    <div class="stat-card"><div class="si blue">📊</div><div><div class="sn">${allItems.length}</div><div class="sl">累计审核</div></div></div>`;
+
+  // Filter — admin-side filters are management-oriented and different from user-side
+  document.getElementById('raFilter').innerHTML = `
+    <select><option>全部审核状态</option><option>待审核</option><option>已通过</option><option>已驳回</option></select>
+    <select><option>全部知识库类型</option><option>企业知识库</option><option>个人知识库</option></select>
+    <input type="text" placeholder="所属知识库">
+    <input type="text" placeholder="上传人">
+    <div class="date-range"><input type="date"><span class="arrow">→</span><input type="date"></div>
+    <input type="text" placeholder="搜索文件名称">
+    <button class="btn btn-primary">查询</button>`;
+
+  // Admin review table — aggregated from all KB types
+  const thead = '<tr><th>文件名</th><th>知识库类型</th><th>所属知识库</th><th>上传人</th><th>上传时间</th><th>涉密关键词</th><th>审核状态</th><th>文档状态</th><th>审核人</th><th>操作</th></tr>';
+  let rows = '';
+  allItems.forEach(r => {
+    const icon = r.type === 'pdf' ? '<div class="fn-icon pdf">PDF</div>' : '<div class="fn-icon doc">DOC</div>';
+    const kwHtml = r.kw.map(k => `<span class="kw-tag">${k}</span>`).join('');
+    let statusHtml, docStateHtml, actionHtml;
+    if (r.status === 'pending') {
+      statusHtml = '<span class="status-tag warning"><span class="sdot orange"></span>待审核</span>';
+      docStateHtml = '<span class="status-tag info"><span class="sdot blue"></span>解析前</span>';
+      actionHtml = `<button class="btn btn-outline btn-sm" onclick="openPreview('${r.file}','${r.uploader}','${r.time}',${JSON.stringify(r.kw).replace(/"/g,"&quot;")})">预览</button> <button class="btn btn-success btn-sm" onclick="openReview('approve','${r.file}')">通过</button> <button class="btn btn-danger btn-sm" onclick="openReview('reject','${r.file}')">驳回</button>`;
+    } else if (r.status === 'approved') {
+      statusHtml = '<span class="status-tag success"><span class="sdot green"></span>已通过</span>';
+      docStateHtml = '<span class="status-tag success"><span class="sdot green"></span>已入库解析</span>';
+      actionHtml = `<button class="ai" onclick="openPreview('${r.file}','${r.uploader}','${r.time}',${JSON.stringify(r.kw).replace(/"/g,"&quot;")})" title="预览文档">📄</button> <button class="ai" onclick="openModal('approvedModal')" title="审核详情">🔍</button>`;
+    } else {
+      statusHtml = '<span class="status-tag danger"><span class="sdot red"></span>已驳回</span>';
+      docStateHtml = '<span class="status-tag danger"><span class="sdot red"></span>未解析</span>';
+      actionHtml = `<button class="ai" onclick="openPreview('${r.file}','${r.uploader}','${r.time}',${JSON.stringify(r.kw).replace(/"/g,"&quot;")})" title="预览文档">📄</button> <button class="ai" onclick="openModal('rejectedModal')" title="审核详情">🔍</button>`;
+    }
+    rows += `<tr><td><div class="fn-cell">${icon}<span class="fn-text">${r.file}</span></div></td><td>${r.kbType}</td><td>${r.kb}</td><td>${r.uploader}</td><td>${r.time}</td><td>${kwHtml}</td><td>${statusHtml}</td><td>${docStateHtml}</td><td>${r.reviewer}</td><td>${actionHtml}</td></tr>`;
+  });
+  document.querySelector('#raTable thead').innerHTML = thead;
+  document.querySelector('#raTable tbody').innerHTML = rows;
+  document.getElementById('raPagiInfo').textContent = '共 ' + allItems.length + ' 条数据';
+}
+
+/* ══════════════════════════════════════
+   Tab switching
+   ══════════════════════════════════════ */
+function switchTab(el, panelId) {
+  el.parentElement.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('#kbList > .panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('panel-' + panelId).classList.add('active');
+}
+
+function switchKbDetailTab(el, tabId) {
+  el.parentElement.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('kbDetailTab-files').classList.toggle('hidden', tabId !== 'files');
+}
+
+/* ══════════════════════════════════════
+   Navigation
+   ══════════════════════════════════════ */
+function enterKb(name) {
+  currentKbName = name;
+  document.getElementById('kbList').style.display = 'none';
+  document.getElementById('kbDetail').style.display = 'block';
+  document.getElementById('reviewCenter').style.display = 'none';
+  document.getElementById('reviewAdmin').style.display = 'none';
+  document.getElementById('detailTitle').textContent = name;
+  document.getElementById('topbarTitle').textContent = KB_DATA[currentType].label + ' / ' + name;
+  document.getElementById('panel-dFiles').classList.add('active');
+  document.getElementById('kbDetailTab-files').classList.remove('hidden');
+  renderFileList();
+}
+
+function backToList() {
+  document.getElementById('kbList').style.display = 'block';
+  document.getElementById('kbDetail').style.display = 'none';
+  document.getElementById('reviewCenter').style.display = 'none';
+  document.getElementById('reviewAdmin').style.display = 'none';
+  // Close sub-panels, keep KB active
+  document.getElementById('subRc').style.display = 'none';
+  document.getElementById('subRa').style.display = 'none';
+  document.getElementById('subKb').style.display = 'none';
+  document.querySelectorAll('.sidebar .nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('navKb').classList.add('active');
+  document.getElementById('topbarTitle').textContent = KB_DATA[currentType].label;
+}
+
+/* ══════════════════════════════════════
+   File list — split parse & secret status
+   ══════════════════════════════════════ */
+const PARSE_STATUS_META = {
+  unparsed: { label: '未解析', cls: 'info', dot: 'blue' },
+  parsing:  { label: '解析中', cls: 'info', dot: 'blue' },
+  parsed:   { label: '已解析', cls: 'success', dot: 'green' },
+  failed:   { label: '解析失败', cls: 'danger', dot: 'red' }
+};
+const SECRET_STATUS_META = {
+  detecting: { label: '检测中', cls: 'info', dot: 'blue' },
+  passed:    { label: '已通过', cls: 'success', dot: 'green' },
+  hit:       { label: '涉密可疑', cls: 'warning', dot: 'orange' },
+  submitted: { label: '审核中', cls: 'warning', dot: 'orange' },
+  rejected:  { label: '已驳回', cls: 'danger', dot: 'red' }
+};
+
+let currentSecretFileIndex = -1;
+let currentSecretFile = null;
+
+function getKbFiles() {
+  const data = KB_DATA[currentType];
+  const map = data.files || {};
+  return map[currentKbName] || [];
+}
+
+function parseStatusHtml(status) {
+  const m = PARSE_STATUS_META[status] || PARSE_STATUS_META.unparsed;
+  return `<span class="status-tag ${m.cls}"><span class="sdot ${m.dot}"></span>${m.label}</span>`;
+}
+function secretStatusTagHtml(status) {
+  const m = SECRET_STATUS_META[status] || SECRET_STATUS_META.detecting;
+  return `<span class="status-tag ${m.cls}"><span class="sdot ${m.dot}"></span>${m.label}</span>`;
+}
+function secretStatusHtml(f, idx) {
+  const eye = ['hit','submitted','rejected'].includes(f.secretStatus)
+    ? `<button class="ai eye-btn" onclick="event.stopPropagation();openSecretDetail(${idx})" title="查看涉密检测详情">👁</button>`
+    : '';
+  return `<div class="secret-cell">${secretStatusTagHtml(f.secretStatus)}${eye}</div>`;
+}
+
+function fileActionsHtml(f) {
+  // 涉密流程相关状态统一在「涉密审查状态」列的眼睛详情中处理，操作列不再提供额外入口
+  if (['hit','submitted','rejected'].includes(f.secretStatus)) {
+    return '<div class="action-icons">—</div>';
+  }
+  const nameEsc = f.name.replace(/'/g, "\\'");
+  return `<div class="action-icons">
+    <button class="ai" onclick="openPreview('${nameEsc}','当前用户','${f.updateTime}',${JSON.stringify(f.kw || []).replace(/"/g, '&quot;')},{viewOnly:true})" title="预览文档">📄</button>
+    <button class="ai">⬇</button>
+    <button class="ai">🔄</button>
+    <button class="ai">✏</button>
+    <button class="ai danger">🗑</button>
+  </div>`;
+}
+
+function renderFileList() {
+  const files = getKbFiles();
+  const tbody = document.getElementById('kbFileListBody');
+  const countEl = document.getElementById('kbFileListCount');
+  if (!tbody) return;
+  if (files.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-sec);padding:40px 0">暂无文件，点击右上角「上传文件」开始录入</td></tr>';
+    if (countEl) countEl.textContent = '共 0 条数据';
+    return;
+  }
+  let rows = '';
+  files.forEach((f, idx) => {
+    const icon = f.type === 'pdf' ? 'PDF' : 'DOC';
+    rows += `<tr>
+      <td><div class="checkbox" onclick="this.classList.toggle('checked')"></div></td>
+      <td><div class="fn-cell"><div class="fn-icon ${f.type}">${icon}</div><span class="fn-text">${f.name}</span></div></td>
+      <td>${f.version || 'V1.0.0'}</td>
+      <td>${f.strategy || '通用解析策略'}</td>
+      <td>${f.createTime || f.updateTime || '-'}</td>
+      <td>${parseStatusHtml(f.parseStatus)}</td>
+      <td>${secretStatusHtml(f, idx)}</td>
+      <td>${f.updateTime || '-'}</td>
+      <td>${fileActionsHtml(f)}</td>
+    </tr>`;
+  });
+  tbody.innerHTML = rows;
+  if (countEl) countEl.textContent = '共 ' + files.length + ' 条数据';
+}
+
+function openSecretDetail(idx) {
+  const files = getKbFiles();
+  const f = files[idx];
+  if (!f) return;
+  currentSecretFileIndex = idx;
+  currentSecretFile = f;
+  const sm = SECRET_STATUS_META[f.secretStatus] || SECRET_STATUS_META.detecting;
+  document.getElementById('sdTitle').textContent = '涉密检测详情 — ' + sm.label;
+  document.getElementById('sdBody').innerHTML = buildSecretDetailBody(f);
+  document.getElementById('sdFooter').innerHTML = buildSecretDetailFooter(f);
+  openModal('secretDetailModal');
+}
+
+function buildSecretDetailBody(f) {
+  const nameEsc = f.name.replace(/'/g, "\\'");
+  const previewKw = JSON.stringify(f.kw || []).replace(/"/g,'&quot;');
+  const previewTime = f.updateTime || f.createTime || '-';
+  let html = '';
+  // 1) 涉密告警置顶
+  if (['hit','submitted','rejected'].includes(f.secretStatus)) {
+    const kwTags = (f.kw || []).map(k => `<span class="kw-tag">${k}</span>`).join('');
+    html += `<div class="danger-alert"><div class="ai-icon">⚠</div><div><div class="at">检测到涉密内容</div><div class="ad">系统检测到该文件包含敏感关键词，请确认是否继续上传并提交管理员审核。</div><div class="matched-kw"><div class="kw-t">命中关键词</div>${kwTags}</div></div></div>`;
+  }
+  // 2) 文件信息卡
+  html += `<div class="fd-card">
+    <div class="fd-row"><span class="fl">文件名</span><span class="fv">${f.name}</span></div>
+    <div class="fd-row"><span class="fl">版本号</span><span class="fv">${f.version || 'V1.0.0'}</span></div>
+    <div class="fd-row"><span class="fl">解析策略</span><span class="fv">${f.strategy || '通用解析策略'}</span></div>
+    <div class="fd-row"><span class="fl">创建时间</span><span class="fv">${f.createTime || '-'}</span></div>
+    <div class="fd-row"><span class="fl">解析状态</span><span class="fv">${parseStatusHtml(f.parseStatus)}</span></div>
+    <div class="fd-row"><span class="fl">涉密审查状态</span><span class="fv">${secretStatusTagHtml(f.secretStatus)}</span></div>
+    <div class="fd-actions" style="display:flex;justify-content:flex-start;margin-top:12px;padding-top:12px;border-top:1px solid #F0F0F0">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('secretDetailModal');openPreview('${nameEsc}','当前用户','${previewTime}',${previewKw},{returnTo:'secretDetailModal',viewOnly:true})">查看文档详情</button>
+    </div>
+  </div>`;
+  // 3) 流转记录
+  html += `<div style="font-size:14px;font-weight:500;margin-bottom:12px;margin-top:16px">流转记录</div>${buildSecretTimeline(f)}`;
+  return html;
+}
+
+function buildSecretTimeline(f) {
+  const uploadTime = f.createTime || '-';
+  const updateTime = f.updateTime || '-';
+  let html = `<div class="tl">`;
+  html += `<div class="tl-item"><div class="tl-dot upload">⬆</div><div class="tl-body"><div class="tlt">用户发起上传</div><div class="tltime">${uploadTime}</div></div></div>`;
+  if (f.secretStatus === 'detecting') {
+    html += `<div class="tl-item"><div class="tl-dot detect">🔍</div><div class="tl-body"><div class="tlt warn">系统涉密检测中</div><div class="tltime">${updateTime}</div><div class="tldesc">检测完成前文档不会进入解析流程</div></div></div>`;
+  } else if (['hit','submitted','rejected','passed'].includes(f.secretStatus)) {
+    const kwDesc = (f.kw || []).length ? `命中关键词：${f.kw.join('、')}` : '未命中敏感关键词';
+    html += `<div class="tl-item"><div class="tl-dot detect">🔍</div><div class="tl-body"><div class="tlt warn">系统检测到涉密内容</div><div class="tltime">${updateTime}</div><div class="tldesc">${kwDesc}</div></div></div>`;
+  } else {
+    html += `<div class="tl-item"><div class="tl-dot detect">🔍</div><div class="tl-body"><div class="tlt">系统涉密检测完成</div><div class="tltime">${updateTime}</div></div></div>`;
+  }
+  if (['submitted','rejected','passed'].includes(f.secretStatus)) {
+    html += `<div class="tl-item"><div class="tl-dot upload">✅</div><div class="tl-body"><div class="tlt">用户确认继续上传</div><div class="tltime">${updateTime}</div></div></div>`;
+  }
+  if (f.secretStatus === 'hit') {
+    html += `<div class="tl-item"><div class="tl-dot wait">⏳</div><div class="tl-body"><div class="tlt warn">涉密可疑，等待用户处理</div><div class="tltime">当前</div><div class="tldesc">用户可选择取消上传或继续上传并提交管理员审核</div></div></div>`;
+  } else if (f.secretStatus === 'submitted') {
+    html += `<div class="tl-item"><div class="tl-dot wait">⏳</div><div class="tl-body"><div class="tlt warn">等待管理员审核</div><div class="tltime">当前</div><div class="tldesc">文档处于解析前状态，审核通过后方可入库并解析</div></div></div>`;
+  } else if (f.secretStatus === 'rejected') {
+    html += `<div class="tl-item"><div class="tl-dot reject">❌</div><div class="tl-body"><div class="tlt fail">管理员审核驳回</div><div class="tltime">${updateTime}</div><div class="tldesc">文档未入库，不会进入解析流程</div></div></div>`;
+  } else if (f.secretStatus === 'passed') {
+    html += `<div class="tl-item"><div class="tl-dot review">✅</div><div class="tl-body"><div class="tlt ok">管理员审核通过</div><div class="tltime">${updateTime}</div><div class="tldesc">文档正式入库，开始解析</div></div></div>`;
+    html += `<div class="tl-item"><div class="tl-dot review">✅</div><div class="tl-body"><div class="tlt ok">解析完成</div><div class="tltime">${updateTime}</div></div></div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function buildSecretDetailFooter(f) {
+  if (f.secretStatus === 'hit') {
+    return `<button class="btn btn-outline btn-lg" onclick="cancelSecretUpload()">取消上传</button><button class="btn btn-primary btn-lg" onclick="continueSecretUpload()">继续上传并提交审批</button>`;
+  }
+  if (f.secretStatus === 'submitted') {
+    return `<button class="btn btn-outline btn-lg" onclick="closeModal('secretDetailModal')">关闭</button>`;
+  }
+  if (f.secretStatus === 'rejected') {
+    return `<button class="btn btn-outline btn-lg" onclick="closeModal('secretDetailModal')">关闭</button><button class="btn btn-primary btn-lg" onclick="showToast('重新上传功能即将开放','');closeModal('secretDetailModal')">重新上传</button>`;
+  }
+  return `<button class="btn btn-outline btn-lg" onclick="closeModal('secretDetailModal')">关闭</button>`;
+}
+
+function continueSecretUpload() {
+  const f = currentSecretFile;
+  if (!f) return;
+  if (f._storeId) BaigeLibraryStore.updateDoc(f._storeId, { secretStatus:'submitted' });
+  closeModal('secretDetailModal');
+  currentSecretFile = null;
+  currentSecretFileIndex = -1;
+  libRefreshIfVisible();
+  showToast(`《${f.name}》已提交管理员审核，通过后将进入解析`,'success');
+}
+
+function cancelSecretUpload() {
+  const f = currentSecretFile;
+  if (!f) return;
+  if (f._storeId) BaigeLibraryStore.removeDocs([f._storeId]);
+  closeModal('secretDetailModal');
+  currentSecretFile = null;
+  currentSecretFileIndex = -1;
+  libRefreshIfVisible();
+  showToast(`《${f.name}》已取消上传`,'');
+}
+
+function addReviewItem(f, kbName) {
+  const data = KB_DATA[currentType];
+  const time = nowStr();
+  data.reviewItems.unshift({file:f.name,type:f.type,kb:kbName,uploader:'wenhui.xian',time:time,kw:f.kw||[],status:'pending',reviewer:'—'});
+  data.myrvItems.unshift({file:f.name,type:f.type,kb:kbName,time:time,kw:f.kw||[],status:'pending',opinion:'等待管理员审核…'});
+  data.stats.pending++;
+  data.stats.total++;
+}
+
+/* ── Modals ── */
+function openModal(id){document.getElementById(id).classList.add('show')}
+function closeModal(id){document.getElementById(id).classList.remove('show')}
+document.querySelectorAll('.modal-overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show')})});
+
+/* ── Toast ── */
+function showToast(msg,type){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(type?' '+type:'');setTimeout(()=>t.classList.remove('show'),3200)}
+
+/* ── Upload helpers ── */
+function nowStr(){
+  const d=new Date();
+  const pad=n=>n.toString().padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/* ── Upload Wizard ── */
+function openUploadWizard(){
+  wizardStep = 1;
+  wizardFiles = [];
+  wizardDetectDone = false;
+  wizardSelectedTags = [];
+  wizardPublishMode = 'public';
+  wizardOwnerDept = BaigeLibraryStore.getCurrentDept();
+  renderWizardPublish();
+  const targetTxt = libKbMode
+    ? '百舸文库'
+    : KB_DATA[currentType].label + ' / ' + (currentKbName || '当前知识库');
+  document.getElementById('wizardTarget').textContent = targetTxt;
+  document.getElementById('wizardUploadList').innerHTML = '';
+  document.getElementById('wizardDetecting').classList.add('hidden');
+  document.getElementById('wizardFinishSummary').classList.remove('hidden');
+  renderWizardTags();
+  updateWizardUI();
+  openModal('uploadWizardModal');
+}
+function closeUploadWizard(){
+  closeModal('uploadWizardModal');
+}
+function updateWizardUI(){
+  // Step content
+  for(let i=1;i<=3;i++){
+    document.getElementById('wizardStep'+i).classList.toggle('hidden', i!==wizardStep);
+    const ind = document.getElementById('wizardStepInd'+i);
+    ind.classList.remove('active','done');
+    if(i < wizardStep) ind.classList.add('done');
+    else if(i === wizardStep) ind.classList.add('active');
+  }
+  // Footer buttons
+  const prevBtn = document.getElementById('wizardPrev');
+  const nextBtn = document.getElementById('wizardNext');
+  prevBtn.classList.toggle('hidden', wizardStep === 1);
+  if(wizardStep === 1){
+    nextBtn.textContent = '下一步';
+    nextBtn.className = 'btn btn-primary';
+    nextBtn.disabled = wizardFiles.length === 0;
+  } else if(wizardStep === 2){
+    nextBtn.textContent = '下一步';
+    nextBtn.className = 'btn btn-primary';
+    nextBtn.disabled = false;
+  } else if(wizardStep === 3){
+    nextBtn.textContent = '完成录入';
+    nextBtn.className = 'btn btn-primary';
+    nextBtn.disabled = false;
+  }
+  // Summary on step 3
+  document.getElementById('wizardSummaryCount').textContent = wizardFiles.length + ' 个';
+  // 步骤2 左侧文件列表 + 右侧详情（默认选中第一个）
+  if(wizardFiles.length){
+    if(typeof wizardSelIdx !== 'number' || wizardSelIdx >= wizardFiles.length) wizardSelIdx = 0;
+    renderWizardFileList();
+    selectWizardFile(wizardSelIdx);
+  } else {
+    document.getElementById('wfiTotal').textContent = '0 个文件，共 0 MB';
+    document.getElementById('wfiFileList').innerHTML = '';
+    document.getElementById('wfiNameInput').value = '';
+    document.getElementById('wfiType').textContent = '—';
+    document.getElementById('wfiVerInput').value = 'V1.0.0';
+    document.getElementById('wfiSize').textContent = '—';
+    renderWizardCover();
+  }
+}
+let wizardSelIdx = 0; // 当前选中的文件（步骤2）
+function renderWizardFileList(){
+  const list = document.getElementById('wfiFileList');
+  if(!list) return;
+  const totalMB = wizardFiles.reduce((s,f)=>{ const v=parseFloat(String(f.size||'0').replace(/[^0-9.]/g,'')); return s+(isNaN(v)?0:v); },0);
+  document.getElementById('wfiTotal').textContent = wizardFiles.length + ' 个文件，共 ' + totalMB.toFixed(1) + ' MB';
+  list.innerHTML = wizardFiles.map((f,i)=>
+    '<div class="wf-file-item '+(i===wizardSelIdx?'active':'')+'" onclick="selectWizardFile('+i+')">'+(f.name||('文件'+(i+1)))+'</div>'
+  ).join('');
+}
+function selectWizardFile(i){
+  if(!wizardFiles[i]) return;
+  wizardSelIdx = i;
+  const f = wizardFiles[i];
+  document.getElementById('wfiNameInput').value = f.name || '';
+  document.getElementById('wfiType').textContent = (f.type||'').toUpperCase() || '—';
+  document.getElementById('wfiVerInput').value = f.version || 'V1.0.0';
+  document.getElementById('wfiSize').textContent = f.size || '—';
+  document.getElementById('wfiOwnerDept').textContent = wizardOwnerDept || BaigeLibraryStore.getCurrentDept();
+  renderWizardFileList();
+  renderWizardCover();
+}
+const PRESET_COVERS = [
+  {id:'ship', name:'船舶蓝', bg:'linear-gradient(135deg,#1976D2,#42A5F5)', icon:'🚢'},
+  {id:'ocean', name:'海洋绿', bg:'linear-gradient(135deg,#00897B,#26A69A)', icon:'🌊'},
+  {id:'tech', name:'科技橙', bg:'linear-gradient(135deg,#F57C00,#FFA726)', icon:'⚙️'},
+  {id:'biz', name:'商务紫', bg:'linear-gradient(135deg,#5E35B1,#7E57C2)', icon:'📊'},
+  {id:'classic', name:'经典红', bg:'linear-gradient(135deg,#C62828,#E53935)', icon:'📕'},
+  {id:'dark', name:'沉稳灰', bg:'linear-gradient(135deg,#37474F,#546E7A)', icon:'📘'}
+];
+function renderWizardCover(){
+  const el = document.getElementById('wfiCover');
+  const presetRow = document.getElementById('wfiPresetCovers');
+  const f = wizardFiles[wizardSelIdx];
+  if(el){
+    if(f && f.cover === 'pdf'){
+      el.innerHTML = `<div class="wf-cover-pdf"><span class="pdf-badge">PDF</span><b>${(f.coverPdfName || 'PDF 首屏').replace(/</g,'&lt;')}</b><small>已自动获取 PDF 首页封面</small></div>`;
+    } else if(f && f.cover === 'custom'){
+      el.innerHTML = '<div class="wf-cover-img" style="background:linear-gradient(135deg,#e8f0fe,#d6e4fb)">🖼</div>';
+    } else if(f && f.cover){
+      const p = PRESET_COVERS.find(x=>x.id===f.cover);
+      if(p) el.innerHTML = '<div class="wf-cover-img" style="background:'+p.bg+'"><span style="font-size:40px">'+p.icon+'</span></div>';
+    } else {
+      el.innerHTML = '<div class="wf-cover-empty"><span class="ci">🖼</span>点击上传或选择下方封面<br><span style="font-size:10.5px">封面必填，支持 JPG/PNG，或从 PDF 自动获取</span></div>';
+    }
+  }
+  if(presetRow){
+    presetRow.innerHTML = PRESET_COVERS.map(p => `
+      <div class="wf-preset-item ${f && f.cover===p.id ? 'sel' : ''}" style="background:${p.bg}" onclick="selectPresetCover('${p.id}')" title="${p.name}">
+        <span>${p.icon}</span><span class="pn">${p.name}</span>
+      </div>`).join('');
+  }
+}
+function selectPresetCover(id){
+  if(!wizardFiles[wizardSelIdx]) return;
+  wizardFiles[wizardSelIdx].cover = id;
+  renderWizardCover();
+  showToast('已选择封面','success');
+}
+function simulateCoverUpload(){
+  if(!wizardFiles[wizardSelIdx]) return;
+  wizardFiles[wizardSelIdx].cover = 'custom';
+  renderWizardCover();
+  showToast('文档封面已上传（自定义）','success');
+}
+
+function autoPdfCover(){
+  const f = wizardFiles[wizardSelIdx];
+  if(!f){ showToast('请先选择要设置封面的文件','warning'); return; }
+  const isPdf = f.type === 'pdf' || /\.pdf$/i.test(f.name || '');
+  if(!isPdf){ showToast('自动获取封面仅支持 PDF 文件','warning'); return; }
+  f.cover = 'pdf';
+  f.coverPdfName = f.name || 'PDF 首页';
+  renderWizardCover();
+  showToast('已从上传的 PDF 自动获取首页封面','success');
+}
+
+function renderWizardPublish(){
+  const options = document.querySelectorAll('#wizardPublishOptions .wf-publish-option');
+  options.forEach((el) => {
+    const active = el.dataset.mode === wizardPublishMode;
+    el.classList.toggle('sel', active);
+    const radio = el.querySelector('input');
+    if(radio) radio.checked = active;
+  });
+  const hint = document.getElementById('wizardPublishHint');
+  if(hint) hint.textContent = wizardPublishMode === 'limited'
+    ? '有限公开（付费文档）：非本部门用户只能试读前 2 页，本部门人员可查看全文；其他部门需在权限管理中授权。'
+    : '全部公开：所有部门都可查看全文。';
+  const owner = document.getElementById('wfiOwnerDept');
+  if(owner) owner.textContent = wizardOwnerDept || BaigeLibraryStore.getCurrentDept();
+}
+function setPublishMode(mode){
+  wizardPublishMode = mode === 'limited' ? 'limited' : 'public';
+  renderWizardPublish();
+}
+function onWizardNameInput(v){
+  if(wizardFiles[wizardSelIdx]){ wizardFiles[wizardSelIdx].name = v; renderWizardFileList(); }
+}
+function onWizardVerInput(v){
+  if(wizardFiles[wizardSelIdx]) wizardFiles[wizardSelIdx].version = v;
+}
+function renderWizardTags(){
+  const container = document.getElementById('wizardTagSelector');
+  container.innerHTML = TAG_CATEGORIES.map((cat,i) => `
+    <div class="tag-category ${i===0?'open':''}">
+      <div class="tag-cat-header" onclick="toggleWizardCat(this)">
+        <span>${cat.name}</span>
+        <span class="tag-cat-arrow">▶</span>
+      </div>
+      <div class="tag-cat-body">
+        <div class="tag-chips">
+          ${cat.tags.map(tag => `
+            <label class="tag-chip">
+              <input type="checkbox" value="${tag}" data-cat="${cat.key}" onchange="toggleWizardTag(this)">
+              <span>${tag}</span>
+            </label>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+function toggleWizardCat(header){
+  header.parentElement.classList.toggle('open');
+}
+function toggleWizardTag(cb){
+  const item = { cat: cb.dataset.cat, tag: cb.value };
+  if(cb.checked){
+    if(wizardSelectedTags.length >= 5){
+      cb.checked = false;
+      showToast('最多可选择 5 个标签','warning');
+      return;
+    }
+    wizardSelectedTags.push(item);
+  } else {
+    wizardSelectedTags = wizardSelectedTags.filter(t => !(t.cat === item.cat && t.tag === item.tag));
+  }
+}
+function nextWizardStep(){
+  if(wizardStep === 1 && wizardFiles.length === 0){showToast('请先上传文件','warning');return;}
+  if(wizardStep === 2 && (!wizardFiles[wizardSelIdx] || !wizardFiles[wizardSelIdx].cover)){showToast('请选择或上传文档封面','warning');return;}
+  if(wizardStep === 3){
+    finishWizardAndDetect();
+    return;
+  }
+  wizardStep++;
+  updateWizardUI();
+}
+function prevWizardStep(){
+  if(wizardStep > 1){wizardStep--; updateWizardUI();}
+}
+function simulateWizardUpload(){
+  if(wizardFiles.length > 0) return;
+  const files=[
+    {name:'XX项目技术方案_v3.pdf',size:'2.4 MB',type:'pdf',sensitive:true,kw:['秘密','内部资料','机密等级','受控分发'],hitPreview:[
+      '第3章“技术实现”写明：本模块涉及<span class="kw-hl">秘密</span>级业务数据，配套方案标注为<span class="kw-hl">内部资料</span>，未经授权不得外传。',
+      '封面页眉处印有“<span class="kw-hl">机密等级</span>：高”，尾页同时注明“<span class="kw-hl">受控分发</span>，禁止截屏与复制”。'
+    ]},
+    {name:'Q3季度总结.docx',size:'1.2 MB',type:'doc',sensitive:false,kw:[]},
+    {name:'产品使用手册_v2.pdf',size:'3.8 MB',type:'pdf',sensitive:false,kw:[]}
+  ];
+  wizardFiles = files.map((f,i)=>({...f,id:i,progress:0,uploaded:false}));
+  const list=document.getElementById('wizardUploadList');
+  let html='';
+  wizardFiles.forEach(f=>{
+    const icon=f.type==='pdf'?'PDF':'DOC';
+    html+=`<div class="upload-item" id="wizUp${f.id}"><div class="fi ${f.type}">${icon}</div><div class="uinfo"><div class="uname">${f.name}</div><div class="umeta" id="wizUpMeta${f.id}">${f.size} · 上传中…</div><div class="pbar"><div class="fill blue" id="wizUpProg${f.id}" style="width:0%"></div></div></div><div class="ust" id="wizUpStat${f.id}"><span style="color:var(--primary)">上传中</span></div></div>`;
+  });
+  list.innerHTML=html;
+  wizardFiles.forEach(f=>simulateWizardSingleUpload(f));
+  updateWizardUI();
+}
+function simulateWizardSingleUpload(file){
+  let prog=0;
+  const iv=setInterval(()=>{
+    prog+=Math.random()*25+10;
+    if(prog>=100){
+      prog=100; clearInterval(iv);
+      file.progress=100; file.uploaded=true;
+      document.getElementById(`wizUpProg${file.id}`).style.width='100%';
+      document.getElementById(`wizUpStat${file.id}`).innerHTML='<span style="color:#2E7D32">上传完成</span>';
+      document.getElementById(`wizUpMeta${file.id}`).textContent=`${file.size} · 上传完成`;
+      updateWizardUI();
+    } else {
+      file.progress=prog;
+      document.getElementById(`wizUpProg${file.id}`).style.width=prog+'%';
+    }
+  },300+file.id*120);
+}
+function finishWizardAndDetect(){
+  document.getElementById('wizardFinishSummary').classList.add('hidden');
+  document.getElementById('wizardDetecting').classList.remove('hidden');
+  document.getElementById('wizardNext').disabled = true;
+  document.getElementById('wizardPrev').disabled = true;
+
+  setTimeout(()=>{
+    wizardDetectDone = true;
+    closeUploadWizard();
+    const now = nowStr();
+    const tags = wizardSelectedTags.slice();
+    const created = BaigeLibraryStore.addDocs(wizardFiles.map(f => ({
+      title: f.name,
+      category: tags[0] || '其他',
+      source: 'upload',
+      sourceLabel: '部门上传',
+      ownerDept: wizardOwnerDept || BaigeLibraryStore.getCurrentDept(),
+      accessMode: wizardPublishMode,
+      org: '船舶研究院',
+      author: '当前用户',
+      date: now.slice(0,10),
+      docType: '文件',
+      fileType: f.type,
+      version: 'V1.0.0',
+      parseStatus: 'unparsed',
+      secretStatus: 'detecting',
+      abstract: '通过百舸文库文件上传向导录入的文档。',
+      kw: f.kw || [],
+      hot: 0,
+      origin: 'upload'
+    })));
+    wizardFiles.forEach((f, i) => { f._storeId = created[i] ? created[i].id : null; });
+    libRefreshIfVisible();
+    showToast('文件已完成录入，检测状态请在文件列表中查看','success');
+    wizardFiles.forEach((f,i)=>{
+      setTimeout(()=>runAsyncDetection(f), 1200 + i*800);
+    });
+  },1400);
+}
+function runAsyncDetection(file){
+  const doc = file._storeId ? BaigeLibraryStore.getDoc(file._storeId) : null;
+  if(!doc) return;
+  if(!file.sensitive){
+    BaigeLibraryStore.updateDoc(doc.id, { secretStatus:'passed', parseStatus:'parsing' });
+    libRefreshIfVisible();
+    showToast(`《${file.name}》未命中涉密内容，检测通过`,'success');
+    setTimeout(()=>{
+      BaigeLibraryStore.updateDoc(doc.id, { parseStatus:'parsed' });
+      libRefreshIfVisible();
+      showToast(`《${file.name}》解析完成`,'success');
+    },1600);
+  } else {
+    BaigeLibraryStore.updateDoc(doc.id, {
+      secretStatus:'hit',
+      parseStatus:'unparsed',
+      hitPreview: file.hitPreview && file.hitPreview.length ? file.hitPreview : buildAutoHitPreview(file.kw)
+    });
+    libRefreshIfVisible();
+    showToast(`《${file.name}》检测到涉密内容，请提交审核`,'warning');
+  }
+}
+
+function buildAutoHitPreview(kw){
+  const snippets = {
+    '秘密':['文档第3页写明“该模块涉及<span class="kw-hl">秘密</span>级业务数据，未经授权不得外传”。','表格备注栏标注为<span class="kw-hl">秘密</span>级，配套说明要求限定知悉范围。'],
+    '机密':['文中出现“<span class="kw-hl">机密</span>级系统架构描述”等表述，涉及核心安全设计。','访问控制矩阵及漏洞清单均标记为<span class="kw-hl">机密</span>，仅限授权人员查阅。'],
+    '内部':['文档明确“本资料属于<span class="kw-hl">内部</span>资料，禁止向外部人员转发”。','项目组成员名单后注明“以上人员可查阅<span class="kw-hl">内部</span>版本”。'],
+    '内部资料':['文件封面印有“<span class="kw-hl">内部资料</span>，注意保密”字样。','分发说明中强调“本材料为<span class="kw-hl">内部资料</span>，离职人员不得留存”。'],
+    '机密等级':['数据分级表中将核心算法列为<span class="kw-hl">机密等级</span>，并限定访问权限。','多处页眉出现“<span class="kw-hl">机密等级</span>：高”的水印标识。'],
+    '受控分发':['文件尾页标注“<span class="kw-hl">受控分发</span>，禁止截屏与复制”。','版本记录中写明“本版为<span class="kw-hl">受控分发</span>，接收人需签收”。'],
+    '涉密':['第2节标题为“<span class="kw-hl">涉密</span>数据管理要求”，正文列出具体管控措施。','截图中可见标有<span class="kw-hl">涉密</span>字样的系统界面，需脱敏后重新上传。']
+  };
+  const list = (kw || []);
+  if (!list.length) return [];
+  const result = [];
+  list.forEach((k, idx) => {
+    const pool = snippets[k] || [`文档正文中出现敏感词“<span class="kw-hl">${k}</span>”，请结合上下文确认是否符合上传规范。`];
+    // 同一关键词取第 idx 条，超出时循环；不同关键词尽量分散，减少内容重合
+    result.push(pool[idx % pool.length]);
+  });
+  // 简单去重：去除高亮标签后文本相同则合并
+  const seen = new Set();
+  return result.filter(line => {
+    const key = line.replace(/<[^>]+>/g, '').trim();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+function submitFileReview(name){
+  const kb = currentKbName || 'test0019090';
+  const data = KB_DATA[currentType];
+  const files = (data.files && data.files[kb]) || [];
+  const f = files.find(x => x.name === name && x.secretStatus === 'hit');
+  if(!f) return;
+  f.secretStatus = 'submitted';
+  f.updateTime = nowStr();
+  addReviewItem(f, kb);
+  renderFileList();
+  libRefreshIfVisible();
+  renderReviewCenter();
+  renderReviewAdmin();
+  showToast(`《${f.name}》已提交管理员审核，通过后将进入解析`,'success');
+}
+
+/* ── Review ── */
+function findKbFile(fileName, kbName){
+  for(const type of ['enterprise','department','personal']){
+    const data = KB_DATA[type];
+    const files = data.files && data.files[kbName];
+    if(files){
+      const f = files.find(x => x.name === fileName);
+      if(f) return { type, data, files, f };
+    }
+  }
+  return null;
+}
+function renderFileListIfVisible(type, kbName){
+  if(currentType === type && currentKbName === kbName) renderFileList();
+}
+
+function openReview(action,fileName){
+  currentReviewAction=action;
+  document.getElementById('rvFile').textContent=fileName;
+  currentReviewItem = null;
+  let kbLabel = KB_DATA[currentType].label;
+  let kbName = currentKbName || 'test0019090';
+  for(const type of ['enterprise','department','personal']){
+    const data = KB_DATA[type];
+    const found = data.reviewItems.find(r => r.file === fileName);
+    if(found){ currentReviewItem = { type, item: found }; kbLabel = data.label; kbName = found.kb; break; }
+  }
+  document.getElementById('rvKbName').textContent = kbLabel + ' / ' + kbName;
+  const title=document.getElementById('rvTitle'),btn=document.getElementById('rvSubmit');
+  if(action==='approve'){title.innerHTML='✅ 审核通过确认';document.getElementById('rvReject').classList.add('hidden');document.getElementById('rvApprove').classList.remove('hidden');btn.className='btn btn-success btn-lg';btn.textContent='确认通过';document.getElementById('rvApproveNote').value=''}
+  else{title.innerHTML='❌ 审核驳回';document.getElementById('rvReject').classList.remove('hidden');document.getElementById('rvApprove').classList.add('hidden');btn.className='btn btn-danger btn-lg';btn.textContent='确认驳回';document.getElementById('rvRejectReason').value=''}
+  openModal('reviewModal');
+}
+function submitReview(){
+  if(currentReviewAction==='reject'){if(!document.getElementById('rvRejectReason').value.trim()){showToast('请填写驳回意见','warning');return}}
+  const fileName = document.getElementById('rvFile').textContent;
+  const kbName = currentReviewItem && currentReviewItem.item ? currentReviewItem.item.kb : (currentKbName || 'test0019090');
+  const info = findKbFile(fileName, kbName);
+  closeModal('reviewModal');
+  if(currentReviewAction==='approve'){
+    const note = document.getElementById('rvApproveNote').value.trim();
+    const descEl = document.getElementById('approvedTimelineDesc');
+    if(descEl) descEl.textContent = note ? '审核人：wenhui.xian 备注：' + note : '审核人：wenhui.xian';
+    if(info){
+      const { type, data, f } = info;
+      f.secretStatus = 'passed';
+      f.parseStatus = 'parsing';
+      f.updateTime = nowStr();
+      if(currentReviewItem){ currentReviewItem.item.status = 'approved'; currentReviewItem.item.reviewer = 'wenhui.xian'; }
+      const mi = data.myrvItems.find(r => r.file === fileName && r.kb === kbName);
+      if(mi){ mi.status = 'approved'; mi.opinion = note ? '内容合规，已入库。备注：' + note : '内容合规，已入库'; }
+      if(data.stats.pending > 0) data.stats.pending--;
+      data.stats.approved++;
+      renderFileListIfVisible(type, kbName);
+      setTimeout(()=>{
+        f.parseStatus = 'parsed';
+        f.updateTime = nowStr();
+        renderFileListIfVisible(type, kbName);
+      },1800);
+    }
+    showToast('审核已通过，文档已正式入库并开始解析','success');
+  } else {
+    if(info){
+      const { type, data, f } = info;
+      f.secretStatus = 'rejected';
+      f.parseStatus = 'unparsed';
+      f.updateTime = nowStr();
+      if(currentReviewItem){ currentReviewItem.item.status = 'rejected'; currentReviewItem.item.reviewer = 'wenhui.xian'; }
+      const mi = data.myrvItems.find(r => r.file === fileName && r.kb === kbName);
+      if(mi){ mi.status = 'rejected'; mi.opinion = document.getElementById('rvRejectReason').value.trim() || '内容不合规，已驳回'; }
+      if(data.stats.pending > 0) data.stats.pending--;
+      data.stats.rejected++;
+      renderFileListIfVisible(type, kbName);
+    }
+    showToast('已驳回，驳回意见已通知上传人','success');
+  }
+  renderReviewCenter();
+  renderReviewAdmin();
+}
+
+/* ── Preview ── */
+let previewFileData = {};
+let previewReturnTo = null;
+let pvContentOriginal = '';
+function escapeRegExp(s){return s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
+function highlightTextNodes(node, kwList){
+  if(!kwList || !kwList.length) return;
+  if(node.nodeType===3){
+    const text=node.nodeValue;
+    const pattern=kwList.slice().sort((a,b)=>b.length-a.length).map(escapeRegExp).join('|');
+    const re=new RegExp('('+pattern+')','g');
+    if(!re.test(text)) return;
+    const span=document.createElement('span');
+    span.innerHTML=text.replace(re,'<span class="kw-hl">$1</span>');
+    node.parentNode.replaceChild(span,node);
+  } else if(node.nodeType===1 && node.childNodes.length && node.tagName!=='SCRIPT' && node.tagName!=='STYLE'){
+    Array.from(node.childNodes).forEach(c=>highlightTextNodes(c,kwList));
+  }
+}
+function closePreviewModal() {
+  closeModal('previewModal');
+  if (previewReturnTo) { openModal(previewReturnTo); previewReturnTo = null; }
+}
+function openPreview(fileName, uploader, time, kw, options = {}) {
+  const { returnTo = null, isUploader = false, viewOnly = false } = options;
+  previewReturnTo = returnTo;
+  previewFileData = { fileName, uploader, time, kw };
+  document.getElementById('pvFileName').textContent = fileName;
+  document.getElementById('pvDocTitle').textContent = fileName.replace(/\.(pdf|docx?)$/i, '');
+  // Render kw tags only (no highlighting)
+  document.getElementById('pvKwTags').innerHTML = kw.map(k => '<span class="kw-tag">'+k+'</span>').join(' ');
+  const pvContent = document.getElementById('pvContent');
+  pvContent.innerHTML = pvContentOriginal;
+  // Info tab
+  document.getElementById('pvInfoFile').textContent = fileName;
+  document.getElementById('pvInfoUploader').textContent = uploader;
+  document.getElementById('pvInfoTime').textContent = time;
+  document.getElementById('pvInfoKw').innerHTML = kw.length ? kw.map(k => '<span class="kw-tag">'+k+'</span>').join(' ') : '—';
+  // Footer actions — 审核操作仅在审核管理页打开预览时显示；知识库菜单仅为查看
+  let item = null;
+  for (const type of ['enterprise','department','personal']) {
+    const found = KB_DATA[type].reviewItems.find(r => r.file === fileName);
+    if (found) { item = found; break; }
+  }
+  const actionsEl = document.getElementById('pvActions');
+  if (!viewOnly && !isUploader && item && item.status === 'pending') {
+    actionsEl.innerHTML = `<button class="btn btn-success btn-lg" onclick="closeModal('previewModal');openReview('approve','${fileName}')">通过入库</button><button class="btn btn-danger btn-lg" onclick="closeModal('previewModal');openReview('reject','${fileName}')">驳回</button>`;
+  } else {
+    actionsEl.innerHTML = `<button class="btn btn-outline btn-lg" onclick="closePreviewModal()">关闭</button>`;
+  }
+  // Reset to preview tab
+  switchPreviewTab('preview');
+  openModal('previewModal');
+}
+function switchPreviewTab(tab) {
+  document.querySelectorAll('.preview-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('pvTabBtn' + (tab==='preview'?'Preview':'Info')).classList.add('active');
+  document.getElementById('pvTabPreview').classList.toggle('active', tab === 'preview');
+  document.getElementById('pvTabPreview').style.display = tab === 'preview' ? 'block' : 'none';
+  document.getElementById('pvTabInfo').classList.toggle('active', tab === 'info');
+  document.getElementById('pvTabInfo').style.display = tab === 'info' ? 'block' : 'none';
+}
+function switchPreviewPage(el, page) {
+  el.parentElement.querySelectorAll('.ps-item').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  // Scroll to section
+  const sections = document.querySelectorAll('#pvContent h4');
+  if (sections[page-1]) sections[page-1].scrollIntoView({behavior:'smooth',block:'start'});
+}
+function openPreviewFromReview() {
+  const fileName = document.getElementById('rvFile').textContent;
+  closeModal('reviewModal');
+  openPreview(fileName, 'zhang.san', '2026-08-12', ['秘密','内部'], { returnTo: 'reviewModal' });
+}
+
+/* ── Init ── */
+pvContentOriginal = document.getElementById('pvContent').innerHTML;
+renderKbGrid();
+renderReviewCenter();
+renderReviewAdmin();
+openSubPanel('kb');
+
+/* ═══ 百舸文库权限设置（迁移自 百舸文库-权限设置-v2） ═══ */
+const DEPTS = BaigeLibraryStore.departments;
+function renderDepts(){
+  document.getElementById('deptList').innerHTML = DEPTS.map(d=>{
+    const people = BaigeLibraryStore.peopleForDept(d);
+    return `<div class="dept-node collapsed" data-dept="${d}">
+      <div class="dept-lv" data-dept="${d}" onclick="selectDept('${d}', this)">
+        <button class="dept-toggle" type="button" aria-expanded="false" aria-label="展开${d}人员" onclick="event.stopPropagation(); toggleDeptPeople('${d}')">▸</button>
+        <svg class="ic" viewBox="0 0 24 24"><path d="M3 21h18V5h-7l-2-2H3v18z"/></svg><span class="dept-label">${d}</span><span class="dept-people-count">${people.length} 人</span>
+      </div>
+      <div class="dept-people">${people.map(p=>`<div class="person-lv" data-person="${p.id}" onclick="selectPerson('${p.id}','${d}',this)"><svg class="ic" viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4zm0 2c-3.3 0-8 1.7-8 5v1h16v-1c0-3.3-4.7-5-8-5z"/></svg><span>${p.name}</span></div>`).join('')}</div>
+    </div>`;
+  }).join('');
+  document.getElementById('deptCount').textContent = DEPTS.length;
+}
+function filterDepts(v){
+  const q=v.trim().toLowerCase();
+  document.querySelectorAll('#deptList .dept-node').forEach(node=>{
+    const deptNode = node.querySelector('.dept-lv');
+    const deptText = (deptNode?.textContent || '').toLowerCase();
+    const deptMatch = !q || deptText.includes(q);
+    let personMatch = false;
+    node.querySelectorAll('.person-lv').forEach(person=>{
+      const match = deptMatch || person.textContent.toLowerCase().includes(q);
+      person.style.display = match ? 'flex' : 'none';
+      if(match && q && !deptMatch) personMatch = true;
+    });
+    node.style.display = !q || deptMatch || personMatch ? '' : 'none';
+    if(!q){
+      node.classList.add('collapsed');
+      updateDeptToggle(node, false);
+    } else if(deptMatch || personMatch){
+      node.classList.remove('collapsed');
+      updateDeptToggle(node, true);
+    }
+  });
+  document.getElementById('entNode').style.display = !q || '船舶研究院'.includes(q) || '企业'.includes(q) ? 'flex' : 'none';
+}
+let curDept = '';
+let targetType = 'dept';
+let targetPerson = '';
+let adminDept = BaigeLibraryStore.getCurrentDept();
+function renderAdminIdentity(){
+  const el = document.getElementById('adminDeptLabel');
+  if(el) el.textContent = '管理身份：' + adminDept + ' · 仅显示本部门上传文档';
+}
+function updateDeptToggle(node, expanded){
+  if(!node) return;
+  const toggle = node.querySelector('.dept-toggle');
+  if(toggle) toggle.setAttribute('aria-expanded', String(expanded));
+}
+function expandDept(name){
+  const node = document.querySelector(`#deptList .dept-node[data-dept="${name}"]`);
+  if(!node) return;
+  node.classList.remove('collapsed');
+  updateDeptToggle(node, true);
+}
+function toggleDeptPeople(name){
+  const node = document.querySelector(`#deptList .dept-node[data-dept="${name}"]`);
+  if(!node) return;
+  const collapsed = node.classList.toggle('collapsed');
+  updateDeptToggle(node, !collapsed);
+}
+function setTargetLabel(){
+  const label = targetType === 'person'
+    ? (BaigeLibraryStore.people.find(p => p.id === targetPerson)?.name || '人员') + '（' + curDept + ' · 单人）'
+    : (curDept === 'enterprise' ? '船舶研究院（企业，全部部门）' : curDept + '（部门整体）');
+  const el = document.getElementById('curDept');
+  if(el) el.textContent = label;
+}
+function selectDept(name, el){
+  targetType = 'dept';
+  targetPerson = '';
+  curDept = name;
+  document.querySelectorAll('.dept-lv,.person-lv').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  setTargetLabel();
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('permArea').style.display='block';
+  reloadDocsFromStore();
+  renderAdminIdentity();
+  selected.clear();
+  page = 1;
+  render();
+}
+function selectPerson(id, dept, el){
+  targetType = 'person';
+  targetPerson = id;
+  curDept = dept;
+  document.querySelectorAll('.dept-lv,.person-lv').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  expandDept(dept);
+  setTargetLabel();
+  document.getElementById('emptyState').style.display='none';
+  document.getElementById('permArea').style.display='block';
+  reloadDocsFromStore();
+  renderAdminIdentity();
+  selected.clear();
+  page = 1;
+  render();
+}
+
+const CATS = BaigeLibraryStore.categories;
+const UPLOAD_TYPES = CATS;
+
+let DOCS = [];
+function reloadDocsFromStore(){
+  DOCS = BaigeLibraryStore.loadDocs().filter(d => d.ownerDept === adminDept).map(d => {
+    const isPerson = targetType === 'person' && targetPerson;
+    return {
+      ...d,
+      name: d.title,
+      src: d.source,
+      srcLabel: d.sourceLabel,
+      type: d.category,
+      perm: isPerson ? BaigeLibraryStore.effectivePersonLevel(d, targetPerson) : (curDept && DEPTS.includes(curDept) ? BaigeLibraryStore.effectiveLevel(d, curDept) : 3),
+      permExpiry: isPerson ? (d.personPermissionExpiry?.[targetPerson] || null) : (curDept && d.permissionExpiry ? (d.permissionExpiry[curDept] || null) : null)
+    };
+  });
+}
+function persistCurrentPermissions(){
+  if(!DEPTS.includes(curDept)) return;
+  const groups = new Map();
+  DOCS.forEach(d => {
+    const level = Number(d.perm) || 0;
+    const expiry = level > 0 ? (d.permExpiry || null) : null;
+    const key = level + '|' + (expiry || '');
+    if(!groups.has(key)) groups.set(key, { level, expiry, ids: [] });
+    groups.get(key).ids.push(d.id);
+  });
+  if(targetType === 'person' && targetPerson){
+    groups.forEach(g => BaigeLibraryStore.setPersonPermissions(g.ids, targetPerson, g.level, g.expiry));
+  } else {
+    groups.forEach(g => BaigeLibraryStore.setPermissions(g.ids, curDept, g.level, g.expiry));
+  }
+}
+
+let source='all', curType='all', kw='', page=1, size=12, aiMode=false;
+let selected = new Set();
+let revokeTarget = null;
+
+const LV_NAME = {0:'不赋予',1:'可搜索',2:'可见',3:'可在线查看',4:'可下载'};
+const LV_DESC = {1:'仅可通过检索命中标题/摘要等元信息',2:'可浏览列表与详情元数据，不可看全文',3:'可在线预览全文，不可下载（默认）',4:'完整权限，可下载（需按需授予）'};
+
+function setSource(s){
+  source=s;
+  document.querySelectorAll('.src-tab').forEach(t=>t.classList.toggle('active', t.dataset.src===s));
+  curType='all'; renderTypes(); resetList();
+}
+function renderTypes(){
+  const row = document.getElementById('typeRow');
+  if (!row) return;
+  row.style.display = '';
+  const types = UPLOAD_TYPES;
+  row.innerHTML = '<span class="lb">文档类型</span><span class="type-chip '+(curType==='all'?'active':'')+'" onclick="setType(\'all\')">全部</span>'+
+    types.map(t=>`<span class="type-chip ${curType===t?'active':''}" onclick="setType('${t}')">${t}</span>`).join('');
+}
+function setType(t){ curType=t; renderTypes(); resetList(); }
+
+function filtered(){
+  return DOCS.filter(d=>{
+    if(source==='crawl' && d.src!=='crawl') return false;
+    if(source==='upload' && d.src!=='upload') return false;
+    if(curType!=='all' && d.type!==curType) return false;
+    if(kw){
+      const q=kw.toLowerCase();
+      if(!(d.name+' '+d.org+' '+d.author+' '+d.type+' '+d.date).toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function render(){
+  const list=filtered();
+  const denied = list.filter(d=>d.perm===0).length;
+  const adjusted = list.filter(d=>d.perm!==0 && d.perm!==3).length;
+  const pages=Math.max(1, Math.ceil(list.length/size));
+  if(page>pages) page=pages;
+  const start=(page-1)*size, cur=list.slice(start,start+size);
+  const tbody=document.getElementById('tbody');
+  if(!cur.length){ tbody.innerHTML='<tr><td colspan="6" class="empty">当前筛选条件下暂无文档</td></tr>'; }
+  else {
+    tbody.innerHTML = cur.map(d=>{
+      const cls = d.perm===0 ? 'denied' : (d.perm===3 ? '' : 'adjusted');
+      return `<tr class="${cls}">
+        <td><input type="checkbox" class="row-ck" data-id="${d.id}" ${selected.has(d.id)?'checked':''} onchange="toggleSelect(${d.id},this.checked)"></td>
+        <td><div class="d-name">${d.name}<span class="access-pill ${d.accessMode==='limited'?'limited':'public'}">${d.accessMode==='limited'?'有限公开':'全部公开'}</span></div><div class="d-sub">${d.org} · ${d.author} · ${d.date}</div></td>
+        <td><span class="d-src ${d.src==='crawl'?'src-crawl':'src-upload'}">${d.srcLabel}</span></td>
+        <td class="src-type">${d.type || '—'}</td>
+        <td>${permBadges(d.perm)}${permExpiryHtml(d)}</td>
+        <td class="act-cell">
+          ${d.perm===0
+            ? '<span class="row-act grant" onclick="singleRevoke('+d.id+')">授权</span>'
+            : '<span class="row-act" onclick="singleRevoke('+d.id+')">调整权限</span>'}
+        </td>
+      </tr>`;
+    }).join('');
+  }
+  document.getElementById('ckAll').checked = cur.length>0 && cur.every(d=>selected.has(d.id));
+  document.getElementById('scopeInfo').innerHTML =
+    (aiMode?'<span style="color:var(--primary)">AI 语义匹配</span> · ':'') +
+    '当前范围 <b>'+list.length+'</b> 篇 · 不赋予 <b style="color:var(--red)">'+denied+'</b> 篇 · 已调整 <b style="color:var(--orange)">'+adjusted+'</b> 篇 · 已选 '+selected.size+' 篇';
+  document.getElementById('pinfo').textContent = '共 '+list.length+' 篇 · 第 '+page+'/'+pages+' 页';
+  document.getElementById('btnRevokeSel').disabled = selected.size===0;
+  document.getElementById('btnScope').disabled = list.length===0;
+  renderPager(pages);
+}
+function renderPager(pages){
+  let b='<span class="pg '+(page===1?'dis':'')+'" onclick="goPage('+(page-1)+')">‹</span>';
+  for(let p=1;p<=pages;p++) b+='<span class="pg '+(p===page?'cur':'')+'" onclick="goPage('+p+')">'+p+'</span>';
+  b+='<span class="pg '+(page===pages?'dis':'')+'" onclick="goPage('+(page+1)+')">›</span>';
+  document.getElementById('pgs').innerHTML=b;
+}
+function goPage(p){ const pages=Math.max(1,Math.ceil(filtered().length/size)); if(p<1||p>pages)return; page=p; render(); }
+function changeSize(v){ size=parseInt(v); page=1; render(); }
+function resetList(){ page=1; render(); }
+
+/* 当前权限列：拥有全部展示，不赋予显式红标 */
+const PERM_NAMES = ['可搜索','可见','可在线查看','可下载'];
+function permBadges(p){
+  if(p===0) return '<span class="pbadge none">不赋予</span>';
+  return PERM_NAMES.map((n,i)=>'<span class="pbadge '+(p>=(i+1)?'on':'off')+'">'+n+'</span>').join('');
+}
+function permExpiryHtml(d){
+  if(!d.permExpiry) return '';
+  const expired = Date.parse(d.permExpiry) <= Date.now();
+  const date = new Date(d.permExpiry);
+  const text = Number.isNaN(date.getTime()) ? d.permExpiry : date.toLocaleDateString('zh-CN');
+  return `<div class="perm-expiry${expired ? ' expired' : ''}">${expired ? '已过期' : '授权至 ' + text}</div>`;
+}
+
+/* 设置权限弹窗 */
+let selectedLevel=3, revokeCount=0;
+let revokeExpiryMode='permanent', revokeExpiryDate='';
+function openRevoke(count){
+  revokeCount = count;
+  const targetName = targetType === 'person' ? ((BaigeLibraryStore.people.find(p=>p.id===targetPerson)?.name || '人员') + '（' + curDept + '）') : curDept;
+  document.getElementById('revokeDesc').innerHTML = '请选择要赋予 <b>'+targetName+'</b> 对所选 <b>'+count+'</b> 篇文档的权限（可多选，勾选高级别自动包含低级别）：';
+  selectedLevel = 3;
+  revokeExpiryMode = 'permanent';
+  revokeExpiryDate = '';
+  renderLevels();
+  document.getElementById('revokeMask').classList.add('show');
+}
+const LV_ICON = ['M10 2a8 8 0 1 0 4.9 14.3l5 5 1.4-1.4-5-5A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z','M12 5c-4 0-7 2.6-7 6 0 1.5.6 2.9 1.5 4L5 19l4-1.5c1 .4 2 .5 3 .5 4 0 7-2.6 7-6s-3-6-7-6zm0 2c2.8 0 5 1.8 5 4s-2.2 4-5 4c-.8 0-1.6-.2-2.3-.5l-.3-.1-2 .8.8-2-.1-.3C9.8 14.4 7 13 7 11c0-2.2 2.2-4 5-4z','M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 3v6l2 2 2-2V6h2v6l-4 4-4-4V6h2zm9 10v2H8v-2h8z','M12 2a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V3a1 1 0 0 1 1-1z'];
+function renderLevels(){
+  document.getElementById('levelList').innerHTML = PERM_NAMES.map((n,i)=>{
+    const lv=i+1, checked = selectedLevel>=lv;
+    return `<label class="level-item ${checked?'sel':''}" data-lv="${lv}" onclick="toggleLevel(${lv},${!checked})">
+      <span class="lv-ic"><svg viewBox="0 0 24 24"><path d="${LV_ICON[i]}"/></svg></span>
+      <span class="lv-body"><span class="lv-name">${n}</span><div class="lv-desc">${LV_DESC[lv]}</div></span>
+      <span class="lv-check"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
+    </label>`;
+  }).join('');
+  renderRevokeExpiry();
+}
+function toggleLevel(lv, checked){
+  if(checked){ selectedLevel = Math.max(selectedLevel, lv); }
+  else { selectedLevel = Math.min(selectedLevel, lv-1); }
+  renderLevels();
+}
+function pickNone(){ selectedLevel=0; renderLevels(); }
+function onRevokeExpiryChange(value){
+  revokeExpiryMode = value;
+  const date = document.getElementById('revokeExpiryDate');
+  if(date) date.hidden = value !== 'custom';
+  renderRevokeExpiry();
+}
+function onRevokeExpiryDateChange(value){
+  revokeExpiryDate = value;
+  renderRevokeExpiry();
+}
+function renderRevokeExpiry(){
+  const select = document.getElementById('revokeExpiry');
+  const date = document.getElementById('revokeExpiryDate');
+  const hint = document.getElementById('revokeExpiryHint');
+  const disabled = selectedLevel === 0;
+  if(select){ select.disabled = disabled; select.value = revokeExpiryMode; }
+  if(date){ date.disabled = disabled; date.hidden = disabled || revokeExpiryMode !== 'custom'; date.value = revokeExpiryDate || ''; }
+  if(hint){
+    if(disabled) hint.textContent = '不赋予权限时无需设置有效期。';
+    else if(revokeExpiryMode === 'custom') hint.textContent = revokeExpiryDate ? '将在 ' + revokeExpiryDate + ' 23:59 自动回收权限。' : '请选择到期日期，到期当天 23:59 自动回收。';
+    else if(revokeExpiryMode === 'permanent') hint.textContent = '永久有效；也可改为限时授权，到期自动回收。';
+    else hint.textContent = '将在 ' + revokeExpiryMode + ' 天后自动回收权限，无需手动操作。';
+  }
+}
+function singleRevoke(id){ revokeTarget={id:id}; openRevoke(1); }
+function revokeSelected(){ if(!selected.size) return; revokeTarget='selected'; openRevoke(selected.size); }
+function revokeScope(){ const list=filtered(); if(!list.length){ showToast('当前筛选范围为空'); return; } revokeTarget='scope'; openRevoke(list.length); }
+function confirmRevoke(){
+  let expiresAt = null;
+  if(selectedLevel > 0 && revokeExpiryMode !== 'permanent'){
+    if(revokeExpiryMode === 'custom'){
+      if(!revokeExpiryDate){ showToast('请选择授权到期日期','warning'); return; }
+      const custom = new Date(revokeExpiryDate + 'T23:59:59');
+      if(Number.isNaN(custom.getTime()) || custom.getTime() <= Date.now()){ showToast('授权到期日期必须晚于当前时间','warning'); return; }
+      expiresAt = custom.toISOString();
+    } else {
+      const date = new Date();
+      date.setDate(date.getDate() + Number(revokeExpiryMode));
+      expiresAt = date.toISOString();
+    }
+  }
+  const ids = revokeTarget==='selected' ? [...selected] : revokeTarget==='scope' ? filtered().map(d=>d.id) : [revokeTarget.id];
+  ids.forEach(id=>{ const d=DOCS.find(x=>x.id===id); if(d){ d.perm=selectedLevel; d.permExpiry=expiresAt; } });
+  persistCurrentPermissions();
+  const n=ids.length;
+  selected.clear(); closeRevoke(); render();
+  const expiryText = expiresAt ? '，有效至 ' + new Date(expiresAt).toLocaleDateString('zh-CN') : '';
+  showToast('已将 '+n+' 篇文档权限设置为【'+LV_NAME[selectedLevel]+'】'+expiryText);
+}
+function singleRestore(id){ const d=DOCS.find(x=>x.id===id); if(d){ d.perm=3; d.permExpiry=null; } persistCurrentPermissions(); render(); showToast('已恢复默认权限（可在线查看）'); }
+function restoreAll(){
+  if(!curDept){ showToast('请先选择部门'); return; }
+  const n=DOCS.length; DOCS.forEach(d=>{ d.perm=3; d.permExpiry=null; });
+  persistCurrentPermissions();
+  selected.clear(); render();
+  showToast('已将全部 '+n+' 篇文档恢复默认权限（可搜索/可见/可在线查看）');
+}
+function closeRevoke(){ document.getElementById('revokeMask').classList.remove('show'); }
+
+function toggleSelect(id, ck){ ck?selected.add(id):selected.delete(id); render(); }
+function toggleAll(ck){ const list=filtered(); const start=(page-1)*size; list.slice(start,start+size).forEach(d=>{ ck?selected.add(d.id):selected.delete(d.id); }); render(); }
+
+function doSearch(){
+  kw=document.getElementById('kw').value.trim();
+  if(!kw){ showToast('请输入关键词'); return; }
+  aiMode=false; resetList();
+}
+function onKwInput(){
+  const v=document.getElementById('kw').value;
+  document.getElementById('kwClear').style.display = v ? 'flex' : 'none';
+}
+function clearKw(){
+  document.getElementById('kw').value='';
+  document.getElementById('kwClear').style.display='none';
+  kw=''; aiMode=false; resetList();
+}
+
+
+reloadDocsFromStore(); renderDepts(); renderTypes(); renderAdminIdentity();
+setInterval(() => {
+  if(BaigeLibraryStore.purgeExpired()){
+    reloadDocsFromStore();
+    if(curDept) render();
+  }
+}, 30000);
+</script>
+<script src="../src/data.js"></script>
+<script src="../src/ui.js"></script>
+<script src="../src/page-bridge.js"></script>
+<script>
+(() => {
+  const bridge = window.BaigePage;
+  const title = document.getElementById("adminViewTitle");
+  const back = document.getElementById("adminBack");
+  const params = new URLSearchParams(location.search);
+  const adminEmbed = params.get("embed") === "admin";
+  const hashChild = decodeURIComponent(location.hash.slice(1));
+  const requestedChild = params.get("view") === "perm" || hashChild === "权限管理" ? "权限管理" : "文件管理";
+  if (adminEmbed) {
+    const bar = document.querySelector(".admin-backbar");
+    if (bar) bar.style.display = "none";
+  }
+  function show(child) {
+    const view = child === "权限管理" ? "perm" : "upload";
+    document.querySelectorAll(".modal-overlay.show, .mask.show").forEach((node) => node.classList.remove("show"));
+    adminDept = BaigeLibraryStore.getCurrentDept();
+    openLibView(view);
+    if (view === "perm" && !curDept) {
+      const dept = BaigeLibraryStore.getCurrentDept();
+      const node = document.querySelector(`#deptList .dept-node[data-dept="${dept}"] .dept-lv`);
+      if (node) selectDept(dept, node);
+    }
+    if (title) title.textContent = view === "perm" ? "权限管理" : "文件管理";
+  }
+  bridge.onActivate(() => show(requestedChild));
+  bridge.onDeactivate(() => {
+    document.querySelectorAll(".modal-overlay.show, .mask.show").forEach((node) => node.classList.remove("show"));
+  });
+  back.addEventListener("click", () => {
+    if (window.parent === window) location.href = "library.html#文库首页";
+    else bridge.navigate("library", "文库首页");
+  });
+})();
+</script>
+</body>
+</html>

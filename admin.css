@@ -1,0 +1,24 @@
+/* 后管端：沿用客户端顶栏、侧栏和内容区结构，只保留后台入口。 */
+.admin-page { background: var(--canvas); }
+.admin-shell { height: 100dvh; }
+.admin-topbar { z-index: 40; }
+.admin-topbar-meta { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
+.admin-context { color: var(--muted); font-size: 12px; }
+.admin-return {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px;
+  border: 1px solid var(--line); border-radius: 8px; background: var(--surface);
+  color: var(--muted); font-size: 12px; transition: color .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease);
+}
+.admin-return:hover { color: var(--accent-hover); border-color: #c9d8fb; background: #f7f9ff; }
+.admin-return .icon { width: 14px; height: 14px; }
+.admin-sidebar { padding-top: 14px; }
+.admin-sidebar #adminNav { flex: 1; overflow-y: auto; min-height: 0; }
+.admin-sidebar .nav-item { gap: 12px; }
+.admin-sidebar .nav-item .icon { width: 18px; height: 18px; }
+.admin-version { color: var(--muted); font-size: 11px; }
+.admin-main { padding: 0; overflow: hidden; }
+.admin-frame { display: block; width: 100%; height: 100%; border: 0; background: var(--canvas); }
+.admin-sidebar .nav-section-label:first-child { padding-top: 4px; }
+@media (max-width: 1120px) {
+  .admin-shell { grid-template-columns: 210px minmax(0, 1fr); }
+}

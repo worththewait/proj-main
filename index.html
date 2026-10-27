@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#f4f6fb" />
+<title>百舸数智平台</title>
+<link rel="stylesheet" href="./styles.css?v=20261027-management" />
+<link rel="stylesheet" href="./account.css?v=20261026-xd-header" />
+</head>
+<body>
+<div class="app-shell">
+<header class="app-topbar" aria-label="平台顶栏">
+<a class="brand" href="#home" aria-label="百舸数智平台首页"><img class="brand-mark" src="./assets/baige-logo.svg" width="32" height="34" alt="" /><span>百舸<span class="brand-subtitle">数智服务平台</span></span></a>
+<div class="app-topbar-actions"><button class="topbar-icon-button" id="supportTrigger" type="button" aria-label="客服帮助" aria-haspopup="dialog" aria-controls="accountDialog" title="客服帮助"></button><button class="topbar-icon-button" id="notificationTrigger" type="button" aria-label="通知提醒，1条演示未读" aria-haspopup="dialog" aria-controls="accountDialog" title="通知提醒"><span class="notification-dot" aria-hidden="true"></span></button><div id="accountRoot"></div></div>
+</header>
+<aside class="sidebar" id="sidebar" aria-label="工作空间导航">
+<nav id="navigation" aria-label="主导航"></nav>
+<div class="sidebar-footer"><button class="icon-button" id="collapseButton" aria-label="收起导航" title="收起导航"></button></div>
+</aside>
+<main class="main-area" id="pageHost" aria-label="当前页面"></main>
+</div>
+<noscript>请在浏览器中启用 JavaScript，以使用百舸数智平台原型。</noscript>
+<!-- 普通本地脚本顺序加载，支持双击 HTML，无需服务。 -->
+<script src="./src/data.js?v=20261027-title-edge"></script>
+<script src="./src/ui.js"></script>
+<script src="./src/account.js?v=20261027-management"></script>
+<script src="./src/app.js?v=20261027-management"></script>
+</body>
+</html>
