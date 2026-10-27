@@ -52,17 +52,27 @@ test('sidebar shows granted and unavailable children with clear status', () => {
   assert.match(a.nav.innerHTML, /data-child="智能问数"/);
   assert.match(a.nav.innerHTML, /data-child="全球鹰"/);
   assert.match(a.nav.innerHTML, /data-child="智研通"/);
-  assert.match(a.nav.innerHTML, /aria-expanded="true" aria-controls="sub-qa"/);
-  assert.match(a.nav.innerHTML, /aria-expanded="true" aria-controls="sub-frontier"/);
+  assert.match(a.nav.innerHTML, /aria-expanded="false" aria-controls="sub-qa"/);
+  assert.match(a.nav.innerHTML, /aria-expanded="false" aria-controls="sub-frontier"/);
+  assert.match(a.nav.innerHTML, /aria-expanded="false" aria-controls="sub-data-platform"/);
+  assert.match(a.nav.innerHTML, /id="sub-qa" hidden/);
+  assert.match(a.nav.innerHTML, /id="sub-frontier" hidden/);
   assert.match(a.nav.innerHTML, /需申请/);
+});
+
+test('collapsible groups open after the parent is activated', () => {
+  const a = app();
+  a.click({nav: 'data-platform'});
+  assert.match(a.nav.innerHTML, /aria-expanded="true" aria-controls="sub-data-platform"/);
+  assert.doesNotMatch(a.nav.innerHTML, /id="sub-data-platform" hidden/);
 });
 
 test('a fully unavailable group remains expandable', () => {
   const a = app({denyFrontier: true});
   a.click({nav: 'frontier'});
-  assert.match(a.nav.innerHTML, /aria-expanded="false" aria-controls="sub-frontier"/);
-  a.click({nav: 'frontier'});
   assert.match(a.nav.innerHTML, /aria-expanded="true" aria-controls="sub-frontier"/);
+  a.click({nav: 'frontier'});
+  assert.match(a.nav.innerHTML, /aria-expanded="false" aria-controls="sub-frontier"/);
   assert.match(a.nav.innerHTML, /data-child="全球鹰"/);
   assert.match(a.nav.innerHTML, /data-child="智研通"/);
 });

@@ -6,7 +6,8 @@
   const navRoot = document.querySelector("#navigation");
   const host = document.querySelector("#pageHost");
   const shell = document.querySelector(".app-shell");
-  const state = { activeId: "home", activeChild: "", expanded: new Set(["qa", "frontier"]) };
+  // Collapsible groups start collapsed; a route deep link expands only its own parent.
+  const state = { activeId: "home", activeChild: "", expanded: new Set() };
   // Keep each document mounted so its inputs and tool tabs survive menu changes.
   const pages = new Map();
   const discoverableGroups = new Set(["qa", "frontier"]);
