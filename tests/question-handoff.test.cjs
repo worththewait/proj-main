@@ -174,6 +174,25 @@ test("homepage prompt settings survive mode switches without hiding the knowledg
   assert.equal(node("#quickQuestion").placeholder, "更新后的提示");
 });
 
+test("homepage web search toggle is independent and reflected in the prompt", () => {
+  const env = bridge("home");
+  vm.runInContext(source("qa-session.js"), env.context);
+  vm.runInContext(source("pages/home-knowledge.js"), env.context);
+  const web = env.document.querySelector("#quickWebSearchMode");
+  const field = env.document.querySelector("#quickQuestion");
+  assert.equal(web.getAttribute("aria-pressed"), "false");
+  web.emit("click");
+  assert.equal(web.getAttribute("aria-pressed"), "true");
+  assert.match(field.placeholder, /联网搜索已开启/);
+  env.document.querySelector("#quickKnowledgeMode").emit("click");
+  assert.equal(web.getAttribute("aria-pressed"), "true");
+  env.document.querySelector("#quickGeneralMode").emit("click");
+  assert.equal(web.getAttribute("aria-pressed"), "true");
+  web.emit("click");
+  assert.equal(web.getAttribute("aria-pressed"), "false");
+  assert.doesNotMatch(field.placeholder, /联网搜索/);
+});
+
 test("child bridge forwards trimmed questions without putting them in the hash", () => {
   const env = bridge("home");
   env.window.BaigePage.navigate("qa", "对话", { question: "  绿色船舶研究  " });

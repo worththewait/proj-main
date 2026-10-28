@@ -19,7 +19,7 @@
             <label class="sr-only" for="quickQuestion">输入你的问题</label>
             <textarea id="quickQuestion" rows="3" maxlength="16000" placeholder="输入您的问题，百舸为您解答" aria-describedby="dashboardIntroDescription"></textarea>
             <div class="home-quick-sources" id="quickSelectedSources" hidden><span id="quickSelectedTags"></span><button class="qa-text-action" id="quickChangeKnowledge" type="button">更换知识库</button></div>
-            <div class="home-quick-actions"><div class="home-quick-modes" role="group" aria-label="快捷问答模式"><button class="home-quick-mode is-active" id="quickGeneralMode" type="button" aria-pressed="true"><span data-icon="chat" aria-hidden="true"></span>通用问答</button><button class="home-quick-mode" id="quickKnowledgeMode" type="button" aria-pressed="false" aria-haspopup="dialog" aria-expanded="false" aria-controls="quickKnowledgePicker"><span data-icon="book" aria-hidden="true"></span><span id="quickKnowledgeLabel">知识库问答</span></button></div><small>Enter 发送 · Shift + Enter 换行</small><button class="home-quick-send" id="quickQuestionSend" type="submit" disabled>发送<span data-icon="arrow" aria-hidden="true"></span></button></div>
+            <div class="home-quick-actions"><div class="home-quick-modes" role="group" aria-label="快捷问答选项"><button class="home-quick-mode is-active" id="quickGeneralMode" type="button" aria-pressed="true"><span data-icon="chat" aria-hidden="true"></span>通用问答</button><button class="home-quick-mode" id="quickKnowledgeMode" type="button" aria-pressed="false" aria-haspopup="dialog" aria-expanded="false" aria-controls="quickKnowledgePicker"><span data-icon="book" aria-hidden="true"></span><span id="quickKnowledgeLabel">知识库问答</span></button><button class="home-quick-mode" id="quickWebSearchMode" type="button" aria-pressed="false" title="联网搜索"><span data-icon="globe" aria-hidden="true"></span>联网搜索</button></div><small>Enter 发送 · Shift + Enter 换行</small><button class="home-quick-send" id="quickQuestionSend" type="submit" disabled>发送<span data-icon="arrow" aria-hidden="true"></span></button></div>
           </form>
           <p class="home-quick-feedback" id="quickQuestionFeedback" role="status"></p>
         </section>
@@ -83,12 +83,12 @@
       <button class="primary-button" type="button" id="applyHomeAccess">申请权限</button>
     </div>
   </dialog>
-  <script src="../src/data.js?v=20261027-management"></script>
+  <script src="../src/data.js?v=20261028-web-search"></script>
   <script src="../src/ui.js"></script>
   <script src="../src/page-bridge.js?v=20261026-lifecycle"></script>
   <script src="../src/home-access.js"></script>
   <script src="../src/qa-session.js"></script>
-  <script src="../src/pages/home-knowledge.js?v=20261026-xd"></script>
+  <script src="../src/pages/home-knowledge.js?v=20261028-web-search"></script>
   <script src="../src/home-card-images.js?v=20261026-carousel"></script>
   <script src="../src/home-directory-icons.js?v=20261024-directory"></script>
   <script src="../src/home-carousel-model.js?v=20261027-management"></script>

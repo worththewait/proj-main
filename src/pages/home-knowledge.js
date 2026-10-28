@@ -5,6 +5,7 @@
   const session = new window.BaigeQuestionSession(knowledgeBases);
   const general = document.querySelector("#quickGeneralMode");
   const knowledge = document.querySelector("#quickKnowledgeMode");
+  const webSearchButton = document.querySelector("#quickWebSearchMode");
   const picker = document.querySelector("#quickKnowledgePicker");
   const scopes = document.querySelector("#quickKnowledgeScopes");
   const search = document.querySelector("#quickKnowledgeSearch");
@@ -17,16 +18,19 @@
   let scope = "行业";
   let trigger = knowledge;
   let restorePickerFocus = true;
+  let webSearch = false;
   function renderMode() {
     const active = session.mode === "knowledge";
     general.classList.toggle("is-active", !active);
     general.setAttribute("aria-pressed", String(!active));
     knowledge.classList.toggle("is-active", active);
     knowledge.setAttribute("aria-pressed", String(active));
+    webSearchButton.classList.toggle("is-active", webSearch);
+    webSearchButton.setAttribute("aria-pressed", String(webSearch));
     document.querySelector("#quickKnowledgeLabel").textContent = active ? `知识库问答 · ${session.selected.length}` : "知识库问答";
     sourceRow.hidden = !active;
     document.querySelector("#quickSelectedTags").innerHTML = session.selected.map(item => `<span class="qa-source-tag">${icon("book")}<span>${escapeHtml(item.name)}</span></span>`).join("");
-    field.placeholder = active ? "围绕已选知识库提问，发送后进入知识库问答…" : generalPrompt;
+    field.placeholder = (active ? "围绕已选知识库提问，发送后进入知识库问答…" : generalPrompt) + (webSearch ? "（联网搜索已开启）" : "");
   }
   function renderCount() {
     count.textContent = `已选 ${session.draftIds.size} 个知识库`;
@@ -58,6 +62,11 @@
   knowledge.addEventListener("click", () => openPicker(knowledge));
   document.querySelector("#quickChangeKnowledge").addEventListener("click", event => openPicker(event.currentTarget));
   general.addEventListener("click", () => { session.useGeneral(); renderMode(); field.focus(); });
+  webSearchButton.addEventListener("click", () => {
+    webSearch = !webSearch;
+    renderMode();
+    field.focus();
+  });
   document.querySelector("#quickKnowledgeClose").addEventListener("click", closePicker);
   document.querySelector("#quickKnowledgeCancel").addEventListener("click", closePicker);
   picker.addEventListener("cancel", () => session.cancelSelection());

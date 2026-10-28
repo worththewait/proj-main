@@ -15,7 +15,7 @@ const tools = [
  {name:"专利编制",group:"研究辅助",icon:"file",description:"辅助梳理专利技术方案与申请材料，形成编制思路。"}
 ];
 const navigation = [
- {id:"home",file:"pages/home.html?v=20261027-title-edge",label:"首页",icon:"home"},
+ {id:"home",file:"pages/home.html?v=20261028-web-search",label:"首页",icon:"home"},
  {id:"qa",file:"pages/qa.html?v=20261026-xd",label:"百舸问答",icon:"chat",children:["对话","智能问数"]},
  {id:"knowledge",file:"pages/knowledge.html",label:"知识库",icon:"book"},
  {id:"writing",file:"pages/writing.html",label:"百舸写作",icon:"pen"},
