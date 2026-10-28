@@ -258,6 +258,16 @@
   function peopleForDept(dept) {
     return PEOPLE.filter((person) => person.dept === dept);
   }
+  // Department uploads are only visible to, and manageable by, their owning department.
+  function uploadsForDept(dept) {
+    if (!DEPARTMENTS.includes(dept)) return [];
+    return loadDocs().filter((doc) => doc.source === "upload" && doc.ownerDept === dept);
+  }
+  function canManageDoc(id, dept) {
+    if (!DEPARTMENTS.includes(dept)) return false;
+    const doc = loadDocs().find((item) => Number(item.id) === Number(id));
+    return Boolean(doc && doc.source === "upload" && doc.ownerDept === dept);
+  }
   function getCurrentUser() {
     const dept = getCurrentDept();
     const current = readStorage(USER_KEY);
@@ -361,6 +371,8 @@
     departments: DEPARTMENTS.slice(),
     people: PEOPLE.map((person) => ({ ...person })),
     peopleForDept,
+    uploadsForDept,
+    canManageDoc,
     loadDocs,
     getDoc: (id) => loadDocs().find((doc) => Number(doc.id) === Number(id)) || null,
     addDocs,

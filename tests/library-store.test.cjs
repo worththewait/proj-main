@@ -62,6 +62,32 @@ test("library store merges home, permission and file seed data", () => {
   }
 });
 
+test("department management scope only includes uploads owned by that department", () => {
+  const { store } = createStore();
+  const dept = "经济研究中心";
+  const docs = Array.from(store.uploadsForDept(dept));
+  assert.ok(docs.length > 0);
+  for (const doc of docs) {
+    assert.equal(doc.source, "upload");
+    assert.equal(doc.ownerDept, dept);
+    assert.equal(store.canManageDoc(doc.id, dept), true);
+  }
+  const crawl = Array.from(store.loadDocs()).find((doc) => doc.source === "crawl" && doc.ownerDept === dept);
+  assert.ok(crawl, "the same department can still own crawled documents");
+  assert.equal(store.canManageDoc(crawl.id, dept), false);
+
+  const foreign = Array.from(store.loadDocs()).find((doc) => doc.source === "upload" && doc.ownerDept !== dept);
+  assert.ok(foreign);
+  assert.equal(store.canManageDoc(foreign.id, dept), false);
+  assert.deepEqual(Array.from(store.uploadsForDept("不存在的部门")), []);
+
+  store.setCurrentDept("动力研究院");
+  assert.equal(store.getCurrentDept(), "动力研究院");
+  assert.deepEqual(Array.from(store.uploadsForDept(store.getCurrentDept())), []);
+  store.setCurrentDept(dept);
+  assert.equal(store.getCurrentDept(), dept);
+});
+
 test("library store mutations are shared by permission, file and home views", () => {
   const { store } = createStore();
   const before = store.loadDocs().length;
