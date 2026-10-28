@@ -512,6 +512,11 @@
   .admin-title{font-size:14px;font-weight:600;color:var(--text)}
   .admin-context{margin-left:auto;color:var(--text-tri);font-size:12px}
   .content{flex:1;min-height:0;overflow:auto;padding:22px 28px 30px;background:var(--bg)}
+  .lib-scope-bar{display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;background:#fff;border:1px solid var(--border);border-radius:var(--radius);flex-wrap:wrap}
+  .lib-scope-bar label{font-size:12px;font-weight:600;color:var(--text)}
+  .lib-scope-bar select{min-width:150px;height:32px;padding:0 10px;border:1px solid var(--border);border-radius:8px;background:#fff;color:var(--text);font:inherit;cursor:pointer}
+  .lib-scope-bar select:focus-visible{outline:3px solid rgba(36,91,255,.25);outline-offset:2px;border-color:var(--primary)}
+  .lib-scope-bar .lib-scope-hint{font-size:11.5px;color:var(--text-sec)}
   .dtw{overflow-x:auto}
   .toast{top:68px}
   .btn,.sbtn,.kw-btn,.form-input,.form-textarea,.modal,.dtw,.list-header,.review-stats{border-radius:var(--radius)}
@@ -812,6 +817,11 @@
 
   
   <div id="libView" style="display:none">
+      <div class="lib-scope-bar">
+        <label for="libDeptSelect">当前部门</label>
+        <select id="libDeptSelect" aria-label="切换当前部门" onchange="switchLibDept(this.value)"></select>
+        <span class="lib-scope-hint">切换后，文件管理与权限管理仅显示本部门上传文档</span>
+      </div>
       <!-- 文件管理（迁移自企业知识库：选择知识库 → 文件列表 → 上传向导） -->
       <div class="panel" id="libPanel-upload">
         <div id="libUploadRoot">
@@ -820,7 +830,6 @@
           <div id="libKbFiles">
             <div class="list-header" style="margin-bottom:12px">
               <div style="font-size:15px;font-weight:600">文件列表</div>
-              <span id="libAdminDeptLabel" style="font-size:12px;color:var(--text-sec)"></span>
               <div class="spacer"></div>
               <button class="btn btn-primary" style="height:34px;padding:0 16px" onclick="libOpenUploadWizard()"><span style="font-size:20px;line-height:1;margin-right:2px">+</span> 上传文件</button>
             </div>
@@ -1361,6 +1370,28 @@ function openSubPanel(type) {
    ══════════════════════════════════════ */
 const LIB_VIEWS = { upload: '文件管理', perm: '权限管理' };
 
+function renderLibDeptSwitcher() {
+  const select = document.getElementById('libDeptSelect');
+  if (!select) return;
+  const current = BaigeLibraryStore.getCurrentDept();
+  select.innerHTML = BaigeLibraryStore.departments.map((dept) =>
+    `<option value="${dept}"${dept === current ? ' selected' : ''}>${dept}</option>`).join('');
+  select.value = current;
+}
+function switchLibDept(dept) {
+  if (!BaigeLibraryStore.departments.includes(dept)) return;
+  BaigeLibraryStore.setCurrentDept(dept);
+  adminDept = dept;
+  const select = document.getElementById('libDeptSelect');
+  if (select) select.value = dept;
+  libFilePage = 1;
+  libRenderFileList();
+  const node = document.querySelector(`#deptList .dept-node[data-dept="${dept}"] .dept-lv`);
+  if (node) selectDept(dept, node);
+  else { reloadDocsFromStore(); renderAdminIdentity(); }
+  showToast('已切换到' + dept + '，仅显示本部门上传文档', 'success');
+}
+
 function openLibView(view) {
   // Close sub-panels after selection
   ['subRc','subRa','subKb','subLib'].forEach(function(id){ var e=document.getElementById(id); if(e) e.style.display='none'; });
@@ -1374,6 +1405,7 @@ function openLibView(view) {
   if (subItems[idx]) subItems[idx].classList.add('active');
   // Show libView, hide other views
   document.getElementById('libView').style.display = 'block';
+  renderLibDeptSwitcher();
   document.getElementById('reviewCenter').style.display = 'none';
   document.getElementById('reviewAdmin').style.display = 'none';
   document.getElementById('kbList').style.display = 'none';
@@ -1424,16 +1456,11 @@ function libKbFilesOf(name) {
   }));
 }
 
-function renderLibDeptIdentity() {
-  const el = document.getElementById('libAdminDeptLabel');
-  if (el) el.textContent = '当前部门：' + BaigeLibraryStore.getCurrentDept() + ' · 仅显示本部门上传文档';
-}
 function libEnterKb(name) {
   libKbName = name;
   libKbMode = true;
   libFilePage = 1;
   document.getElementById('libKbFiles').style.display = 'block';
-  renderLibDeptIdentity();
   libResetFilters();
   libRenderFileList();
 }
@@ -2628,7 +2655,7 @@ let targetPerson = '';
 let adminDept = BaigeLibraryStore.getCurrentDept();
 function renderAdminIdentity(){
   const el = document.getElementById('adminDeptLabel');
-  if(el) el.textContent = '管理身份：' + adminDept + ' · 仅显示本部门上传文档';
+  if(el) el.textContent = '管理身份：' + adminDept;
 }
 function updateDeptToggle(node, expanded){
   if(!node) return;
@@ -2917,7 +2944,7 @@ function clearKw(){
 }
 
 
-reloadDocsFromStore(); renderDepts(); renderTypes(); renderAdminIdentity();
+reloadDocsFromStore(); renderDepts(); renderTypes(); renderAdminIdentity(); renderLibDeptSwitcher();
 setInterval(() => {
   if(BaigeLibraryStore.purgeExpired()){
     reloadDocsFromStore();

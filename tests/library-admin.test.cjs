@@ -23,6 +23,10 @@ test("百舸文库 links only to the user-facing library; admin demo remains ava
 test("library admin scopes file and permission management to department uploads", () => {
   const html = read("pages/library-admin.html");
   assert.match(html, /function libKbFilesOf\(name\) \{[\s\S]{0,160}uploadsForDept\(BaigeLibraryStore\.getCurrentDept\(\)\)/);
+  assert.match(html, /id="libDeptSelect"/);
+  assert.match(html, /function renderLibDeptSwitcher\(\)/);
+  assert.match(html, /function switchLibDept\(dept\)/);
+  assert.match(html, /BaigeLibraryStore\.setCurrentDept\(dept\)/);
   assert.match(html, /DOCS = BaigeLibraryStore\.uploadsForDept\(adminDept\)/);
   assert.match(html, /仅显示本部门上传文档/);
   assert.match(html, /canManageDoc\(id, BaigeLibraryStore\.getCurrentDept\(\)\)/);

@@ -80,6 +80,12 @@ test("department management scope only includes uploads owned by that department
   assert.ok(foreign);
   assert.equal(store.canManageDoc(foreign.id, dept), false);
   assert.deepEqual(Array.from(store.uploadsForDept("不存在的部门")), []);
+
+  store.setCurrentDept("动力研究院");
+  assert.equal(store.getCurrentDept(), "动力研究院");
+  assert.deepEqual(Array.from(store.uploadsForDept(store.getCurrentDept())), []);
+  store.setCurrentDept(dept);
+  assert.equal(store.getCurrentDept(), dept);
 });
 
 test("library store mutations are shared by permission, file and home views", () => {
