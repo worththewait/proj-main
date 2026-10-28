@@ -3,8 +3,16 @@
 
   const DOC_KEY = "baige.library.docs.v3";
   const DEPT_KEY = "baige.library.dept.v1";
+  const MANAGE_KEY = "baige.library.manage-dept.v1";
   const USER_KEY = "baige.library.user.v1";
   const DEPARTMENTS = ["经济研究中心", "动力研究院", "技术经济中心", "船级社规范所", "国际航运研究中心", "情报研究所"];
+  // Four departments run 百舸文库; the other organization departments stay as authorization targets.
+  const LIBRARY_MANAGERS = [
+    { label: "经研中心", dept: "经济研究中心", types: ["智库成果", "三方研报"] },
+    { label: "标准中心", dept: "船级社规范所", types: ["船舶标准"] },
+    { label: "知产中心", dept: "技术经济中心", types: ["行业专利"] },
+    { label: "数智中心", dept: "情报研究所", types: ["规则规范", "专业书籍", "期刊论文", "其他"] },
+  ];
   const PEOPLE = [
     { id: "eco-1", name: "张海宁", dept: "经济研究中心" },
     { id: "eco-2", name: "李明远", dept: "经济研究中心" },
@@ -60,16 +68,31 @@
   function normalizePersonMap(value) {
     return value && typeof value === "object" ? { ...value } : {};
   }
+  function managerForCategory(category) {
+    return LIBRARY_MANAGERS.find((manager) => manager.types.includes(category)) || LIBRARY_MANAGERS[LIBRARY_MANAGERS.length - 1];
+  }
   function normalizeDoc(doc, id) {
-    const ownerDept = DEPARTMENTS.includes(doc.ownerDept) ? doc.ownerDept : DEPARTMENTS[0];
+    const category = TYPES.includes(doc.category) ? doc.category : "其他";
+    const ownerDept = managerForCategory(category).dept;
+    const previousOwner = DEPARTMENTS.includes(doc.ownerDept) ? doc.ownerDept : "";
     const accessMode = doc.accessMode === "limited" ? "limited" : "public";
     const permissions = doc.permissions
       ? normalizePermissions(doc.permissions)
       : accessMode === "limited" ? limitedPermissions(ownerDept) : blankPermissions();
+    const permissionExpiry = normalizeExpiry(doc.permissionExpiry);
+    // Re-home documents by their type and keep the responsible department's owner access.
+    if (previousOwner !== ownerDept) {
+      permissions[ownerDept] = Math.max(3, Number(permissions[ownerDept]) || 0);
+      if (previousOwner) {
+        if (accessMode === "limited" && Number(permissions[previousOwner]) === 3) permissions[previousOwner] = 0;
+        if (Number(permissions[previousOwner]) === 0) permissionExpiry[previousOwner] = null;
+      }
+      permissionExpiry[ownerDept] = null;
+    }
     return {
       id,
       title: String(doc.title || "").trim(),
-      category: TYPES.includes(doc.category) ? doc.category : "其他",
+      category,
       source: doc.source === "upload" ? "upload" : "crawl",
       sourceLabel: doc.source === "upload" ? "部门上传" : "爬虫公开",
       ownerDept,
@@ -87,7 +110,7 @@
       abstract: doc.abstract || "",
       origin: doc.origin || "library",
       permissions,
-      permissionExpiry: normalizeExpiry(doc.permissionExpiry),
+      permissionExpiry,
       personPermissions: normalizePersonMap(doc.personPermissions),
       personPermissionExpiry: normalizePersonMap(doc.personPermissionExpiry),
     };
@@ -258,15 +281,35 @@
   function peopleForDept(dept) {
     return PEOPLE.filter((person) => person.dept === dept);
   }
+  function managerTypes(dept) {
+    const manager = LIBRARY_MANAGERS.find((item) => item.dept === dept);
+    return manager ? manager.types.slice() : [];
+  }
+  function managerLabel(dept) {
+    const manager = LIBRARY_MANAGERS.find((item) => item.dept === dept);
+    return manager ? manager.label : dept;
+  }
+  function getManageDept() {
+    const stored = readStorage(MANAGE_KEY);
+    if (LIBRARY_MANAGERS.some((manager) => manager.dept === stored)) return stored;
+    const current = getCurrentDept();
+    if (LIBRARY_MANAGERS.some((manager) => manager.dept === current)) return current;
+    return LIBRARY_MANAGERS[0].dept;
+  }
+  function setManageDept(dept) {
+    if (!LIBRARY_MANAGERS.some((manager) => manager.dept === dept)) return;
+    writeStorage(MANAGE_KEY, dept);
+  }
   // Department uploads are only visible to, and manageable by, their owning department.
   function uploadsForDept(dept) {
     if (!DEPARTMENTS.includes(dept)) return [];
     return loadDocs().filter((doc) => doc.source === "upload" && doc.ownerDept === dept);
   }
   function canManageDoc(id, dept) {
-    if (!DEPARTMENTS.includes(dept)) return false;
+    const manager = LIBRARY_MANAGERS.find((item) => item.dept === dept);
+    if (!manager) return false;
     const doc = loadDocs().find((item) => Number(item.id) === Number(id));
-    return Boolean(doc && doc.source === "upload" && doc.ownerDept === dept);
+    return Boolean(doc && doc.source === "upload" && doc.ownerDept === dept && manager.types.includes(doc.category));
   }
   function getCurrentUser() {
     const dept = getCurrentDept();
@@ -369,8 +412,14 @@
   window.BaigeLibraryStore = Object.freeze({
     categories: TYPES,
     departments: DEPARTMENTS.slice(),
+    managers: LIBRARY_MANAGERS.map(({ label, dept, types }) => ({ label, dept, types: types.slice() })),
     people: PEOPLE.map((person) => ({ ...person })),
     peopleForDept,
+    managerForCategory,
+    managerTypes,
+    managerLabel,
+    getManageDept,
+    setManageDept,
     uploadsForDept,
     canManageDoc,
     loadDocs,
