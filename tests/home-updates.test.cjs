@@ -57,15 +57,17 @@ test('detail actions navigate through permissions and leaving home dismisses the
 });
 
 
-test('published updates refresh a mounted homepage while drafts stay hidden, then deletion removes them', () => {
+test('published updates refresh a mounted homepage while drafts and cancelled updates stay hidden, then deletion removes them', () => {
   const app=setup();
   app.config.saveSection('updates',[
     {id:'new',title:'最新发布',date:'2026-10-27',body:'正文',status:'published'},
     {id:'draft',title:'未发布草稿',date:'2026-10-27',body:'待完善',status:'draft'},
+    {id:'unpublished',title:'已取消发布',date:'2026-10-27',body:'正文',status:'unpublished'},
   ]);
   app.refresh();
   assert.match(app.elements.homeUpdatesList.innerHTML,/最新发布/);
   assert.doesNotMatch(app.elements.homeUpdatesList.innerHTML,/未发布草稿/);
+  assert.doesNotMatch(app.elements.homeUpdatesList.innerHTML,/已取消发布/);
   app.open('new');assert.equal(app.elements.productUpdateDialogTitle.textContent,'最新发布');
   app.config.saveSection('updates',[]);app.refresh();
   assert.doesNotMatch(app.elements.homeUpdatesList.innerHTML,/最新发布/);

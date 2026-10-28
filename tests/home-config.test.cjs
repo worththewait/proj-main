@@ -54,6 +54,7 @@ test('published news requires title, valid calendar date and body; drafts allow 
   assert.ok(model.validateUpdates([entry]));
   assert.equal(model.validateUpdates([{...entry, body:''}]), null);
   assert.ok(model.validateUpdates([{...entry, body:'', status:'draft'}]));
+  assert.ok(model.validateUpdates([{...entry, body:'', status:'unpublished'}]));
   for (const date of ['2026-02-30','2026-13-01','not-a-date']) assert.equal(model.validateUpdates([{...entry,date}]),null);
   assert.equal(model.validateUpdates([entry,entry]),null);
   assert.equal(model.validateUpdates([{...entry,status:'external'}]),null);
@@ -63,6 +64,7 @@ test('only published entries are returned, descending by date with stable same-d
   const entry = {title:'标题', body:'正文', status:'published'};
   model.saveSection('updates', [
     {...entry,id:'old',date:'2026-10-24'}, {...entry,id:'draft',date:'2026-10-27',status:'draft'},
+    {...entry,id:'unpublished',date:'2026-10-27',status:'unpublished'},
     {...entry,id:'new',date:'2026-10-26'}, {...entry,id:'same',date:'2026-10-26'},
   ]);
   assert.equal(JSON.stringify(model.published().map(x=>x.id)),JSON.stringify(['new','same','old']));

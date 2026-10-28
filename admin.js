@@ -4,7 +4,7 @@
   const views = {
     files: { src: "pages/library-admin.html?embed=admin&view=files&v=20261028-managed-docs", title: "文件管理" },
     perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261028-managed-docs", title: "权限管理" },
-    settings: { src: "pages/home-settings.html?embed=admin&v=20261028-dept-scope", title: "自定义界面" },
+    settings: { src: "pages/home-settings.html?embed=admin&v=20261028-update-toast", title: "自定义界面" },
   };
   if (window.BaigeUI) window.BaigeUI.hydrate();
   const nav = document.querySelector("#adminNav");

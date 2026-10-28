@@ -50,7 +50,7 @@
     for (const item of value) {
       if (!item || typeof item.id!=='string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(item.id) || seen.has(item.id) ||
         typeof item.title!=='string' || !item.title.trim() || item.title.trim().length>60 ||
-        typeof item.body!=='string' || item.body.trim().length>5000 || !['draft','published'].includes(item.status)) return null;
+        typeof item.body!=='string' || item.body.trim().length>5000 || !['draft','published','unpublished'].includes(item.status)) return null;
       const now = new Date();
       // The publisher supplies the current date; older records keep their saved date.
       const dateValue = item.date === undefined ? `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}` : item.date;

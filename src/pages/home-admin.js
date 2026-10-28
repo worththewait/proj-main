@@ -11,9 +11,20 @@
   const destinationFor = item => item.destination && newsDestinations.find(target=>target.route===item.destination.route && target.child===item.destination.child);
   get('updateDestination').innerHTML = '<option value="">不设置跳转</option>' + newsDestinations.map(item=>`<option value="${escape(item.key)}">${escape(item.label)}</option>`).join('');
   let selected = new Set(config.read().recommendedIds);
-  let group = 'all', newsFilter = 'all', editingId = null, deleteId = null, deleteTrigger = null, detailTrigger = null;
+  let group = 'all', deleteId = null, deleteTrigger = null, detailTrigger = null;
   let nextId = 0;
   const notice = text => { get('adminNotice').textContent = text; };
+  let toastTimer = null;
+  function showToast(text) {
+    const toast = get('adminToast');
+    toast.innerHTML = `${icon('check')}<span>${escape(text)}</span>`;
+    toast.classList.add('is-visible');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toast.classList.remove('is-visible');
+      toastTimer = null;
+    }, 2000);
+  }
 
   function switchTab(name, focus = false) {
     for (const tab of tabs) {
@@ -93,41 +104,42 @@
   get('resetCarousel').addEventListener('click', () => {editor.beginDraft(config.read().slides); notice('已取消修改，恢复为上次保存的轮播。');});
 
   function renderNews() {
-    const updates = config.read().updates;
+    const all = config.read().updates;
+    const updates = all.filter(item => item.status === 'published' || item.status === 'unpublished');
+    const publishedCount = updates.filter(item => item.status === 'published').length;
+    const unpublishedCount = updates.length - publishedCount;
     const query = get('updatesSearch').value.trim().toLowerCase();
-    const visible = updates.filter(item => (newsFilter==='all'||item.status===newsFilter) && item.title.toLowerCase().includes(query)).sort((a,b)=>b.date.localeCompare(a.date));
-    get('updatesTable').innerHTML = visible.length ? visible.map(item=>`<tr><td><strong class="admin-news-title" title="${escape(item.title)}">${escape(item.title)}</strong><small class="admin-news-excerpt">${escape(item.body || '正文待完善')}</small></td><td><span class="admin-news-destination" title="${escape(destinationFor(item)?.label || '未设置')}">${escape(destinationFor(item)?.label || '未设置')}</span></td><td><span class="admin-state${item.status==='published'?' is-published':''}">${item.status==='published'?'已发布':'草稿'}</span></td><td><div class="admin-row-actions"><button type="button" class="admin-text-button" data-${item.status==='published'?'view':'edit'}-update="${escape(item.id)}" aria-label="${item.status==='published'?'查看':'编辑'}${escape(item.title)}">${item.status==='published'?'查看':'编辑'}</button><button type="button" class="admin-text-button is-danger" data-delete-update="${item.id}" aria-label="删除${escape(item.title)}">删除</button></div></td></tr>`).join('') : '<tr><td colspan="4" class="admin-empty">没有匹配的动态，可新增动态或调整筛选条件。</td></tr>';
-    get('updatesSummary').textContent = `共 ${updates.length} 条动态 · 已发布 ${updates.filter(item=>item.status==='published').length} 条 · 草稿 ${updates.filter(item=>item.status==='draft').length} 条${visible.length!==updates.length?` · 当前显示 ${visible.length} 条`:''}`;
-    get('newUpdate').disabled = updates.length>=100;
+    const visible = updates.filter(item => item.title.toLowerCase().includes(query)).sort((a,b)=>b.date.localeCompare(a.date));
+    get('updatesTable').innerHTML = visible.length ? visible.map(item=>{
+      const published = item.status === 'published';
+      const actions = published
+        ? `<button type="button" class="admin-text-button" data-view-update="${escape(item.id)}" aria-label="查看${escape(item.title)}">查看</button><button type="button" class="admin-text-button" data-unpublish-update="${escape(item.id)}" aria-label="取消发布${escape(item.title)}">取消发布</button>`
+        : `<button type="button" class="admin-text-button" data-view-update="${escape(item.id)}" aria-label="查看${escape(item.title)}">查看</button><button type="button" class="admin-text-button" data-publish-update="${escape(item.id)}" aria-label="重新发布${escape(item.title)}">发布</button>`;
+      return `<tr><td><strong class="admin-news-title" title="${escape(item.title)}">${escape(item.title)}</strong><small class="admin-news-excerpt">${escape(item.body || '正文待完善')}</small></td><td><span class="admin-news-destination" title="${escape(destinationFor(item)?.label || '未设置')}">${escape(destinationFor(item)?.label || '未设置')}</span></td><td><span class="admin-state${published ? ' is-published' : ' is-unpublished'}">${published ? '已发布' : '取消发布'}</span></td><td><div class="admin-row-actions">${actions}<button type="button" class="admin-text-button is-danger" data-delete-update="${escape(item.id)}" aria-label="删除${escape(item.title)}">删除</button></div></td></tr>`;
+    }).join('') : '<tr><td colspan="4" class="admin-empty">没有匹配的动态，可直接新增动态。</td></tr>';
+    get('updatesSummary').textContent = `共 ${updates.length} 条动态 · 已发布 ${publishedCount} 条 · 取消发布 ${unpublishedCount} 条${visible.length!==updates.length?` · 当前显示 ${visible.length} 条`:''}`;
+    get('newUpdate').disabled = all.length>=100;
   }
-  function setNewsFilter(value) {
-    newsFilter = value;
-    for (const filter of get('updatesFilters').querySelectorAll('button')) filter.setAttribute('aria-pressed',String(filter.dataset.newsFilter===value));
-  }
-  get('updatesFilters').addEventListener('click', event => {const button=event.target.closest('[data-news-filter]'); if (button) {setNewsFilter(button.dataset.newsFilter); renderNews();}});
   get('updatesSearch').addEventListener('input', renderNews);
   function bodyCount() {get('updateBodyCount').textContent = `${get('updateBody').value.length} / 5000 字`;}
-  function openEditor(item) {
-    if (item?.status === 'published') {openDetail(item); return;}
-    editingId = item?.id || null;
-    get('updateEditorTitle').textContent = item ? '编辑动态' : '新增动态';
-    get('updateTitle').value = item?.title || '';
-    get('updateDestination').value = item ? destinationFor(item)?.key || '' : '';
-    get('updateBody').value = item?.body || '';
-    get('publishUpdate').textContent = '发布动态';
-    get('updateStateNote').textContent = '草稿不会显示在首页。';
+  function openEditor() {
+    get('updateEditorTitle').textContent = '新增动态';
+    get('updateTitle').value = '';
+    get('updateDestination').value = '';
+    get('updateBody').value = '';
+    get('updateStateNote').textContent = '发布后立即展示在首页产品动态。';
     get('updateFeedback').textContent = '';
     for (const id of ['updateTitle','updateDestination','updateBody']) get(id).removeAttribute('aria-invalid');
     get('updatesListView').hidden = true; get('updateForm').hidden = false;
     notice(''); bodyCount(); get('updateTitle').focus();
   }
-  function closeEditor() {get('updateForm').hidden = true; get('updatesListView').hidden = false; editingId=null; renderNews(); get('newUpdate').focus();}
+  function closeEditor() {get('updateForm').hidden = true; get('updatesListView').hidden = false; renderNews(); get('newUpdate').focus();}
   function openDetail(item, trigger = null) {
     detailTrigger = trigger;
     get('updateDetailTitle').textContent = item.title;
     get('updateDetailBody').textContent = item.body;
     get('updateDetailDestination').textContent = destinationFor(item)?.label || '未设置';
-    get('updateDetailStatus').textContent = item.status === 'published' ? '已发布' : '草稿';
+    get('updateDetailStatus').textContent = item.status === 'published' ? '已发布' : '取消发布';
     get('updatesListView').hidden = true; get('updateForm').hidden = true; get('updateDetailView').hidden = false;
     notice(''); get('closeUpdateDetail').focus();
   }
@@ -138,38 +150,49 @@
   get('newUpdate').addEventListener('click', () => openEditor());
   get('cancelUpdate').addEventListener('click', closeEditor);
   for (const id of ['updateTitle','updateDestination','updateBody']) get(id).addEventListener('input', () => {get(id).removeAttribute('aria-invalid'); get('updateFeedback').textContent=''; if(id==='updateBody')bodyCount();});
-  function saveNews(status) {
+  function publishNews() {
     const latest=config.read().updates;
-    if (editingId) {
-      const current = latest.find(item => item.id === editingId);
-      if (!current || current.status !== 'draft') {
-        get('updateFeedback').textContent = current ? '这条动态已发布，不能再修改。请返回列表查看。' : '这条动态已删除，无法保存。请返回列表。';
-        return;
-      }
-    }
     const target=newsDestinations.find(target=>target.key===get('updateDestination').value);
     const now=new Date();
-    const date=status==='published' ? `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}` : latest.find(item=>item.id===editingId)?.date;
-    const item={id:editingId || `news-${Date.now().toString(36)}-${++nextId}`,title:get('updateTitle').value.trim(),date,body:get('updateBody').value.trim(),status,destination:target?{route:target.route,child:target.child}:null};
-    const invalid = !item.title||item.title.length>60 ? ['updateTitle','请输入动态标题，最多 60 字。'] : get('updateDestination').value&&!target ? ['updateDestination','请选择有效的平台内功能。'] : item.body.length>5000 || (status==='published'&&!item.body) ? ['updateBody','发布前请填写正文，最多 5000 字。'] : null;
+    const date=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    const item={id:`news-${Date.now().toString(36)}-${++nextId}`,title:get('updateTitle').value.trim(),date,body:get('updateBody').value.trim(),status:'published',destination:target?{route:target.route,child:target.child}:null};
+    const invalid = !item.title||item.title.length>60 ? ['updateTitle','请输入动态标题，最多 60 字。'] : get('updateDestination').value&&!target ? ['updateDestination','请选择有效的平台内功能。'] : !item.body||item.body.length>5000 ? ['updateBody','发布前请填写正文，最多 5000 字。'] : null;
     if (invalid) {get('updateFeedback').textContent=invalid[1];get(invalid[0]).setAttribute('aria-invalid','true');get(invalid[0]).focus();return;}
-    const index=latest.findIndex(update=>update.id===item.id);
-    if (index>=0) latest[index]=item; else latest.unshift(item);
-    try {config.saveSection('updates',latest);setNewsFilter('all');get('updatesSearch').value='';closeEditor();notice(status==='published'?'动态已发布，首页产品动态已同步更新。':'草稿已保存，不会展示在首页。');}
+    latest.unshift(item);
+    try {config.saveSection('updates',latest);get('updatesSearch').value='';closeEditor();notice('动态已发布，首页产品动态已同步更新。');}
     catch(error) {get('updateFeedback').textContent=error.message;}
   }
-  get('updateForm').addEventListener('submit', event => {event.preventDefault();saveNews('published');});
-  get('saveUpdateDraft').addEventListener('click', () => saveNews('draft'));
+  function unpublishNews(id) {
+    const latest=config.read().updates;
+    const index=latest.findIndex(item=>item.id===id);
+    if(index<0||latest[index].status!=='published') return;
+    latest[index]={...latest[index],status:'unpublished'};
+    try {config.saveSection('updates',latest);renderNews();notice('');showToast('已取消发布，首页已移除。');}
+    catch(error) {notice(error.message);}
+  }
+  function publishExisting(id) {
+    const latest=config.read().updates;
+    const index=latest.findIndex(item=>item.id===id);
+    if(index<0||latest[index].status!=='unpublished') return;
+    const now=new Date();
+    const date=`${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+    latest[index]={...latest[index],status:'published',date};
+    try {config.saveSection('updates',latest);renderNews();notice('');showToast('已重新发布，首页产品动态已同步更新。');}
+    catch(error) {notice(error.message);}
+  }
+  get('updateForm').addEventListener('submit', event => {event.preventDefault();publishNews();});
   get('updatesTable').addEventListener('click', event => {
-    const edit=event.target.closest('[data-edit-update]');
     const view=event.target.closest('[data-view-update]');
+    const unpublish=event.target.closest('[data-unpublish-update]');
+    const publish=event.target.closest('[data-publish-update]');
     const remove=event.target.closest('[data-delete-update]');
-    if (edit) {const item=config.read().updates.find(item=>item.id===edit.dataset.editUpdate);if(item) {if(item.status==='published') openDetail(item, edit); else openEditor(item);}}
     if (view) {const item=config.read().updates.find(item=>item.id===view.dataset.viewUpdate);if(item) openDetail(item, view);}
+    if (unpublish) {unpublishNews(unpublish.dataset.unpublishUpdate);}
+    if (publish) {publishExisting(publish.dataset.publishUpdate);}
     if (remove) {
       const item=config.read().updates.find(item=>item.id===remove.dataset.deleteUpdate);if(!item)return;
       deleteId=item.id;deleteTrigger=remove;
-      get('deleteUpdateDescription').textContent=`「${item.title}」删除后无法恢复${item.status==='published'?'，同时从首页移除':''}。`;
+      get('deleteUpdateDescription').textContent=`「${item.title}」删除后无法恢复，同时从首页移除。`;
       get('deleteUpdateFeedback').textContent='';get('deleteUpdateDialog').showModal();get('cancelDeleteUpdate').focus();
     }
   });
@@ -180,7 +203,11 @@
     catch(error) {get('deleteUpdateFeedback').textContent=error.message;}
   });
   get('deleteUpdateDialog').addEventListener('close', () => {deleteId=null;(deleteTrigger?.isConnected?deleteTrigger:get('newUpdate')).focus();deleteTrigger=null;});
-  window.BaigePage.onDeactivate(() => {if(get('deleteUpdateDialog').open)get('deleteUpdateDialog').close();});
+  window.BaigePage.onDeactivate(() => {
+    if(get('deleteUpdateDialog').open)get('deleteUpdateDialog').close();
+    if(toastTimer){clearTimeout(toastTimer);toastTimer=null;}
+    get('adminToast').classList.remove('is-visible');
+  });
   window.BaigePage.onActivate(() => {renderNews();});
   renderOptions(); renderNews();
 })();
