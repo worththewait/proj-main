@@ -81,7 +81,7 @@ test('corrupt optional section cannot discard other valid sections and returned 
   const {model} = setup({'baige.home-config.v2':JSON.stringify({version:2,recommendedIds:[],slides:'broken',updates:[]})});
   const value = model.read();
   assert.equal(value.recommendedIds.length,0);
-  assert.equal(value.updates.length,0);
+  assert.equal(value.updates.length,10);
   assert.equal(value.slides.length,3);
   value.slides[0].title='mutated';
   assert.notEqual(model.read().slides[0].title,'mutated');
@@ -130,4 +130,14 @@ test('old administrative destinations are removed without losing user-authored s
   assert.equal(config.updates[0].destination,null);
   assert.equal(model.updateDestinations().some(item=>item.route==='library' && ['文件管理','权限管理'].includes(item.child)),false);
   assert.ok(storage.get('baige.home-config.v2').includes('权限管理'), 'read must not mutate original storage');
+});
+
+test('existing saved updates receive the new examples once without losing edits or restoring deleted examples', () => {
+  const previous = {version:2, updates:[{id:'custom',title:'自定义',body:'原内容',date:'2026-10-27',status:'published'}]};
+  const {model} = setup({'baige.home-config.v2':JSON.stringify(previous)});
+  const first = model.read();
+  assert.equal(first.updates.length, 11);
+  assert.equal(first.updates[0].title, '自定义');
+  model.saveSection('updates', first.updates.filter(item => item.id !== 'library-news'));
+  assert.equal(model.read().updates.some(item => item.id === 'library-news'), false);
 });

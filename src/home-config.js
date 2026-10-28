@@ -89,6 +89,14 @@
       result.recommendedIds=validateRecommendations(value.recommendedIds)??result.recommendedIds;
       result.slides=carousel.validate(safeSlides(value.slides))||result.slides;
       result.updates=validateUpdates(safeUpdates(value.updates))??result.updates;
+      if (!value.examples20261028 && Array.isArray(value.updates)) {
+        const existing = new Set(result.updates.map(item => item.id));
+        const additions = defaultUpdates.slice(3).filter(item => !existing.has(item.id));
+        if (result.updates.length + additions.length <= 100) {
+          result.updates.push(...clone(additions));
+          try { window.localStorage.setItem(storageKey, JSON.stringify({...value, updates:[...value.updates,...clone(additions)], examples20261028:true})); } catch {}
+        }
+      }
     } else {
       const legacy=readLegacy();
       if (legacy) {
@@ -103,7 +111,7 @@
     const validators={recommendedIds:validateRecommendations,slides:carousel.validate,updates:validateUpdates};
     const next=Object.hasOwn(validators,section)?validators[section](value):null;
     if (!next) throw Error('配置无效，请检查填写内容。');
-    const settings=read(); settings[section]=next;
+    const settings=read(); settings[section]=next; settings.examples20261028=true;
     try {window.localStorage.setItem(storageKey,JSON.stringify(settings));}
     catch {throw Error('未能保存，浏览器存储空间不足或不可用。当前编辑内容已保留，请重试。');}
     return settings;
