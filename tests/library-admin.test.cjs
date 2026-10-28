@@ -20,6 +20,18 @@ test("百舸文库 links only to the user-facing library; admin demo remains ava
   assert.ok(fs.existsSync(path.join(__dirname, "../pages/library-admin.html")));
 });
 
+test("library admin scopes file and permission management to department uploads", () => {
+  const html = read("pages/library-admin.html");
+  assert.match(html, /function libKbFilesOf\(name\) \{[\s\S]{0,160}uploadsForDept\(BaigeLibraryStore\.getCurrentDept\(\)\)/);
+  assert.match(html, /DOCS = BaigeLibraryStore\.uploadsForDept\(adminDept\)/);
+  assert.match(html, /仅显示本部门上传文档/);
+  assert.match(html, /canManageDoc\(id, BaigeLibraryStore\.getCurrentDept\(\)\)/);
+  assert.match(html, /canManageDoc\(target\._storeId/);
+  assert.doesNotMatch(html, /data-src="crawl"/);
+  assert.match(read("src/library-store.js"), /function uploadsForDept\(dept\)/);
+  assert.match(read("src/library-store.js"), /function canManageDoc\(id, dept\)/);
+});
+
 test("library admin page keeps the full file and permission views behind the platform shell", () => {
   const html = read("pages/library-admin.html");
   assert.match(html, /<body data-page="library">/);

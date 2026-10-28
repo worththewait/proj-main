@@ -820,6 +820,7 @@
           <div id="libKbFiles">
             <div class="list-header" style="margin-bottom:12px">
               <div style="font-size:15px;font-weight:600">文件列表</div>
+              <span id="libAdminDeptLabel" style="font-size:12px;color:var(--text-sec)"></span>
               <div class="spacer"></div>
               <button class="btn btn-primary" style="height:34px;padding:0 16px" onclick="libOpenUploadWizard()"><span style="font-size:20px;line-height:1;margin-right:2px">+</span> 上传文件</button>
             </div>
@@ -888,14 +889,6 @@
           <button class="kw-btn" onclick="doSearch()">检索</button>
         </div>
   
-        <div class="src-row">
-          <span class="lb">文档来源</span>
-          <div class="src-tabs">
-            <div class="src-tab active" data-src="all" onclick="setSource('all')">全部文档</div>
-            <div class="src-tab" data-src="crawl" onclick="setSource('crawl')">爬虫平台公开文档</div>
-            <div class="src-tab" data-src="upload" onclick="setSource('upload')">部门上传内部文档</div>
-          </div>
-        </div>
         <div class="type-row" id="typeRow"></div>
   
         <div class="scope-bar">
@@ -1173,7 +1166,7 @@
 <div class="wm"></div>
 
 <script src="../src/library-data.js?v=20261026-library"></script>
-<script src="../src/library-store.js?v=20261026-store"></script>
+<script src="../src/library-store.js?v=20261028-dept-scope"></script>
 <script>
 /* ══════════════════════════════════════
    DATA — 三类知识库各自的数据
@@ -1412,7 +1405,8 @@ let libFilePage = 1;
 let libFileSize = 10;
 
 function libKbFilesOf(name) {
-  return BaigeLibraryStore.loadDocs().map(d => ({
+  // Management scope: only uploads owned by the current department.
+  return BaigeLibraryStore.uploadsForDept(BaigeLibraryStore.getCurrentDept()).map(d => ({
     ...d,
     _storeId: d.id,
     name: d.title,
@@ -1430,11 +1424,16 @@ function libKbFilesOf(name) {
   }));
 }
 
+function renderLibDeptIdentity() {
+  const el = document.getElementById('libAdminDeptLabel');
+  if (el) el.textContent = '当前部门：' + BaigeLibraryStore.getCurrentDept() + ' · 仅显示本部门上传文档';
+}
 function libEnterKb(name) {
   libKbName = name;
   libKbMode = true;
   libFilePage = 1;
   document.getElementById('libKbFiles').style.display = 'block';
+  renderLibDeptIdentity();
   libResetFilters();
   libRenderFileList();
 }
@@ -1548,7 +1547,8 @@ function libUpdateBatchCount() {
 function libDeleteSelected() {
   const checked = [...document.querySelectorAll('#libKbFileListBody .checkbox.checked')];
   if (!checked.length) { showToast('请先选择要删除的文件'); return; }
-  const ids = checked.map((el) => Number(el.dataset.storeId)).filter(Boolean);
+  const ids = checked.map((el) => Number(el.dataset.storeId)).filter((id) => id && BaigeLibraryStore.canManageDoc(id, BaigeLibraryStore.getCurrentDept()));
+  if (!ids.length) { showToast('只能管理本部门上传的文件', 'warning'); return; }
   const removed = BaigeLibraryStore.removeDocs(ids);
   libRenderFileList();
   showToast('已删除 ' + removed + ' 个文件');
@@ -1563,6 +1563,10 @@ function libHandleFileAction(action, name) {
     return;
   }
   if (action === 'delete') {
+    if (!BaigeLibraryStore.canManageDoc(target._storeId, BaigeLibraryStore.getCurrentDept())) {
+      showToast('只能管理本部门上传的文件', 'warning');
+      return;
+    }
     BaigeLibraryStore.removeDocs([target._storeId]);
     libRenderFileList();
     showToast('已删除《' + name + '》');
@@ -2687,7 +2691,7 @@ const UPLOAD_TYPES = CATS;
 
 let DOCS = [];
 function reloadDocsFromStore(){
-  DOCS = BaigeLibraryStore.loadDocs().filter(d => d.ownerDept === adminDept).map(d => {
+  DOCS = BaigeLibraryStore.uploadsForDept(adminDept).map(d => {
     const isPerson = targetType === 'person' && targetPerson;
     return {
       ...d,
@@ -2717,18 +2721,13 @@ function persistCurrentPermissions(){
   }
 }
 
-let source='all', curType='all', kw='', page=1, size=12, aiMode=false;
+let curType='all', kw='', page=1, size=12, aiMode=false;
 let selected = new Set();
 let revokeTarget = null;
 
 const LV_NAME = {0:'不赋予',1:'可搜索',2:'可见',3:'可在线查看',4:'可下载'};
 const LV_DESC = {1:'仅可通过检索命中标题/摘要等元信息',2:'可浏览列表与详情元数据，不可看全文',3:'可在线预览全文，不可下载（默认）',4:'完整权限，可下载（需按需授予）'};
 
-function setSource(s){
-  source=s;
-  document.querySelectorAll('.src-tab').forEach(t=>t.classList.toggle('active', t.dataset.src===s));
-  curType='all'; renderTypes(); resetList();
-}
 function renderTypes(){
   const row = document.getElementById('typeRow');
   if (!row) return;
@@ -2741,8 +2740,6 @@ function setType(t){ curType=t; renderTypes(); resetList(); }
 
 function filtered(){
   return DOCS.filter(d=>{
-    if(source==='crawl' && d.src!=='crawl') return false;
-    if(source==='upload' && d.src!=='upload') return false;
     if(curType!=='all' && d.type!==curType) return false;
     if(kw){
       const q=kw.toLowerCase();
