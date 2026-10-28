@@ -39,6 +39,16 @@
       body:'知识库问答支持行业、企业、部门三个范围。可跨分类选择多个知识库，确认后将问题与所选范围带入对话。当前为原型演示，实际文档检索与模型回答待接入。', status:'published', destination:{route:'qa',child:'对话'}},
     {id:'tools', date:'2026-10-24', title:'专业工具，贯通资料处理与内容创作',
       body:'从文档翻译、OCR识别到专业编写、PPT生成与思维导图生成，按任务选择对应工具。工具目录与独立页签可体验操作流程，实际处理能力待接入。', status:'published', destination:{route:'smart-tools',child:''}},
+    {id:'library-news', date:'2026-10-23', title:'文库资源，支持专业资料查阅', body:'在百舸文库中浏览分类资源，查找所需的行业资料与研究文献。', status:'published', destination:{route:'library',child:''}},
+    {id:'datasets-news', date:'2026-10-22', title:'高质量数据集，汇聚船海领域资源', body:'通过数据集目录了解船海产业、标准、质量及科技成果等数据资源。', status:'published', destination:{route:'datasets',child:''}},
+    {id:'writing-news', date:'2026-10-21', title:'百舸写作，辅助组织专业内容', body:'从写作入口开始整理主题与内容框架，探索专业写作工作流程。', status:'published', destination:{route:'writing',child:''}},
+    {id:'intel-news', date:'2026-10-20', title:'百舸情报，关注行业信息', body:'通过情报入口了解行业信息服务，辅助开展资料收集与研究。', status:'published', destination:{route:'intel',child:''}},
+    {id:'analysis-news', date:'2026-10-19', title:'百舸分析，探索研究工作入口', body:'在分析页面了解平台提供的科研分析与研究工作入口。', status:'published', destination:{route:'analysis',child:''}},
+    {id:'ocr-news', date:'2026-10-18', title:'OCR识别，探索文档处理工具', body:'在智能工具目录中查找 OCR 识别，了解扫描件和图片文字处理流程。', status:'published', destination:{route:'smart-tools',child:''}},
+    {id:'translate-news', date:'2026-10-17', title:'文档翻译，辅助跨语言资料处理', body:'通过智能工具目录了解文档翻译功能及其应用场景。', status:'published', destination:{route:'smart-tools',child:''}},
+    {id:'knowledge-news', date:'2026-10-16', title:'知识库资源，连接多种知识范围', body:'浏览知识库入口，了解行业、企业和部门知识资源。', status:'published', destination:{route:'knowledge',child:''}},
+    {id:'digital-news', date:'2026-10-15', title:'数智系统，连接专业业务入口', body:'从数智系统入口了解平台中的专业业务服务。', status:'published', destination:{route:'digital',child:''}},
+    {id:'platform-news', date:'2026-10-14', title:'智能开发平台，探索应用开发入口', body:'通过智能开发平台入口了解智能应用开发相关服务。', status:'published', destination:{route:'platform',child:''}},
   ];
   const clone = value => JSON.parse(JSON.stringify(value));
   function validateRecommendations(value) {

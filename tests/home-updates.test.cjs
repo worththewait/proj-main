@@ -39,11 +39,11 @@ test('news opens the selected Baige demo detail and closing restores its trigger
   assert.equal(trigger.focused, true);
 });
 
-test('all news displays three unique entries while an unknown id does not open', () => {
+test('all news displays thirteen entries while an unknown id does not open', () => {
   const app = setup(); app.open('unknown');
   assert.equal(app.elements.productUpdatesDialog.open, false);
   const trigger = new app.Element(); trigger.all = true; app.document.emit('click', trigger);
-  assert.equal((app.elements.productUpdateContent.innerHTML.match(/<article/g) || []).length, 3);
+  assert.equal((app.elements.productUpdateContent.innerHTML.match(/<article/g) || []).length, 13);
 });
 
 test('detail actions navigate through permissions and leaving home dismisses the modal', () => {
