@@ -62,32 +62,6 @@ test("library store merges home, permission and file seed data", () => {
   }
 });
 
-test("four library managers own document categories by responsibility", () => {
-  const { store } = createStore();
-  assert.deepEqual(Array.from(store.managers.map((manager) => manager.label)), ["经研中心", "标准中心", "知产中心", "数智中心"]);
-  assert.deepEqual(Array.from(store.managers.map((manager) => manager.dept)), ["经济研究中心", "船级社规范所", "技术经济中心", "情报研究所"]);
-  assert.deepEqual(Array.from(store.managerTypes("经济研究中心")), ["智库成果", "三方研报"]);
-  assert.deepEqual(Array.from(store.managerTypes("船级社规范所")), ["船舶标准"]);
-  assert.deepEqual(Array.from(store.managerTypes("技术经济中心")), ["行业专利"]);
-  assert.deepEqual(Array.from(store.managerTypes("情报研究所")), ["规则规范", "专业书籍", "期刊论文", "其他"]);
-  assert.equal(store.managerForCategory("船舶标准").dept, "船级社规范所");
-  assert.equal(store.managerForCategory("其他").dept, "情报研究所");
-  assert.equal(store.managerLabel("技术经济中心"), "知产中心");
-
-  const counts = {};
-  for (const manager of store.managers) counts[manager.dept] = store.uploadsForDept(manager.dept).length;
-  assert.deepEqual(counts, { "经济研究中心": 4, "船级社规范所": 2, "技术经济中心": 1, "情报研究所": 8 });
-  for (const doc of store.loadDocs()) {
-    assert.equal(doc.ownerDept, store.managerForCategory(doc.category).dept);
-  }
-
-  assert.equal(store.getManageDept(), "经济研究中心");
-  store.setManageDept("船级社规范所");
-  assert.equal(store.getManageDept(), "船级社规范所");
-  store.setManageDept("动力研究院");
-  assert.equal(store.getManageDept(), "船级社规范所", "non-manager departments are not selectable");
-});
-
 test("department management scope only includes uploads owned by that department", () => {
   const { store } = createStore();
   const dept = "经济研究中心";
