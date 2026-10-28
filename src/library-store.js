@@ -305,6 +305,12 @@
     if (!DEPARTMENTS.includes(dept)) return [];
     return loadDocs().filter((doc) => doc.source === "upload" && doc.ownerDept === dept);
   }
+  // Permission management also covers crawled documents of the department's types.
+  function managedDocs(dept) {
+    const manager = LIBRARY_MANAGERS.find((item) => item.dept === dept);
+    if (!manager) return [];
+    return loadDocs().filter((doc) => doc.ownerDept === dept && manager.types.includes(doc.category));
+  }
   function canManageDoc(id, dept) {
     const manager = LIBRARY_MANAGERS.find((item) => item.dept === dept);
     if (!manager) return false;
@@ -421,6 +427,7 @@
     getManageDept,
     setManageDept,
     uploadsForDept,
+    managedDocs,
     canManageDoc,
     loadDocs,
     getDoc: (id) => loadDocs().find((doc) => Number(doc.id) === Number(id)) || null,

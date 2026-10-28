@@ -77,6 +77,18 @@ test("four library managers own document categories by responsibility", () => {
   const counts = {};
   for (const manager of store.managers) counts[manager.dept] = store.uploadsForDept(manager.dept).length;
   assert.deepEqual(counts, { "经济研究中心": 4, "船级社规范所": 2, "技术经济中心": 1, "情报研究所": 8 });
+
+  const managedCounts = {};
+  for (const manager of store.managers) managedCounts[manager.dept] = store.managedDocs(manager.dept).length;
+  assert.deepEqual(managedCounts, { "经济研究中心": 19, "船级社规范所": 9, "技术经济中心": 9, "情报研究所": 30 });
+  for (const manager of store.managers) {
+    const types = store.managerTypes(manager.dept);
+    const docs = Array.from(store.managedDocs(manager.dept));
+    assert.ok(docs.some((doc) => doc.source === "upload"));
+    assert.ok(docs.some((doc) => doc.source === "crawl"));
+    assert.ok(docs.every((doc) => doc.ownerDept === manager.dept && types.includes(doc.category)));
+  }
+  assert.deepEqual(Array.from(store.managedDocs("动力研究院")), []);
   for (const doc of store.loadDocs()) {
     assert.equal(doc.ownerDept, store.managerForCategory(doc.category).dept);
   }

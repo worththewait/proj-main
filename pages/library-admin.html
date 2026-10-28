@@ -821,7 +821,7 @@
       <div class="lib-scope-bar">
         <label for="libDeptSelect">当前部门</label>
         <select id="libDeptSelect" aria-label="切换当前部门" onchange="switchLibDept(this.value)"></select>
-        <span class="lib-scope-hint">切换后，仅显示该部门负责的文档类型和上传文档</span>
+        <span class="lib-scope-hint">切换后，仅显示该部门负责的文档类型</span>
       </div>
       <!-- 文件管理（迁移自企业知识库：选择知识库 → 文件列表 → 上传向导） -->
       <div class="panel" id="libPanel-upload">
@@ -899,6 +899,14 @@
           <button class="kw-btn" onclick="doSearch()">检索</button>
         </div>
   
+        <div class="src-row">
+          <span class="lb">文档来源</span>
+          <div class="src-tabs">
+            <div class="src-tab active" data-src="all" onclick="setSource('all')">全部文档</div>
+            <div class="src-tab" data-src="upload" onclick="setSource('upload')">部门上传</div>
+            <div class="src-tab" data-src="crawl" onclick="setSource('crawl')">爬虫平台</div>
+          </div>
+        </div>
         <div class="type-row" id="typeRow"></div>
   
         <div class="scope-bar">
@@ -1176,7 +1184,7 @@
 <div class="wm"></div>
 
 <script src="../src/library-data.js?v=20261026-library"></script>
-<script src="../src/library-store.js?v=20261028-manager-types"></script>
+<script src="../src/library-store.js?v=20261028-managed-docs"></script>
 <script>
 /* ══════════════════════════════════════
    DATA — 三类知识库各自的数据
@@ -1382,6 +1390,8 @@ function switchLibDept(dept) {
   if (select) select.value = dept;
   libFilePage = 1;
   libRenderFileList();
+  source = 'all';
+  document.querySelectorAll('.src-tab').forEach(t => t.classList.toggle('active', t.dataset.src === 'all'));
   curType = 'all';
   renderTypes();
   const node = document.querySelector(`#deptList .dept-node[data-dept="${dept}"] .dept-lv`);
@@ -2727,7 +2737,7 @@ const CATS = BaigeLibraryStore.categories;
 let DOCS = [];
 function reloadDocsFromStore(){
   const types = BaigeLibraryStore.managerTypes(adminDept);
-  DOCS = BaigeLibraryStore.uploadsForDept(adminDept).filter(d => types.includes(d.category)).map(d => {
+  DOCS = BaigeLibraryStore.managedDocs(adminDept).filter(d => types.includes(d.category)).map(d => {
     const isPerson = targetType === 'person' && targetPerson;
     return {
       ...d,
@@ -2757,13 +2767,20 @@ function persistCurrentPermissions(){
   }
 }
 
-let curType='all', kw='', page=1, size=12, aiMode=false;
+let source='all', curType='all', kw='', page=1, size=12, aiMode=false;
 let selected = new Set();
 let revokeTarget = null;
 
 const LV_NAME = {0:'不赋予',1:'可搜索',2:'可见',3:'可在线查看',4:'可下载'};
 const LV_DESC = {1:'仅可通过检索命中标题/摘要等元信息',2:'可浏览列表与详情元数据，不可看全文',3:'可在线预览全文，不可下载（默认）',4:'完整权限，可下载（需按需授予）'};
 
+function setSource(s){
+  source = s === 'crawl' || s === 'upload' ? s : 'all';
+  document.querySelectorAll('.src-tab').forEach(t => t.classList.toggle('active', t.dataset.src === source));
+  curType = 'all';
+  renderTypes();
+  resetList();
+}
 function renderTypes(){
   const row = document.getElementById('typeRow');
   if (!row) return;
@@ -2778,6 +2795,8 @@ function setType(t){ curType=t; renderTypes(); resetList(); }
 
 function filtered(){
   return DOCS.filter(d=>{
+    if(source==='crawl' && d.src!=='crawl') return false;
+    if(source==='upload' && d.src!=='upload') return false;
     if(curType!=='all' && d.type!==curType) return false;
     if(kw){
       const q=kw.toLowerCase();

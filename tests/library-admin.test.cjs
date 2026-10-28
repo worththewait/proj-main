@@ -28,11 +28,14 @@ test("library admin scopes file and permission management to department types", 
   assert.match(html, /function switchLibDept\(dept\)/);
   assert.match(html, /BaigeLibraryStore\.setManageDept\(dept\)/);
   assert.match(html, /BaigeLibraryStore\.managers\.map/);
-  assert.match(html, /DOCS = BaigeLibraryStore\.uploadsForDept\(adminDept\)/);
+  assert.match(html, /DOCS = BaigeLibraryStore\.managedDocs\(adminDept\)/);
   assert.match(html, /仅显示该部门负责的文档类型/);
   assert.match(html, /canManageDoc\(id, BaigeLibraryStore\.getManageDept\(\)\)/);
   assert.match(html, /canManageDoc\(target\._storeId/);
-  assert.doesNotMatch(html, /data-src="crawl"/);
+  assert.match(html, /data-src="upload"/);
+  assert.match(html, /data-src="crawl"/);
+  assert.match(html, /function setSource\(s\)/);
+  assert.match(html, /source==='crawl'/);
   assert.match(html, /id="wizardTypeHint"/);
   assert.match(html, /文档类型 <span style="color:var\(--danger\)">\*<\/span>/);
   assert.match(read("src/library-store.js"), /const LIBRARY_MANAGERS/);
