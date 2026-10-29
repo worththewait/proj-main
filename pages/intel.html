@@ -458,6 +458,7 @@
   .intel-embed { display: flex; height: 100vh; height: 100dvh; min-height: 0; }
   .intel-embed .app-main { height: 100%; }
 </style>
+<link rel="stylesheet" href="../intel-visual.css?v=20261029-segments" />
 </head>
 <body data-page="intel">
   <div class="intel-embed">
@@ -978,8 +979,8 @@ function renderShell() {
   const cur = (view === 'earlycfg') ? 'early' : view;
 
   document.getElementById('tabbar').innerHTML =
-    INTEL_TABS.map(t =>
-      '<div class="intel-tab' + (cur === t.id ? ' active' : '') + '" data-v="' + t.id + '">' + t.label + '</div>').join('')
+    '<div class="intel-segments" role="group" aria-label="情报栏目">' + INTEL_TABS.map(t =>
+      '<button type="button" class="intel-tab' + (cur === t.id ? ' active' : '') + '" aria-pressed="' + (cur === t.id) + '" data-v="' + t.id + '">' + t.label + '</button>').join('') + '</div>'
     + '<button class="tab-fav" id="tabFav" title="我的收藏">' + icon('star') + '<span>收藏</span>'
     + (favs.length ? '<span class="n">' + favs.length + '</span>' : '')
     + '</button>';
@@ -1073,11 +1074,11 @@ function viewEarly() {
     + '<div class="daily">'
     + '<div class="daily-main">'
     + '<div class="col-head"><span class="ct-line"></span><span class="ct">今日早报</span>'
-    + '<span class="col-btn" id="cfgEntry">⚙ 定制专属内容</span></div>'
+    + '<button type="button" class="col-btn" id="cfgEntry">定制内容</button></div>'
     + '<div class="eb-card">' + body + '</div>'
     + '</div>'
     + liveRail()
-    + '</div></div>';
+    + '<button type="button" class="intel-live-toggle" id="liveToggle" aria-expanded="false">7×24 快讯</button></div></div>';
 }
 
 /* 早报设置 */
@@ -1144,7 +1145,7 @@ function viewTrack() {
       + '<span class="tk-switch-item' + (trackTab === 'feed' ? ' active' : '') + '" data-tt="feed">最新动态</span>'
       + '<span class="tk-switch-item' + (trackTab === 'topics' ? ' active' : '') + '" data-tt="topics">我的主题 ' + TRACKS.length + '</span>'
       + '</div>'
-      + '<button class="intel-page-btn" id="btnAddTrack">＋ 添加跟踪</button>'
+      + '<button class="intel-page-btn primary" id="btnAddTrack">＋ 添加跟踪</button>'
       + '<button class="intel-page-btn" data-manage>管理</button>'
   });
 
@@ -1257,6 +1258,8 @@ function go(v) {
 
 /* ---------------- 事件 ---------------- */
 function bind() {
+  const liveToggle = document.getElementById('liveToggle');
+  if (liveToggle) liveToggle.onclick = () => { const open = liveToggle.closest('.doc').classList.toggle('show-live'); liveToggle.setAttribute('aria-expanded', String(open)); liveToggle.textContent = open ? '收起快讯' : '7×24 快讯'; };
   document.querySelectorAll('.intel-tab').forEach(t => {
     t.onclick = () => go(t.dataset.v);
   });
