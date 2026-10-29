@@ -86,20 +86,20 @@ function setup() {
 
 // A collapsed parent, duplicate workspace entry, or expanded dataset resources
 // would otherwise make specific functions inaccessible or repeat them.
-test('directory exposes exactly 26 unique independent destinations with real child routes', () => {
+test('directory exposes exactly 27 unique independent destinations with real child routes', () => {
   const app = setup();
-  assert.equal(app.items().length, 26);
+  assert.equal(app.items().length, 27);
   const destinations = app.items().map(item => `${item.dataset.homeRoute}:${item.dataset.homeChild}`);
-  assert.equal(new Set(destinations).size, 26);
-  for (const destination of ['qa:对话', 'qa:智能问数', 'library:', 'frontier:全球鹰', 'frontier:智研通', 'data-platform:数据标注平台', 'data-platform:爬虫平台', 'data-platform:数据中台', 'datasets:']) assert.ok(destinations.includes(destination), destination);
-  for (const duplicate of ['qa:', 'frontier:', 'smart-tools:', 'data-platform:', 'datasets:船海产业数据集']) assert.ok(!destinations.includes(duplicate), duplicate);
+  assert.equal(new Set(destinations).size, 27);
+  for (const destination of ['qa:对话', 'qa:智能问数', 'library:', 'frontier:全球鹰', 'frontier:智研通', 'digital:标准编制', 'digital:专利编制', 'data-platform:数据标注平台', 'data-platform:爬虫平台', 'data-platform:数据中台', 'datasets:']) assert.ok(destinations.includes(destination), destination);
+  for (const duplicate of ['qa:', 'frontier:', 'digital:', 'smart-tools:', 'data-platform:', 'datasets:船海产业数据集']) assert.ok(!destinations.includes(duplicate), duplicate);
   app.group('knowledge-research'); assert.equal(app.items().length, 7);
-  app.group('tools-platforms'); assert.equal(app.items().length, 19);
+  app.group('tools-platforms'); assert.equal(app.items().length, 20);
 });
 
 test('available filter removes only the three denied destinations including when querying their parent', () => {
   const app = setup(); app.available(true);
-  assert.equal(app.items().length, 23);
+  assert.equal(app.items().length, 24);
   assert.ok(app.route('library'));
   assert.equal(app.route('library', '文件管理'), undefined);
   assert.equal(app.route('library', '权限管理'), undefined);
@@ -133,7 +133,7 @@ test('search temporarily spans categories and clearing or Escape restores the pr
   assert.equal(app.get('featureGroups').querySelector('[data-feature-group="knowledge-research"]').attributes['aria-pressed'], 'true');
   app.query('翻译'); app.get('featureSearch').emit('keydown', {key: 'Escape'}); assert.equal(app.items().length, 7);
   assert.equal(app.document.activeElement, app.get('featureSearch'));
-  app.query('翻译'); app.group('tools-platforms'); assert.equal(app.items().length, 19);
+  app.query('翻译'); app.group('tools-platforms'); assert.equal(app.items().length, 20);
   assert.equal(app.get('featureSearch').value, '');
 });
 
@@ -141,7 +141,7 @@ test('empty state reset clears query and availability and returns every destinat
   const app = setup(); app.group('knowledge-research'); app.available(true); app.query('不存在的功能');
   assert.equal(app.items().length, 0);
   app.get('featureResults').querySelector('[data-reset-directory]').emit('click');
-  assert.equal(app.items().length, 26);
+  assert.equal(app.items().length, 27);
   assert.equal(app.get('availableOnly').checked, false);
   assert.equal(app.get('featureSearch').value, '');
   assert.equal(app.document.activeElement, app.get('featureSearch'));
@@ -177,5 +177,5 @@ test('denied child opens application, updates only that item to pending, and res
   assert.match(updated.textContent, /待审批/); assert.match(updated.textContent, /查看申请/);
   assert.match(app.route('frontier', '智研通').textContent, /需申请/);
   app.get('closeHomeAccess').emit('click'); assert.equal(app.document.activeElement, updated);
-  app.available(true); assert.equal(app.items().length, 23);
+  app.available(true); assert.equal(app.items().length, 24);
 });

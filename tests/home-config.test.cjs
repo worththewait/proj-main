@@ -14,10 +14,10 @@ function setup(values = {}, fail = false) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../src', file), 'utf8'), context);
   return {model: window.BaigeHomeConfig, storage};
 }
-test('catalog exposes 26 distinct real destinations, excluding settings and library administration', () => {
+test('catalog exposes 27 distinct real destinations, excluding settings and library administration', () => {
   const {model} = setup();
-  assert.equal(model.catalog.length, 26);
-  assert.equal(new Set(model.catalog.map(item => `${item.route}:${item.child}`)).size, 26);
+  assert.equal(model.catalog.length, 27);
+  assert.equal(new Set(model.catalog.map(item => `${item.route}:${item.child}`)).size, 27);
   assert.ok(model.catalog.some(item => item.name === '智能问数'));
   assert.ok(model.catalog.some(item => item.name === '数据中台'));
   assert.ok(!model.catalog.some(item => ['文件管理','权限管理','自定义首页'].includes(item.name)));

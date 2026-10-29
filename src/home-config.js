@@ -16,6 +16,8 @@
     '智研通':['compass','面向专业研究的信息与服务入口。'],
     '数据标注平台':['tag','面向数据标注任务的工作入口。'], '爬虫平台':['bug','面向数据采集任务的工作入口。'],
     '数据中台':['server','集中管理与使用数据的工作入口。'],
+    '标准编制':['standard','辅助整理标准结构、编制内容与条款。'],
+    '专利编制':['file','辅助梳理专利技术方案与申请材料，形成编制思路。'],
   };
   const catalog = navigation.filter(item => !['home','home-settings'].includes(item.id)).flatMap(item => {
     const base = {route:item.id, group:research.has(item.id)?'知识与研究':'工具与平台', tone:research.has(item.id)?'purple':'blue'};

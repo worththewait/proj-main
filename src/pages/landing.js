@@ -45,6 +45,10 @@
       "爬虫平台": { description: "面向数据采集任务的工作入口。", icon: "bug" },
       "数据中台": { description: "集中管理与使用数据的工作入口。", icon: "server" },
     },
+    digital: {
+      "标准编制": { description: "辅助整理标准结构、编制内容与条款。", icon: "standard" },
+      "专利编制": { description: "辅助梳理专利技术方案与申请材料，形成编制思路。", icon: "file" },
+    },
   };
   const groups = [
     { id: "knowledge-research", label: "知识与研究", description: "问答、知识与专业研究", ids: ["qa", "knowledge", "writing", "library", "intel", "analysis"] },

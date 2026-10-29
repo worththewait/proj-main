@@ -23,7 +23,7 @@ const navigation = [
  {id:"analysis",file:"pages/analysis.html",label:"百舸分析",icon:"chart"},
  {id:"smart-tools",file:"pages/smart-tools.html",label:"智能工具",icon:"grid"},
  {id:"frontier",file:"pages/frontier.html",label:"前沿工具",icon:"compass",children:["全球鹰","智研通"]},
- {id:"digital",file:"pages/digital.html",label:"数智系统",icon:"layers"},
+ {id:"digital",file:"pages/digital.html",label:"数智系统",icon:"layers",children:["标准编制","专利编制"],files:{"标准编制":"pages/digital-standard.html","专利编制":"pages/digital-patent.html"}},
  {id:"datasets",file:"pages/datasets.html",label:"高质量数据集",icon:"database",subnav:false,autoChild:false,children:["船海产业数据集","船舶领域标准数据集","船舶行业质量数据集","船舶行业科技成果数据","船舶行业科技文献数据","船舶行业文化传播数据","船舶行业教育培训数据","船舶行业试验测试数据"]},
  {id:"platform",file:"pages/platform.html",label:"智能开发平台",icon:"code"},
  {id:"data-platform",file:"pages/data-platform.html",label:"数据平台",icon:"server",children:["数据标注平台","爬虫平台","数据中台"]},

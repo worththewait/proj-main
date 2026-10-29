@@ -60,11 +60,40 @@ test('sidebar shows granted and unavailable children with clear status', () => {
   assert.match(a.nav.innerHTML, /需申请/);
 });
 
-test('collapsible groups open after the parent is activated', () => {
+test('collapsible groups expand without leaving the current page', () => {
   const a = app();
+  const frameCount = a.frames.length;
+  const initialHash = a.location.hash;
   a.click({nav: 'data-platform'});
   assert.match(a.nav.innerHTML, /aria-expanded="true" aria-controls="sub-data-platform"/);
   assert.doesNotMatch(a.nav.innerHTML, /id="sub-data-platform" hidden/);
+  assert.equal(a.frames.length, frameCount);
+  assert.equal(a.location.hash, initialHash);
+});
+
+test('digital group expands and its children open dedicated pages', () => {
+  const a = app();
+  a.click({nav: 'digital'});
+  assert.match(a.nav.innerHTML, /aria-expanded="true" aria-controls="sub-digital"/);
+  assert.doesNotMatch(a.nav.innerHTML, /id="sub-digital" hidden/);
+  assert.match(a.nav.innerHTML, /data-child="标准编制"/);
+  assert.match(a.nav.innerHTML, /data-child="专利编制"/);
+  assert.equal(a.frames.length, 1);
+
+  a.click({parent: 'digital', child: '标准编制'});
+  assert.equal(a.frames.length, 2);
+  assert.match(a.frames[1].src, /pages\/digital-standard\.html/);
+  assert.equal(a.location.hash, '#digital/' + encodeURIComponent('标准编制'));
+
+  a.click({nav: 'digital'});
+  assert.match(a.nav.innerHTML, /aria-expanded="false" aria-controls="sub-digital"/);
+  assert.equal(a.location.hash, '#digital/' + encodeURIComponent('标准编制'));
+
+  for (const [file, title] of [['pages/digital-standard.html', '标准编制'], ['pages/digital-patent.html', '专利编制']]) {
+    const html = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    assert.match(html, new RegExp(`<h1 id="pageTitle">${title}</h1>`));
+    assert.match(html, /data-page="digital"/);
+  }
 });
 
 test('a fully unavailable group remains expandable', () => {
@@ -79,11 +108,11 @@ test('a fully unavailable group remains expandable', () => {
 
 test('a denied history route keeps the current page and restores its address', () => {
   const a = app();
-  a.click({nav: 'qa'});
-  const currentHash = a.location.hash;
+  const frameCount = a.frames.length;
   a.location.hash = '#frontier/' + encodeURIComponent('智研通');
   a.win.handlers.hashchange();
-  assert.equal(a.location.hash, currentHash);
+  assert.equal(a.frames.length, frameCount);
+  assert.equal(a.location.hash, '#home');
   assert.match(a.alerts[0], /智研通.*未开通/);
 });
 
