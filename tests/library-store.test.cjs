@@ -166,3 +166,33 @@ test("library store mutations are shared by permission, file and home views", ()
   assert.equal(store.loadDocs().length, 0);
   assert.equal(store.loadDocs().length, 0, "an explicitly emptied store must not reseed");
 });
+
+test("personal permissions cannot reduce the department baseline", () => {
+  const { store } = createStore();
+  const [doc] = store.addDocs([{
+    title: "加授测试.pdf",
+    category: "其他",
+    source: "upload",
+    fileType: "pdf",
+    docType: "文件",
+    abstract: "测试个人加授",
+  }]);
+  store.setPermissions([doc.id], "动力研究院", 3);
+  assert.throws(
+    () => store.setPersonPermissions([doc.id], "power-1", 2),
+    /个人权限必须高于部门基础权限/,
+  );
+  assert.equal(store.effectiveLevel(store.getDoc(doc.id), "动力研究院"), 3);
+  assert.equal(store.effectivePersonLevel(store.getDoc(doc.id), "power-1"), 0);
+  assert.equal(store.effectiveAccessLevel(store.getDoc(doc.id), "动力研究院", "power-1"), 3);
+
+  store.setPersonPermissions([doc.id], "power-1", 0);
+  assert.equal(store.effectiveAccessLevel(store.getDoc(doc.id), "动力研究院", "power-1"), 3);
+
+  store.setPermissions([doc.id], "动力研究院", 0);
+  assert.equal(store.effectiveAccessLevel(store.getDoc(doc.id), "动力研究院", "power-1"), 0);
+
+  store.setPermissions([doc.id], "动力研究院", 1);
+  store.setPersonPermissions([doc.id], "power-1", 4);
+  assert.equal(store.effectiveAccessLevel(store.getDoc(doc.id), "动力研究院", "power-1"), 4);
+});

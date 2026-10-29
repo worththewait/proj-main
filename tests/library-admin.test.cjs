@@ -43,6 +43,19 @@ test("library admin scopes file and permission management to department types", 
   assert.match(read("src/library-store.js"), /function canManageDoc\(id, dept\)/);
 });
 
+test("personal permissions are additive to the department baseline", () => {
+  const html = read("pages/library-admin.html");
+  assert.match(html, /basePerm/);
+  assert.match(html, /extraPerm/);
+  assert.match(html, /function permSourceHtml\(d\)/);
+  assert.match(html, /部门基础/);
+  assert.match(html, /个人未加授/);
+  assert.match(html, /revokeMinLevel/);
+  assert.match(html, /不额外授权（沿用部门权限）/);
+  assert.match(html, /个人权限必须高于部门基础权限/);
+  assert.match(html, /requested <= base \? 0 : requested/);
+});
+
 test("library upload wizard only offers manager types and auto-selects a single type", () => {
   const html = read("pages/library-admin.html");
   assert.match(html, /id="wizardTypeHint"/);

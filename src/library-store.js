@@ -386,15 +386,17 @@
     const set = new Set((ids || []).map(Number));
     const value = Math.max(0, Math.min(4, Number(level) || 0));
     const expiry = value > 0 && expiresAt && !Number.isNaN(Date.parse(expiresAt)) ? new Date(expiresAt).toISOString() : null;
-    let count = 0;
-    loadDocs().forEach((doc) => {
-      if (!set.has(Number(doc.id))) return;
+    const person = PEOPLE.find((item) => item.id === personId);
+    const docs = loadDocs().filter((doc) => set.has(Number(doc.id)));
+    if (person && value > 0 && docs.some((doc) => value <= effectiveLevel(doc, person.dept))) {
+      throw new Error('个人权限必须高于部门基础权限');
+    }
+    docs.forEach((doc) => {
       doc.personPermissions = { ...normalizePersonMap(doc.personPermissions), [personId]: value };
-      doc.personPermissionExpiry = { ...normalizePersonMap(doc.personPermissionExpiry), [personId]: expiry };
-      count += 1;
+      doc.personPermissionExpiry = { ...normalizePersonMap(doc.personPermissionExpiry), [personId]: value > 0 ? expiry : null };
     });
     persist();
-    return count;
+    return docs.length;
   }
 
   function removeDocs(ids) {
