@@ -75,11 +75,18 @@
     const category = TYPES.includes(doc.category) ? doc.category : "其他";
     const ownerDept = managerForCategory(category).dept;
     const previousOwner = DEPARTMENTS.includes(doc.ownerDept) ? doc.ownerDept : "";
-    const accessMode = doc.accessMode === "limited" ? "limited" : "public";
+    const storedMode = doc.accessMode === "limited" ? "limited" : "public";
+    const storedExpiry = storedMode === "public" && doc.accessModeExpiry ? String(doc.accessModeExpiry) : null;
+    const storedPrevious = doc.accessModePrevious === "public" ? "public" : "limited";
+    const publicExpired = storedMode === "public" && storedExpiry && Date.parse(storedExpiry) <= Date.now();
+    const accessMode = publicExpired ? storedPrevious : storedMode;
+    const accessModeExpiry = publicExpired ? null : storedExpiry;
+    const accessModePrevious = storedMode === "public" && storedExpiry && !publicExpired ? storedPrevious : null;
     const permissions = doc.permissions
       ? normalizePermissions(doc.permissions)
       : accessMode === "limited" ? limitedPermissions(ownerDept) : blankPermissions();
     const permissionExpiry = normalizeExpiry(doc.permissionExpiry);
+    const permissionModel = Number(doc.permissionModel) === 2 ? 2 : 1;
     // Re-home documents by their type and keep the responsible department's owner access.
     if (previousOwner !== ownerDept) {
       permissions[ownerDept] = Math.max(3, Number(permissions[ownerDept]) || 0);
@@ -89,6 +96,15 @@
       }
       permissionExpiry[ownerDept] = null;
     }
+    if (permissionModel !== 2) {
+      DEPARTMENTS.forEach((dept) => {
+        const baseline = accessMode === "public" ? 3 : dept === ownerDept ? 3 : 0;
+        if (Number(permissions[dept] || 0) <= baseline) {
+          permissions[dept] = 0;
+          permissionExpiry[dept] = null;
+        }
+      });
+    }
     return {
       id,
       title: String(doc.title || "").trim(),
@@ -97,6 +113,8 @@
       sourceLabel: doc.source === "upload" ? "部门上传" : "爬虫公开",
       ownerDept,
       accessMode,
+      accessModeExpiry,
+      accessModePrevious,
       org: doc.org || "船舶研究院",
       author: doc.author || "系统管理员",
       date: doc.date || "2026-01-01",
@@ -111,6 +129,7 @@
       origin: doc.origin || "library",
       permissions,
       permissionExpiry,
+      permissionModel: 2,
       personPermissions: normalizePersonMap(doc.personPermissions),
       personPermissionExpiry: normalizePersonMap(doc.personPermissionExpiry),
     };
@@ -189,13 +208,19 @@
     return Array.isArray(list) && list.every((doc) => doc && typeof doc.title === "string" && doc.title.trim());
   }
 
+  function departmentBaseline(doc, dept) {
+    if (!doc || !DEPARTMENTS.includes(dept)) return 0;
+    return effectiveAccessMode(doc) === "public" ? 3 : dept === doc.ownerDept ? 3 : 0;
+  }
+
   function effectiveLevel(doc, dept) {
     if (!doc || !dept) return 0;
+    const baseline = departmentBaseline(doc, dept);
     const level = Number(doc.permissions?.[dept] ?? 0);
-    if (level <= 0) return 0;
+    if (level <= 0) return baseline;
     const expiry = doc.permissionExpiry?.[dept];
-    if (expiry && Date.parse(expiry) <= Date.now()) return 0;
-    return level;
+    if (expiry && Date.parse(expiry) <= Date.now()) return baseline;
+    return Math.max(baseline, level);
   }
 
   function effectivePersonLevel(doc, personId) {
@@ -211,11 +236,25 @@
     return Math.max(effectiveLevel(doc, dept), effectivePersonLevel(doc, personId));
   }
 
+  function effectiveAccessMode(doc) {
+    if (!doc || doc.accessMode !== "public") return "limited";
+    if (doc.accessModeExpiry && Date.parse(doc.accessModeExpiry) <= Date.now()) {
+      return doc.accessModePrevious === "public" ? "public" : "limited";
+    }
+    return "public";
+  }
+
   function purgeExpired(save = true) {
     if (!cache) return 0;
     let changed = 0;
     const now = Date.now();
     cache.forEach((doc) => {
+      if (doc.accessMode === "public" && doc.accessModeExpiry && Date.parse(doc.accessModeExpiry) <= now) {
+        doc.accessMode = doc.accessModePrevious === "public" ? "public" : "limited";
+        doc.accessModeExpiry = null;
+        doc.accessModePrevious = null;
+        changed += 1;
+      }
       DEPARTMENTS.forEach((dept) => {
         const expiry = doc.permissionExpiry?.[dept];
         if (!expiry || Number(doc.permissions?.[dept] || 0) <= 0) return;
@@ -246,8 +285,9 @@
       try {
         const parsed = JSON.parse(raw);
         if (validateStored(parsed)) {
+          const needsMigration = parsed.some((doc) => Number(doc.permissionModel) !== 2);
           cache = parsed.map((doc, index) => normalizeDoc(doc, Number(doc.id) || index + 1));
-          if (purgeExpired(false)) persist();
+          if (needsMigration || purgeExpired(false)) persist();
           return cache;
         }
       } catch { /* rebuild below */ }
@@ -367,6 +407,25 @@
     return doc;
   }
 
+  function setAccessMode(ids, mode, expiresAt = null) {
+    const set = new Set((ids || []).map(Number));
+    const value = mode === "public" ? "public" : "limited";
+    const expiry = value === "public" && expiresAt && !Number.isNaN(Date.parse(expiresAt))
+      ? new Date(expiresAt).toISOString()
+      : null;
+    let count = 0;
+    loadDocs().forEach((doc) => {
+      if (!set.has(Number(doc.id))) return;
+      const previous = effectiveAccessMode(doc);
+      doc.accessMode = value;
+      doc.accessModeExpiry = value === "public" ? expiry : null;
+      doc.accessModePrevious = value === "public" && expiry ? previous : null;
+      count += 1;
+    });
+    persist();
+    return count;
+  }
+
   function setPermissions(ids, dept, level, expiresAt = null) {
     const set = new Set((ids || []).map(Number));
     const value = Math.max(0, Math.min(4, Number(level) || 0));
@@ -374,8 +433,10 @@
     let count = 0;
     loadDocs().forEach((doc) => {
       if (!set.has(Number(doc.id))) return;
-      doc.permissions = { ...normalizePermissions(doc.permissions), [dept]: value };
-      doc.permissionExpiry = { ...normalizeExpiry(doc.permissionExpiry), [dept]: expiry };
+      const baseline = departmentBaseline(doc, dept);
+      const stored = value > baseline ? value : 0;
+      doc.permissions = { ...normalizePermissions(doc.permissions), [dept]: stored };
+      doc.permissionExpiry = { ...normalizeExpiry(doc.permissionExpiry), [dept]: stored > 0 ? expiry : null };
       count += 1;
     });
     persist();
@@ -442,9 +503,12 @@
     setCurrentDept,
     getCurrentUser,
     setCurrentUser,
+    departmentBaseline,
     effectiveLevel,
     effectivePersonLevel,
     effectiveAccessLevel,
+    effectiveAccessMode,
+    setAccessMode,
     purgeExpired,
     reset,
   });
