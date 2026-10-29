@@ -310,3 +310,62 @@ test("history persists across reload while both panels start closed", () => {
   second.document.querySelector("#historyList").emit("click", {target:{closest(){return {dataset:{historyId:saved[0].id}};}}});
   assert.match(second.document.querySelector("#conversationMessages").innerHTML, /历史测试/);
 });
+
+test('suggestions fill the composer and example citations open the source reader', () => {
+  const env = environment('qa');
+  env.window.BaigePage = {onDeactivate() {}, onActivate() {}};
+  vm.runInContext(source('qa-session.js'), env.context);
+  vm.runInContext(source('conversation-data.js'), env.context);
+  vm.runInContext(source('pages/home.js'), env.context);
+  const node = selector => env.document.querySelector(selector);
+  node('#suggestedQuestions').emit('click', {target:{closest(){return {dataset:{suggestion:'0'}};}}});
+  assert.match(node('#homePrompt').value, /研究报告/);
+  assert.equal(node('#sendQuestion').disabled, false);
+  node('#showCitationExample').emit('click');
+  node('#conversationMessages').emit('click', {target:{closest(){return {};}}});
+  assert.equal(node('#referencesPanel').hidden, false);
+  assert.match(node('#referencesContent').innerHTML, /示例原文/);
+  assert.equal(node('#sourcePage').textContent, '2 / 3');
+  node('#sourceNext').emit('click');
+  assert.equal(node('#sourcePage').textContent, '3 / 3');
+  node('#conversationMessages').emit('click', {target:{closest(){return {dataset:{exampleCitation:'1'}};}}});
+  assert.match(node('#referencesContent').innerHTML, /研究资料核对清单/);
+  assert.equal(node('#sourcePage').textContent, '1 / 2');
+});
+
+test('web search demo toggles independently of question mode', () => {
+  const env = environment('qa');
+  env.window.BaigePage = {onDeactivate() {}, onActivate() {}};
+  vm.runInContext(source('qa-session.js'), env.context);
+  vm.runInContext(source('pages/home.js'), env.context);
+  const node = selector => env.document.querySelector(selector);
+  node('#webSearchMode').emit('click');
+  assert.equal(node('#webSearchMode').getAttribute('aria-pressed'), 'true');
+  assert.equal(node('#generalMode').getAttribute('aria-pressed'), 'true');
+  assert.match(node('#conversationFeedback').textContent, /演示/);
+  node('#webSearchMode').emit('click');
+  assert.equal(node('#webSearchMode').getAttribute('aria-pressed'), 'false');
+});
+
+test('history groups by local date and keeps legacy sessions searchable', () => {
+  const today = new Date(); today.setHours(12, 0, 0, 0);
+  const previous = new Date(today); previous.setDate(previous.getDate() - 3);
+  const old = new Date(today); old.setDate(old.getDate() - 20);
+  const sessions = [
+    {id:'a', title:'今天问题', createdAt:+today, messages:[{role:'user', text:'船舶'}]},
+    {id:'b', title:'近期问题', createdAt:+previous, mode:'knowledge', messages:[{role:'user', text:'标准'}]},
+    {id:'legacy', title:'早期问题', messages:[{role:'user', text:'旧内容'}]},
+    {id:'c', title:'更早问题', createdAt:+old, messages:[{role:'user', text:'旧问题'}]},
+  ];
+  const env = environment('qa', new Map([['baige.qa.history.v1',JSON.stringify(sessions)]]));
+  env.window.BaigePage = {onDeactivate(){},onActivate(){}};
+  vm.runInContext(source('qa-session.js'), env.context);
+  vm.runInContext(source('pages/home.js'), env.context);
+  const result = env.document.querySelector('#historyList').innerHTML;
+  assert.match(result, /今天/); assert.match(result, /近 7 天/); assert.match(result, /更早/);
+  assert.match(result, /知识问答/); assert.match(result, /早期问题/);
+  env.document.querySelector('#historySearch').value = '标准';
+  env.document.querySelector('#historySearch').emit('input');
+  assert.match(env.document.querySelector('#historyList').innerHTML, /近期问题/);
+  assert.doesNotMatch(env.document.querySelector('#historyList').innerHTML, /今天问题/);
+});
