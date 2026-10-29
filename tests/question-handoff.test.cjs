@@ -79,8 +79,13 @@ function application() {
       target: { closest(selector) { return selector === "[data-nav]" ? { dataset: { nav: id } } : null; } },
     });
   }
+  function clickChild(parent, child) {
+    env.document.querySelector("#navigation").emit("click", {
+      target: { closest(selector) { return selector === "[data-child]" ? { dataset: { parent, child } } : null; } },
+    });
+  }
   send("home", "ready");
-  return { ...env, frames, frame, send, clickNav };
+  return { ...env, frames, frame, send, clickNav, clickChild };
 }
 
 test("homepage question waits for a new QA frame to be ready and never enters its URL", () => {
@@ -96,7 +101,7 @@ test("homepage question waits for a new QA frame to be ready and never enters it
 
 test("a mounted QA receives a new question once and ordinary navigation does not replay it", () => {
   const app = application();
-  app.clickNav("qa");
+  app.clickChild("qa", "对话");
   app.send("qa", "ready");
   app.clickNav("home");
   app.send("home", "navigate", { id: "qa", child: "对话", question: "归纳船舶标准" });
@@ -105,7 +110,7 @@ test("a mounted QA receives a new question once and ordinary navigation does not
   app.send("qa", "ready");
   app.window.emit("hashchange");
   app.clickNav("home");
-  app.clickNav("qa");
+  app.clickChild("qa", "对话");
   assert.equal(qa.messages.filter(message => message.question).length, 1);
   assert.equal(qa.messages.at(-1).question, undefined);
 });
@@ -137,7 +142,7 @@ test("leaving QA before readiness cancels an undelivered question", () => {
   app.send("home", "navigate", { id: "qa", child: "对话", question: "尚未投递" });
   app.clickNav("home");
   app.send("qa", "ready");
-  app.clickNav("qa");
+  app.clickChild("qa", "对话");
   assert.equal(app.frame("qa").messages.filter(message => message.question).length, 0);
 });
 

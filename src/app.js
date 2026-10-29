@@ -165,13 +165,9 @@
     const hasSubnav = Boolean(item.children?.length) && item.subnav !== false;
     if (hasSubnav) {
       shell.classList.remove("sidebar-collapsed");
-      if (state.activeId !== item.id && policy.canOpen(item.id)) {
-        setPage(item.id);
-      } else {
-        if (state.expanded.has(item.id)) state.expanded.delete(item.id);
-        else state.expanded.add(item.id);
-        renderNavigation();
-      }
+      if (state.expanded.has(item.id)) state.expanded.delete(item.id);
+      else state.expanded.add(item.id);
+      renderNavigation();
     } else setPage(item.id);
     // renderNavigation replaces the buttons; keep keyboard focus on the same item.
     [...navRoot.querySelectorAll("[data-nav]")].find((node) => node.dataset.nav === item.id)?.focus();

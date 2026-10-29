@@ -4,7 +4,7 @@
   if (!root) return;
   const { icon, escapeHtml } = window.BaigeUI;
   const account = { email: "admin@cimtec.net.cn", role: "超级管理员", organization: "中船综合院" };
-  const feedback = { type: "使用建议", content: "" };
+  const feedback = { content: "" };
   const paths = {
     person: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-3a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v3Z"/>',
     bell: '<path d="M5 10a7 7 0 0 1 14 0v6l2 3H3l2-3Z M10 22h4 M12 1v2"/>',
@@ -157,16 +157,16 @@
       openNoticeDialog();
       return;
     } else if (action === "support") {
-      renderDialog("客服帮助", "在这里查看使用指引，或记录问题与建议。", '<dl class="account-help-list"><div><dt>如何开始问答？</dt><dd>在首页输入问题后发送，即可进入对话；选择知识库问答，可指定行业、企业或部门知识库。</dd></div><div><dt>如何设置推荐功能？</dt><dd>从个人中心进入「后台系统」，打开「自定义界面」，在「推荐功能」中最多选择 4 项并保存。</dd></div><div><dt>功能无法使用怎么办？</dt><dd>在「了解平台功能」查看开通状态，未开通项可申请权限。</dd></div></dl><p class="account-notice">当前为客服帮助演示，尚未接入人工在线客服。系统反馈仅在原型内演示，不实际发送。</p>', '<button class="secondary-button" type="button" data-account-close>关闭</button><button class="primary-button" type="button" data-account-feedback>系统反馈</button>');
+      renderDialog("客服帮助", "在这里查看使用指引，或记录问题与建议。", '<dl class="account-help-list"><div><dt>如何开始问答？</dt><dd>在首页输入问题后发送，即可进入对话；选择知识库问答，可指定行业、企业或部门知识库。</dd></div><div><dt>功能无法使用怎么办？</dt><dd>在「了解平台功能」查看开通状态，未开通项可申请权限。</dd></div></dl>', '<button class="secondary-button" type="button" data-account-close>关闭</button><button class="primary-button" type="button" data-account-feedback>系统反馈</button>');
     } else if (action === "about") {
       renderDialog("关于我们", "百舸 · 让知识连接工作", `<div class="account-about-brand">${avatar}<div><strong>百舸数智平台</strong><small>中船综合院</small></div></div><p class="account-about-copy">汇集知识问答、知识资源、写作与研究工具，为船舶行业工作提供统一的数智服务入口。</p>`);
     } else if (action === "feedback") {
-      renderDialog("系统反馈", "告诉我们使用中遇到的问题或建议。", `<form class="account-form" id="accountFeedbackForm" novalidate><label class="account-field"><span>反馈类型</span><select id="accountFeedbackType" name="type">${["使用建议", "功能问题", "界面体验", "其他"].map((type) => `<option${feedback.type === type ? " selected" : ""}>${type}</option>`).join("")}</select></label><label class="account-field"><span class="account-field-label"><span>反馈内容（必填）</span><small id="accountFeedbackCount">${feedback.content.length} / 1000</small></span><textarea id="accountFeedbackContent" name="content" required maxlength="1000" placeholder="请描述遇到的问题、操作步骤或改进建议" aria-describedby="accountFeedbackHint accountFeedbackStatus">${escapeHtml(feedback.content)}</textarea></label><p class="account-feedback-hint" id="accountFeedbackHint">原型演示，反馈内容不会实际发送。</p><p class="account-feedback-status" id="accountFeedbackStatus" role="status" hidden></p></form>`, '<button class="secondary-button" type="button" data-account-close>取消</button><button class="primary-button" type="submit" form="accountFeedbackForm">提交反馈</button>');
+      renderDialog("系统反馈", "告诉我们使用中遇到的问题或建议。", `<form class="account-form" id="accountFeedbackForm" novalidate><label class="account-field"><span class="account-field-label"><span>反馈内容（必填）</span><small id="accountFeedbackCount">${feedback.content.length} / 1000</small></span><textarea id="accountFeedbackContent" name="content" required maxlength="1000" placeholder="请描述遇到的问题、操作步骤或改进建议" aria-describedby="accountFeedbackHint accountFeedbackStatus">${escapeHtml(feedback.content)}</textarea></label><p class="account-feedback-hint" id="accountFeedbackHint">原型演示，反馈内容不会实际发送。</p><p class="account-feedback-status" id="accountFeedbackStatus" role="status" hidden></p></form>`, '<button class="secondary-button" type="button" data-account-close>取消</button><button class="primary-button" type="submit" form="accountFeedbackForm">提交反馈</button>');
     } else if (action === "logout") {
       renderDialog("退出登录", "确认退出当前演示账户？", '<p class="account-exit-message">此操作仅演示退出登录流程，可随时返回演示。</p>', '<button class="secondary-button" type="button" data-account-close>取消</button><button class="primary-button" type="button" data-account-exit>确认退出</button>');
     }
     if (!dialog.open) dialog.showModal();
-    const initial = action === "feedback" ? dialog.querySelector("#accountFeedbackType") : dialog.querySelector("#accountDialogTitle");
+    const initial = action === "feedback" ? dialog.querySelector("#accountFeedbackContent") : dialog.querySelector("#accountDialogTitle");
     initial.focus({ preventScroll: true });
   }
   menu.addEventListener("click", (event) => {
@@ -202,9 +202,6 @@
     dialog.querySelector("#accountFeedbackCount").textContent = `${feedback.content.length} / 1000`;
     event.target.removeAttribute("aria-invalid");
     dialog.querySelector("#accountFeedbackStatus").hidden = true;
-  });
-  dialog.addEventListener("change", (event) => {
-    if (event.target.id === "accountFeedbackType") feedback.type = event.target.value;
   });
   dialog.addEventListener("submit", (event) => {
     if (event.target.id !== "accountFeedbackForm") return;
