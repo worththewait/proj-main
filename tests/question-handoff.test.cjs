@@ -25,6 +25,7 @@ function element() {
   return events({
     value: "", hidden: false, disabled: false, open: false, isConnected: true,
     classList: {
+      contains(name) { return classes.has(name); },
       add(name) { classes.add(name); },
       remove(name) { classes.delete(name); },
       toggle(name, force = !classes.has(name)) { force ? classes.add(name) : classes.delete(name); return force; },
@@ -38,7 +39,7 @@ function element() {
   });
 }
 
-function environment(pageId = "home") {
+function environment(pageId = "home", savedStorage = new Map()) {
   const nodes = new Map();
   const document = events({
     body: { dataset: { page: pageId } },
@@ -48,10 +49,13 @@ function environment(pageId = "home") {
     },
   });
   const window = events({ BaigeUI: { hydrate() {}, icon() { return ""; }, escapeHtml(value) { return String(value); } } });
+  window.localStorage = { getItem: key => savedStorage.get(key) ?? null, setItem: (key, value) => savedStorage.set(key, value) };
   const location = { hash: "", href: "file:///prototype/index.html" };
+  const timers = [];
+  window.setTimeout = fn => { timers.push(fn); };
   const context = vm.createContext({ window, document, location });
   vm.runInContext(source("data.js"), context);
-  return { window, document, location, context, nodes };
+  return { window, document, location, context, nodes, timers };
 }
 
 function application() {
@@ -238,10 +242,14 @@ test("QA consumes an incoming question in general mode and keeps previous knowle
   node("#confirmKnowledgePicker").emit("click");
   assert.equal(node("#knowledgeMode").getAttribute("aria-pressed"), "true");
   activate({ child: "对话", question: "  首页带入的问题  " });
-  assert.equal(node("#homePrompt").value, "首页带入的问题");
-  assert.equal(node("#sendQuestion").disabled, false);
+  assert.equal(node("#homePrompt").value, "");
+  assert.equal(node("#sendQuestion").disabled, true);
   assert.equal(node("#generalMode").getAttribute("aria-pressed"), "true");
-  assert.match(node("#conversationFeedback").textContent, /通用问答能力正在集成/);
+  assert.match(node("#conversationMessages").innerHTML, /首页带入的问题/);
+  assert.equal(node("#conversationView").classList.contains("is-chatting"), true);
+  assert.doesNotMatch(node("#conversationMessages").innerHTML, /演示回复/);
+  while (env.timers.length) env.timers.shift()();
+  assert.match(node("#conversationMessages").innerHTML, /演示回复/);
   assert.equal(submissions, 1);
   activate({ child: "对话" });
   assert.equal(submissions, 1);
@@ -253,7 +261,7 @@ test("QA consumes an incoming question in general mode and keeps previous knowle
   assert.equal(node("#knowledgeMode").getAttribute("aria-pressed"), "true");
   assert.match(node("#selectedSourceTags").innerHTML, /企业制度知识库/);
   assert.match(node("#selectedSourceTags").innerHTML, /项目资料知识库/);
-  assert.match(node("#conversationFeedback").textContent, /知识问答能力正在集成/);
+  assert.match(node("#conversationMessages").innerHTML, /按企业制度解答/);
 });
 
 test("knowledge question sources are delivered once with the queued question", () => {
@@ -274,4 +282,31 @@ test("custom homepage settings is backend-only and redirects away from the clien
   app.clickNav("home-settings");
   assert.equal(app.location.href, "./admin.html#settings");
   assert.equal(app.frames.some((frame) => frame.src.includes("home-settings")), false);
+});
+
+
+test("history persists across reload while both panels start closed", () => {
+  const storage = new Map();
+  const load = () => {
+    const env = environment("qa", storage);
+    env.window.BaigePage = {onDeactivate() {}, onActivate() {}};
+    vm.runInContext(source("qa-session.js"), env.context);
+    vm.runInContext(source("pages/home.js"), env.context);
+    return env;
+  };
+  const first = load();
+  const node = selector => first.document.querySelector(selector);
+  node("#homePrompt").value = "历史测试";
+  node("#conversationForm").emit("submit", {preventDefault() {}});
+  while (first.timers.length) first.timers.shift()();
+  node("#historyToggle").emit("click");
+  assert.equal(node("#historyPanel").hidden, false);
+  assert.match(node("#historyList").innerHTML, /历史测试/);
+  const second = load();
+  assert.equal(second.document.querySelector("#historyPanel").hidden, true);
+  assert.equal(second.document.querySelector("#referencesPanel").hidden, true);
+  assert.match(second.document.querySelector("#historyList").innerHTML, /历史测试/);
+  const saved = JSON.parse(storage.get("baige.qa.history.v1"));
+  second.document.querySelector("#historyList").emit("click", {target:{closest(){return {dataset:{historyId:saved[0].id}};}}});
+  assert.match(second.document.querySelector("#conversationMessages").innerHTML, /历史测试/);
 });

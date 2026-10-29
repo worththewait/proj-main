@@ -103,3 +103,28 @@
   .qa-composer, .qa-mode-button, .qa-send-button { transition: none; }
   .qa-send-button:active:not(:disabled) { transform: none; }
 }
+
+.qa-conversation-messages { display: flex; flex-direction: column; gap: 18px; margin-top: 24px; }
+.qa-chat-message { max-width: 82%; line-height: 1.7; }
+.qa-chat-user { align-self: flex-end; }
+.qa-chat-assistant { align-self: flex-start; }
+.qa-chat-label { display: block; margin-bottom: 5px; color: #68748a; font-size: 12px; }
+.qa-chat-user .qa-chat-label { text-align: right; }
+.qa-chat-message p { margin: 0; padding: 12px 16px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; background: #f1f4fa; color: #26344d; }
+.qa-chat-user p { background: #e5edff; }
+
+.qa-conversation.is-chatting .qa-welcome, .qa-conversation.is-chatting .qa-introductions { display: none; }
+.qa-conversation.is-chatting .qa-conversation-messages { width: min(100%, 860px); margin: 0 auto; padding: 12px 0 24px; }
+.qa-conversation.is-chatting .qa-composer-area { position: sticky; bottom: 0; z-index: 2; width: min(100%, 860px); margin: auto auto 0; padding: 18px 0 12px; background: var(--canvas); }
+.qa-workspace { position: relative; }
+.qa-panel-actions { position: absolute; z-index: 4; top: 12px; right: 20px; display: flex; gap: 8px; }
+.qa-panel-actions button, .qa-panel-heading button { border: 1px solid #dbe3ef; border-radius: 8px; background: #fff; color: #425572; padding: 7px 11px; cursor: pointer; }
+.qa-side-panel { position: absolute; z-index: 5; top: 0; bottom: 0; width: min(320px, 85%); padding: 20px; overflow-y: auto; background: #fff; border: 1px solid #e2e7ef; }
+.qa-side-panel[hidden] { display: none; }
+.qa-history-panel { left: 0; }
+.qa-references-panel { right: 0; }
+.qa-panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.qa-panel-heading h2 { font-size: 17px; }
+.qa-history-item { display: block; width: 100%; padding: 12px; border: 0; border-radius: 8px; background: transparent; color: #34455f; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.qa-history-item:hover { background: #f1f5ff; }
+.qa-panel-empty, .qa-references-panel p { color: #68748a; font-size: 13px; line-height: 1.7; }

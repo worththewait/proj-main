@@ -5,10 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>百舸问答 · 百舸数智平台</title>
   <link rel="stylesheet" href="../styles.css?v=20261026-xd" />
-  <link rel="stylesheet" href="../qa-visual.css?v=20261026-xd" />
+  <link rel="stylesheet" href="../qa-visual.css?v=20261029-chat-panels" />
 </head>
 <body class="module-page qa-module" data-page="qa">
-  <main class="module-main">
+  <main class="module-main qa-workspace">
+    <div class="qa-panel-actions"><button type="button" id="historyToggle" aria-controls="historyPanel" aria-expanded="false">历史记录</button><button type="button" id="newConversation">新建对话</button><button type="button" id="referencesToggle" aria-controls="referencesPanel" aria-expanded="false">引用文档</button></div>
+    <aside class="qa-side-panel qa-history-panel" id="historyPanel" aria-label="历史记录" hidden><div class="qa-panel-heading"><h2>历史记录</h2><button type="button" id="historyClose" aria-label="关闭历史记录">×</button></div><div id="historyList"></div></aside>
+    <aside class="qa-side-panel qa-references-panel" id="referencesPanel" aria-label="引用文档" hidden><div class="qa-panel-heading"><h2>引用文档</h2><button type="button" id="referencesClose" aria-label="关闭引用文档">×</button></div><div id="referencesContent"><p>演示对话暂无实际引用文档。</p></div></aside>
     <div class="content-scroll" id="contentScroll">
       <div class="content-inner qa-page" id="content">
         <section class="qa-conversation" id="conversationView" aria-labelledby="conversationTitle">
@@ -50,6 +53,7 @@
             </article>
           </div>
 
+          <div id="conversationMessages" class="qa-conversation-messages" aria-live="polite" aria-label="对话记录"></div>
           <div class="qa-composer-area">
             <form class="qa-composer" id="conversationForm">
               <div class="qa-selected-sources" id="selectedSources" hidden>
@@ -95,6 +99,6 @@
   <script src="../src/ui.js"></script>
   <script src="../src/page-bridge.js?v=20261023-comments"></script>
   <script src="../src/qa-session.js"></script>
-  <script src="../src/pages/home.js?v=20261023-comments"></script>
+  <script src="../src/pages/home.js?v=20261029-chat-panels"></script>
 </body>
 </html>

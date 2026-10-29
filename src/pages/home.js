@@ -4,6 +4,56 @@
   const { icon, escapeHtml } = window.BaigeUI;
   const session = new window.BaigeQuestionSession(knowledgeBases);
   const form = document.querySelector("#conversationForm");
+  const messages = document.querySelector("#conversationMessages");
+  const scroll = document.querySelector("#contentScroll");
+  const conversation = document.querySelector("#conversationView");
+  const historyKey = "baige.qa.history.v1";
+  let conversations = [];
+  try { const saved = JSON.parse(window.localStorage.getItem(historyKey)); if (Array.isArray(saved)) conversations = saved.filter(item => item && typeof item.id === "string" && Array.isArray(item.messages)); } catch {}
+  let current = null;
+  let chat = [];
+  const historyPanel = document.querySelector("#historyPanel");
+  const referencesPanel = document.querySelector("#referencesPanel");
+  const historyToggle = document.querySelector("#historyToggle");
+  const referencesToggle = document.querySelector("#referencesToggle");
+  function setPanel(panel, toggle, open) { panel.hidden = !open; toggle.setAttribute("aria-expanded", String(open)); }
+  function saveHistory() {
+    try { window.localStorage.setItem(historyKey, JSON.stringify(conversations.map(item => ({...item, messages:item.messages.map(message => message.role === "assistant" ? {...message, text:demoReply} : message)})))); } catch {}
+    document.querySelector("#historyList").innerHTML = conversations.length ? conversations.map(item => `<button type="button" class="qa-history-item" data-history-id="${escapeHtml(item.id)}">${escapeHtml(item.title)}</button>`).join("") : '<p class="qa-panel-empty">暂无历史对话</p>';
+  }
+  setPanel(historyPanel, historyToggle, false);
+  setPanel(referencesPanel, referencesToggle, false);
+  historyToggle.addEventListener("click", () => setPanel(historyPanel, historyToggle, historyPanel.hidden));
+  referencesToggle.addEventListener("click", () => setPanel(referencesPanel, referencesToggle, referencesPanel.hidden));
+  document.querySelector("#historyClose").addEventListener("click", () => setPanel(historyPanel, historyToggle, false));
+  document.querySelector("#referencesClose").addEventListener("click", () => setPanel(referencesPanel, referencesToggle, false));
+  document.querySelector("#newConversation").addEventListener("click", () => {
+    current = null; chat = []; conversation.classList.remove("is-chatting"); messages.innerHTML = "";
+    setPanel(historyPanel, historyToggle, false); setPanel(referencesPanel, referencesToggle, false); field.value = ""; send.disabled = true; field.focus();
+  });
+  document.querySelector("#historyList").addEventListener("click", event => {
+    const button = event.target.closest("[data-history-id]");
+    const selected = button && conversations.find(item => item.id === button.dataset.historyId);
+    if (!selected) return;
+    current = selected; chat = selected.messages; conversation.classList.add("is-chatting"); renderChat();
+    setPanel(historyPanel, historyToggle, false);
+  });
+  const demoReply = "这是一条演示回复。感谢你的提问，实际智能问答能力正在接入中。";
+  function renderChat() {
+    messages.innerHTML = chat.map(item => `<div class="qa-chat-message qa-chat-${item.role}"><span class="qa-chat-label">${item.role === "user" ? "我" : "百舸问答"}</span><p>${escapeHtml(item.text)}</p></div>`).join("");
+    scroll.scrollTop = scroll.scrollHeight;
+  }
+  function typeReply(item) {
+    const chars = Array.from(demoReply);
+    let position = 0;
+    function step() {
+      item.text += chars[position++];
+      if (chat.includes(item)) renderChat();
+      if (position === chars.length) saveHistory();
+      if (position < chars.length) window.setTimeout(step, 35);
+    }
+    window.setTimeout(step, 35);
+  }
   const field = document.querySelector("#homePrompt");
   const feedback = document.querySelector("#conversationFeedback");
   const send = document.querySelector("#sendQuestion");
@@ -131,9 +181,19 @@
       return field.focus();
     }
     if (request.status === "knowledge-required") return openPicker(knowledgeMode);
-    feedback.textContent = request.mode === "knowledge" ?
-      `已选择 ${request.knowledgeBaseNames.join("、")}。知识问答能力正在集成，暂未发送内容。` :
-      "通用问答能力正在集成，暂未发送内容。";
+    conversation.classList.add("is-chatting");
+    if (!current) { current = {id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, title: request.question.slice(0, 40), messages: chat}; conversations.unshift(current); }
+    chat.push({role: "user", text: request.question});
+    const reply = {role: "assistant", text: ""};
+    chat.push(reply);
+    renderChat();
+    typeReply(reply);
+    saveHistory();
+    field.value = "";
+    send.disabled = true;
+    feedback.textContent = "";
+    field.focus();
+
   });
   window.BaigePage.onDeactivate(() => closePicker(false));
   window.BaigePage.onActivate(({ child, question, knowledgeBaseIds }) => {
@@ -162,4 +222,5 @@
     }
   });
   renderMode();
+  saveHistory();
 })();
