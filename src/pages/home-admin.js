@@ -12,6 +12,8 @@
   get('updateDestination').innerHTML = '<option value="">不设置跳转</option>' + newsDestinations.map(item=>`<option value="${escape(item.key)}">${escape(item.label)}</option>`).join('');
   let selected = new Set(config.read().recommendedIds);
   let group = 'all', deleteId = null, deleteTrigger = null, detailTrigger = null;
+  const NEWS_PAGE_SIZE = 10;
+  let newsPage = 1;
   let nextId = 0;
   const notice = text => { get('adminNotice').textContent = text; };
   let toastTimer = null;
@@ -103,13 +105,33 @@
   });
   get('resetCarousel').addEventListener('click', () => {editor.beginDraft(config.read().slides); notice('已取消修改，恢复为上次保存的轮播。');});
 
+  function renderNewsPager(pages) {
+    const pager = get('updatesPager');
+    if (pages <= 1) {
+      pager.hidden = true;
+      pager.innerHTML = '';
+      return;
+    }
+    pager.hidden = false;
+    let html = `<button type="button" class="admin-page-button" data-news-page="${newsPage - 1}" aria-label="上一页" ${newsPage === 1 ? 'disabled' : ''}>上一页</button>`;
+    for (let page = 1; page <= pages; page += 1) {
+      html += `<button type="button" class="admin-page-button" data-news-page="${page}" aria-label="第 ${page} 页"${page === newsPage ? ' aria-current="page"' : ''}>${page}</button>`;
+    }
+    html += `<button type="button" class="admin-page-button" data-news-page="${newsPage + 1}" aria-label="下一页" ${newsPage === pages ? 'disabled' : ''}>下一页</button>`;
+    pager.innerHTML = html;
+  }
   function renderNews() {
     const all = config.read().updates;
     const updates = all.filter(item => item.status === 'published' || item.status === 'unpublished');
     const publishedCount = updates.filter(item => item.status === 'published').length;
     const unpublishedCount = updates.length - publishedCount;
     const query = get('updatesSearch').value.trim().toLowerCase();
-    const visible = updates.filter(item => item.title.toLowerCase().includes(query)).sort((a,b)=>b.date.localeCompare(a.date));
+    const filtered = updates.filter(item => item.title.toLowerCase().includes(query)).sort((a,b)=>b.date.localeCompare(a.date));
+    const pages = Math.max(1, Math.ceil(filtered.length / NEWS_PAGE_SIZE));
+    if (newsPage > pages) newsPage = pages;
+    if (newsPage < 1) newsPage = 1;
+    const start = (newsPage - 1) * NEWS_PAGE_SIZE;
+    const visible = filtered.slice(start, start + NEWS_PAGE_SIZE);
     get('updatesTable').innerHTML = visible.length ? visible.map(item=>{
       const published = item.status === 'published';
       const actions = published
@@ -117,10 +139,20 @@
         : `<button type="button" class="admin-text-button" data-view-update="${escape(item.id)}" aria-label="查看${escape(item.title)}">查看</button><button type="button" class="admin-text-button" data-publish-update="${escape(item.id)}" aria-label="重新发布${escape(item.title)}">发布</button>`;
       return `<tr><td><strong class="admin-news-title" title="${escape(item.title)}">${escape(item.title)}</strong><small class="admin-news-excerpt">${escape(item.body || '正文待完善')}</small></td><td><span class="admin-news-destination" title="${escape(destinationFor(item)?.label || '未设置')}">${escape(destinationFor(item)?.label || '未设置')}</span></td><td><span class="admin-state${published ? ' is-published' : ' is-unpublished'}">${published ? '已发布' : '取消发布'}</span></td><td><div class="admin-row-actions">${actions}<button type="button" class="admin-text-button is-danger" data-delete-update="${escape(item.id)}" aria-label="删除${escape(item.title)}">删除</button></div></td></tr>`;
     }).join('') : '<tr><td colspan="4" class="admin-empty">没有匹配的动态，可直接新增动态。</td></tr>';
-    get('updatesSummary').textContent = `共 ${updates.length} 条动态 · 已发布 ${publishedCount} 条 · 取消发布 ${unpublishedCount} 条${visible.length!==updates.length?` · 当前显示 ${visible.length} 条`:''}`;
+    get('updatesSummary').textContent = `共 ${updates.length} 条动态 · 已发布 ${publishedCount} 条 · 取消发布 ${unpublishedCount} 条${filtered.length!==updates.length?` · 当前显示 ${filtered.length} 条`:''} · 第 ${newsPage}/${pages} 页`;
+    renderNewsPager(pages);
     get('newUpdate').disabled = all.length>=100;
   }
-  get('updatesSearch').addEventListener('input', renderNews);
+  get('updatesSearch').addEventListener('input', () => { newsPage = 1; renderNews(); });
+  get('updatesPager').addEventListener('click', event => {
+    const button = event.target.closest('[data-news-page]');
+    if (!button || button.disabled) return;
+    const page = Number(button.dataset.newsPage);
+    if (!Number.isInteger(page)) return;
+    newsPage = page;
+    renderNews();
+    [...get('updatesPager').querySelectorAll('[data-news-page]')].find(item => item.dataset.newsPage === String(page))?.focus({preventScroll:true});
+  });
   function bodyCount() {get('updateBodyCount').textContent = `${get('updateBody').value.length} / 5000 字`;}
   function openEditor() {
     get('updateEditorTitle').textContent = '新增动态';
@@ -159,7 +191,7 @@
     const invalid = !item.title||item.title.length>60 ? ['updateTitle','请输入动态标题，最多 60 字。'] : get('updateDestination').value&&!target ? ['updateDestination','请选择有效的平台内功能。'] : !item.body||item.body.length>5000 ? ['updateBody','发布前请填写正文，最多 5000 字。'] : null;
     if (invalid) {get('updateFeedback').textContent=invalid[1];get(invalid[0]).setAttribute('aria-invalid','true');get(invalid[0]).focus();return;}
     latest.unshift(item);
-    try {config.saveSection('updates',latest);get('updatesSearch').value='';closeEditor();notice('动态已发布，首页产品动态已同步更新。');}
+    try {config.saveSection('updates',latest);get('updatesSearch').value='';newsPage=1;closeEditor();notice('动态已发布，首页产品动态已同步更新。');}
     catch(error) {get('updateFeedback').textContent=error.message;}
   }
   function unpublishNews(id) {

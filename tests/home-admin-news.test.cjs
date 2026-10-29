@@ -138,16 +138,54 @@ test('searching covers published and cancelled updates but not drafts', () => {
   assert.match(app.get('updatesTable').innerHTML,/取消发布标题/);
 });
 
+test('product updates paginate at ten per page and search resets to page one', () => {
+  const app=setup();
+  const items=Array.from({length:12},(_,i)=>({
+    id:`page-${i}`,
+    title:`条目${String(i+1).padStart(2,'0')}`,
+    body:'正文',
+    date:`2026-10-${String(28-i).padStart(2,'0')}`,
+    status:'published',
+  }));
+  app.config.saveSection('updates',items);
+  app.get('updatesSearch').emit('input');
+  const rows=()=>(app.get('updatesTable').innerHTML.match(/<tr>/g)||[]).length;
+  assert.equal(rows(),10);
+  assert.equal(app.get('updatesPager').hidden,false);
+  assert.match(app.get('updatesPager').innerHTML,/aria-label="第 1 页"/);
+  assert.match(app.get('updatesPager').innerHTML,/aria-current="page"/);
+  assert.match(app.get('updatesSummary').textContent,/第 1\/2 页/);
+  assert.match(app.get('updatesTable').innerHTML,/条目01/);
+  assert.doesNotMatch(app.get('updatesTable').innerHTML,/条目11/);
+
+  const target={dataset:{newsPage:'2'},disabled:false,closest(selector){return selector==='[data-news-page]'?this:null;}};
+  app.get('updatesPager').emit('click',target);
+  assert.equal(rows(),2);
+  assert.match(app.get('updatesTable').innerHTML,/条目11/);
+  assert.match(app.get('updatesTable').innerHTML,/条目12/);
+  assert.doesNotMatch(app.get('updatesTable').innerHTML,/条目01/);
+  assert.match(app.get('updatesSummary').textContent,/第 2\/2 页/);
+
+  app.get('updatesSearch').value='条目12';
+  app.get('updatesSearch').emit('input');
+  assert.equal(rows(),1);
+  assert.match(app.get('updatesSummary').textContent,/第 1\/1 页/);
+  assert.equal(app.get('updatesPager').hidden,true);
+});
+
 test('update panel has no status filters or draft save control', () => {
   const page=fs.readFileSync(path.join(__dirname,'../pages/home-settings.html'),'utf8');
   assert.doesNotMatch(page,/updatesFilters|data-news-filter|saveUpdateDraft/);
   assert.match(page,/展示已发布与取消发布动态/);
   assert.match(page,/id="adminToast"/);
+  assert.match(page,/id="updatesPager"/);
   const script=fs.readFileSync(path.join(__dirname,'../src/pages/home-admin.js'),'utf8');
   assert.match(script,/data-unpublish-update/);
   assert.match(script,/data-publish-update/);
   assert.match(script,/status === 'unpublished'/);
   assert.match(script,/function showToast\(text\)/);
+  assert.match(script,/NEWS_PAGE_SIZE = 10/);
+  assert.match(script,/data-news-page/);
   assert.match(script,/2000/);
 });
 

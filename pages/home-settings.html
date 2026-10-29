@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>自定义首页 · 百舸数智平台</title>
-<link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../home-dashboard.css?v=20261027-management"><link rel="stylesheet" href="../home-admin.css?v=20261028-unpublish-toast"></head>
+<link rel="stylesheet" href="../styles.css"><link rel="stylesheet" href="../home-dashboard.css?v=20261027-management"><link rel="stylesheet" href="../home-admin.css?v=20261029-news-pagination"></head>
 <body class="module-page" data-page="home-settings"><main class="module-main"><div class="content-scroll" id="contentScroll"><div class="content-inner home-admin" id="content">
 <header class="admin-header"><div><h1>自定义首页</h1><p>配置推荐功能与轮播内容，管理首页产品动态。</p></div><button class="secondary-button" type="button" data-route="home"><span data-icon="home" aria-hidden="true"></span>查看首页</button></header>
 <p class="admin-local-note">当前为原型演示，设置与发布内容仅保存在本浏览器。</p>
@@ -41,7 +41,7 @@
 <section class="admin-panel" id="panelUpdates" role="tabpanel" aria-labelledby="tabUpdates" hidden>
 <div id="updatesListView"><div class="admin-section-heading"><div><h2>产品动态</h2><p>展示已发布与取消发布动态，首页只同步已发布内容。</p></div><button class="primary-button" type="button" id="newUpdate"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>新增动态</button></div>
 <div class="admin-toolbar"><label class="admin-search"><span data-icon="search" aria-hidden="true"></span><input type="search" id="updatesSearch" aria-label="搜索产品动态" placeholder="搜索动态标题"></label></div>
-<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th scope="col">动态标题</th><th scope="col">跳转功能</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead><tbody id="updatesTable"></tbody></table></div><p id="updatesSummary" class="admin-summary"></p></div>
+<div class="admin-table-wrap"><table class="admin-table"><thead><tr><th scope="col">动态标题</th><th scope="col">跳转功能</th><th scope="col">状态</th><th scope="col">操作</th></tr></thead><tbody id="updatesTable"></tbody></table></div><div class="admin-list-footer"><p id="updatesSummary" class="admin-summary"></p><div class="admin-pagination" id="updatesPager" role="group" aria-label="产品动态分页" hidden></div></div></div>
 <section id="updateDetailView" class="admin-news-detail" aria-labelledby="updateDetailHeading" hidden>
 <div class="admin-section-heading"><div><h2 id="updateDetailHeading">查看动态</h2><p>动态完整正文；返回列表可取消发布、重新发布或删除。</p></div><button class="admin-text-button" type="button" id="closeUpdateDetail">返回列表</button></div>
 <dl class="admin-detail-fields"><div><dt>动态标题</dt><dd id="updateDetailTitle"></dd></div><div><dt>跳转链接</dt><dd id="updateDetailDestination"></dd></div><div><dt>状态</dt><dd id="updateDetailStatus"></dd></div><div><dt>正文</dt><dd id="updateDetailBody" class="admin-detail-body"></dd></div></dl>
@@ -56,7 +56,7 @@
 <dialog id="deleteUpdateDialog" class="admin-delete-dialog" aria-labelledby="deleteUpdateTitle"><h2 id="deleteUpdateTitle">删除这条动态？</h2><p id="deleteUpdateDescription"></p><p class="admin-feedback" id="deleteUpdateFeedback" role="status"></p><footer><button class="secondary-button" id="cancelDeleteUpdate" type="button">取消</button><button class="admin-danger-button" id="confirmDeleteUpdate" type="button">删除动态</button></footer></dialog>
 <div class="admin-toast" id="adminToast" role="status" aria-live="polite" aria-atomic="true"></div>
 <script src="../src/data.js?v=20261027-management"></script><script src="../src/ui.js"></script><script src="../src/page-bridge.js?v=20261026-lifecycle"></script>
-<script src="../src/home-card-images.js?v=20261026-carousel"></script><script src="../src/home-directory-icons.js?v=20261024-directory"></script><script src="../src/home-carousel-model.js?v=20261027-management"></script><script src="../src/home-config.js?v=20261028-news-examples"></script><script src="../src/pages/home-carousel.js?v=20261027-management"></script><script src="../src/pages/home-carousel-editor.js?v=20261026-carousel"></script><script src="../src/pages/home-admin.js?v=20261028-update-toast"></script>
+<script src="../src/home-card-images.js?v=20261026-carousel"></script><script src="../src/home-directory-icons.js?v=20261024-directory"></script><script src="../src/home-carousel-model.js?v=20261027-management"></script><script src="../src/home-config.js?v=20261028-news-examples"></script><script src="../src/pages/home-carousel.js?v=20261027-management"></script><script src="../src/pages/home-carousel-editor.js?v=20261026-carousel"></script><script src="../src/pages/home-admin.js?v=20261029-news-pagination"></script>
 <script>
 if (new URLSearchParams(location.search).get('embed') === 'admin') {
   const homeLink = document.querySelector('[data-route="home"]');
