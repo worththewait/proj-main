@@ -458,7 +458,7 @@
   .intel-embed { display: flex; height: 100vh; height: 100dvh; min-height: 0; }
   .intel-embed .app-main { height: 100%; }
 </style>
-<link rel="stylesheet" href="../intel-visual.css?v=20261029-segments" />
+<link rel="stylesheet" href="../intel-visual.css?v=20261029-title-tabs" />
 </head>
 <body data-page="intel">
   <div class="intel-embed">
@@ -979,11 +979,16 @@ function renderShell() {
   const cur = (view === 'earlycfg') ? 'early' : view;
 
   document.getElementById('tabbar').innerHTML =
-    '<div class="intel-segments" role="group" aria-label="情报栏目">' + INTEL_TABS.map(t =>
-      '<button type="button" class="intel-tab' + (cur === t.id ? ' active' : '') + '" aria-pressed="' + (cur === t.id) + '" data-v="' + t.id + '">' + t.label + '</button>').join('') + '</div>'
+    '<div class="intel-title-tabs" role="group" aria-label="情报栏目">' + INTEL_TABS.map(t => {
+      const active = cur === t.id;
+      const tag = active && !detailItem && !detailTrack && view !== 'earlycfg' ? 'h1' : 'div';
+      return '<' + tag + ' class="intel-title-item"><button type="button" class="intel-tab' + (active ? ' active' : '') + '" aria-pressed="' + active + '" data-v="' + t.id + '">' + t.label + '</button></' + tag + '>';
+    }).join('') + '</div>'
+    + '<div class="intel-header-tools">'
+    + (view === 'early' && !detailItem && !detailTrack ? dateNav() : '')
     + '<button class="tab-fav" id="tabFav" title="我的收藏">' + icon('star') + '<span>收藏</span>'
     + (favs.length ? '<span class="n">' + favs.length + '</span>' : '')
-    + '</button>';
+    + '</button></div>';
 
   bindTabbar();
 }
@@ -992,6 +997,7 @@ function bindTabbar() {
   document.querySelectorAll('.intel-tab').forEach(t => { t.onclick = () => go(t.dataset.v); });
   const tf = document.getElementById('tabFav');
   if (tf) tf.onclick = openFavs;
+  bindDateNav();
 }
 
 /* ---------------- 早报 ---------------- */
@@ -1022,6 +1028,36 @@ function dateNav() {
     + '<span class="wd2">' + wdText(selDate) + '</span>'
     + '<span class="yr">· ' + selDate.y + '</span>'
     + '</div>';
+}
+
+function bindDateNav() {
+  const toggleCal = e => {
+    e.stopPropagation();
+    const pop = document.getElementById('calPop');
+    if (!pop) return;
+    if (pop.classList.contains('show')) { pop.classList.remove('show'); return; }
+    calYear = selDate.y; calMonth = selDate.m;
+    renderCal();
+    openCalPop();
+  };
+  const db = document.getElementById('dateBtn');
+  if (db) db.onclick = toggleCal;
+  const cprev = document.getElementById('calPrev'), cnext = document.getElementById('calNext');
+  if (cprev) cprev.onclick = () => { if (calMonth === 1) { calMonth = 12; calYear--; } else calMonth--; renderCal(); };
+  if (cnext) cnext.onclick = () => { if (calMonth === 12) { calMonth = 1; calYear++; } else calMonth++; renderCal(); };
+  const cl = document.getElementById('calLatest');
+  if (cl) cl.onclick = () => { selDate = { y: TODAY.y, m: TODAY.m, d: TODAY.d }; pageScroll = 0; render(); };
+
+  document.querySelectorAll('[data-period]').forEach(el => {
+    el.onclick = () => {
+      if (el.classList.contains('dis')) return;
+      const step = +el.dataset.period;
+      const d = new Date(selDate.y, selDate.m - 1, selDate.d + step);
+      selDate = { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
+      pageScroll = 0;
+      render();
+    };
+  });
 }
 
 function calPop() {
@@ -1070,7 +1106,6 @@ function viewEarly() {
   }).join('') : emptyEarly();
 
   return '<div class="doc">'
-    + pageHead({ title: '今日情报', line: dateNav(), deco: headDeco() })
     + '<div class="daily">'
     + '<div class="daily-main">'
     + '<div class="col-head"><span class="ct-line"></span><span class="ct">今日早报</span>'
@@ -1136,18 +1171,14 @@ function trackEntries() {
 }
 
 function viewTrack() {
-  const head = pageHead({
-    title: '情报跟踪',
-    big: TRACKS.length + ' 个',
-    wd: '跟踪主题',
-
-    act: '<div class="tk-switch">'
+  const head = '<div class="intel-track-tools">'
+      + '<div class="tk-switch">'
       + '<span class="tk-switch-item' + (trackTab === 'feed' ? ' active' : '') + '" data-tt="feed">最新动态</span>'
       + '<span class="tk-switch-item' + (trackTab === 'topics' ? ' active' : '') + '" data-tt="topics">我的主题 ' + TRACKS.length + '</span>'
       + '</div>'
       + '<button class="intel-page-btn primary" id="btnAddTrack">＋ 添加跟踪</button>'
       + '<button class="intel-page-btn" data-manage>管理</button>'
-  });
+      + '</div>';
 
   return '<div class="doc">' + head + (trackTab === 'feed' ? trackFeed() : trackTopics()) + '</div>';
 }
@@ -1287,34 +1318,6 @@ function bind() {
     };
   });
 
-  /* 早报日期：点日期本体或日历图标都能开 */
-  const toggleCal = e => {
-    e.stopPropagation();
-    const pop = document.getElementById('calPop');
-    if (!pop) return;
-    if (pop.classList.contains('show')) { pop.classList.remove('show'); return; }
-    calYear = selDate.y; calMonth = selDate.m;
-    renderCal();
-    openCalPop();
-  };
-  const db = document.getElementById('dateBtn');
-  if (db) db.onclick = toggleCal;
-  const cprev = document.getElementById('calPrev'), cnext = document.getElementById('calNext');
-  if (cprev) cprev.onclick = () => { if (calMonth === 1) { calMonth = 12; calYear--; } else calMonth--; renderCal(); };
-  if (cnext) cnext.onclick = () => { if (calMonth === 12) { calMonth = 1; calYear++; } else calMonth++; renderCal(); };
-  const cl = document.getElementById('calLatest');
-  if (cl) cl.onclick = () => { selDate = { y: TODAY.y, m: TODAY.m, d: TODAY.d }; pageScroll = 0; render(); };
-
-  document.querySelectorAll('[data-period]').forEach(el => {
-    el.onclick = () => {
-      if (el.classList.contains('dis')) return;
-      const step = +el.dataset.period;
-      const d = new Date(selDate.y, selDate.m - 1, selDate.d + step);
-      selDate = { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
-      pageScroll = 0;
-      render();
-    };
-  });
   document.querySelectorAll('[data-latest]').forEach(el => {
     el.onclick = () => { selDate = { y: TODAY.y, m: TODAY.m, d: TODAY.d }; pageScroll = 0; render(); };
   });

@@ -1,7 +1,6 @@
 /* 百舸情报：阅读与持续跟踪共用的紧凑视觉层。 */
 body { background:#f5f7fb; }
-.intel-tabbar { height:44px; padding:0 30px; gap:26px; }
-.doc { padding:22px 30px 40px; max-width:1460px; }
+.doc { padding:12px 30px 40px; max-width:1460px; }
 .ph { align-items:center; gap:16px; padding-bottom:16px; margin-bottom:18px; }
 .ph-art::before, .ph-t h1::before, .ph-deco { display:none; }
 .ph-top { align-items:center; padding:0; }
@@ -75,8 +74,7 @@ body { background:#f5f7fb; }
 .cfg-foot { position:sticky; bottom:0; padding:14px 20px; margin-top:16px; background:#fff; border:1px solid #e1e7f1; border-radius:8px; }
 .intel-live-toggle { display:none; }
 @media (max-width:850px) {
- .intel-tabbar { padding:0 20px; }
- .doc { padding:18px 20px 40px; }
+ .doc { padding:12px 20px 40px; }
  .daily { grid-template-columns:1fr; }
  .daily-side { display:none; }
  .intel-live-toggle { display:block; position:fixed; right:20px; bottom:20px; z-index:800; border:1px solid #b9cdf8; border-radius:8px; background:#fff; color:#245bff; padding:10px 16px; cursor:pointer; }
@@ -101,14 +99,25 @@ body { background:#f5f7fb; }
 .fv-body { padding:8px 24px 24px; }
 .fv-tt { font-size:14px; line-height:1.7; }
 .fv-meta { font-size:12px; color:#75839a; }
-/* 栏目切换保留独立辨识度，但不再形成第二条全宽导航栏。 */
-.intel-tabbar { height:auto; min-height:64px; padding:16px 30px 8px; gap:16px; border:0; background:transparent; }
+/* 栏目名直接作为可切换的页面标题，日期与收藏共用这一行。 */
+.intel-tabbar { position:relative; z-index:300; width:100%; max-width:1460px; margin:0 auto; height:auto; min-height:76px; padding:20px 30px 12px; gap:24px; border:0; background:transparent; }
 .intel-tabbar.scrolled { box-shadow:none; }
-.intel-segments { display:inline-flex; align-items:center; gap:4px; padding:4px; background:#e9edf5; border:1px solid #e1e6ef; border-radius:10px; }
-.intel-segments .intel-tab { display:inline-flex; justify-content:center; min-width:104px; height:32px; padding:0 18px; border:0; border-radius:7px; background:transparent; color:#63718a; font-family:inherit; font-size:13px; line-height:1; cursor:pointer; }
-.intel-segments .intel-tab::after { display:none; }
-.intel-segments .intel-tab.active { background:#fff; color:#245bff; font-weight:600; box-shadow:0 1px 3px #23375512; }
-.intel-segments .intel-tab:not(.active):hover { background:#f2f5fa; color:#354966; }
-.intel-segments .intel-tab:focus-visible { outline:2px solid #7898ee; outline-offset:2px; }
+.intel-title-tabs { display:flex; align-items:center; gap:28px; flex-shrink:0; }
+.intel-title-item { margin:0; font:inherit; }
+.intel-title-tabs .intel-tab { height:44px; padding:0 0 10px; border:0; border-radius:0; background:transparent; color:#6c778a; font-family:inherit; font-size:21px; font-weight:400; line-height:1.4; cursor:pointer; }
+.intel-title-tabs .intel-tab::after { display:none; }
+.intel-title-tabs .intel-tab.active { color:#1d2433; font-weight:600; box-shadow:none; }
+.intel-title-tabs .intel-tab.active::after { display:block; right:auto; bottom:0; width:24px; height:2px; border-radius:0; background:#1d2433; }
+.intel-title-tabs .intel-tab:not(.active):hover { color:#1d2433; }
+.intel-title-tabs .intel-tab:focus-visible { outline:2px solid #7898ee; outline-offset:4px; border-radius:2px; }
+.intel-header-tools { margin-left:auto; display:flex; align-items:center; gap:24px; padding-bottom:8px; }
+.intel-header-tools .ph-date b { font-size:15px; font-weight:500; letter-spacing:0; }
+.intel-header-tools .ph-date .wd2 { margin-left:4px; }
+.intel-header-tools .cal-ic { margin-top:0; }
+.intel-header-tools .intel-cal-pop { left:auto; right:0; }
+.intel-header-tools .tab-fav { margin-left:0; padding-inline:0; }
+.intel-track-tools { display:flex; align-items:center; gap:8px; margin-bottom:18px; min-height:34px; flex-wrap:wrap; }
+.intel-track-tools .tk-switch { margin-right:auto; }
 @media (max-width:850px) { .intel-tabbar { padding-inline:20px; } }
-@media (max-width:520px) { .intel-tabbar { padding-inline:14px; } .intel-segments .intel-tab { min-width:92px; padding-inline:12px; } }
+@media (max-width:700px) { .intel-tabbar { flex-wrap:wrap; gap:12px; } .intel-header-tools { width:100%; padding-bottom:0; gap:12px; } .intel-header-tools .tab-fav { margin-left:auto; } }
+@media (max-width:520px) { .intel-tabbar { padding-inline:14px; } .intel-title-tabs { gap:24px; } .intel-title-tabs .intel-tab { font-size:20px; } }

@@ -19,7 +19,7 @@ const navigation = [
  {id:"knowledge",file:"pages/knowledge.html",label:"知识库",icon:"book"},
  {id:"writing",file:"pages/writing.html",label:"百舸写作",icon:"pen"},
  {id:"library",file:"pages/library.html",label:"百舸文库",icon:"file",children:["文库首页"],subnav:false,autoChild:false},
- {id:"intel",file:"pages/intel.html?v=20261029-segments",label:"百舸情报",icon:"globe"},
+ {id:"intel",file:"pages/intel.html?v=20261029-title-tabs",label:"百舸情报",icon:"globe"},
  {id:"analysis",file:"pages/analysis.html",label:"百舸分析",icon:"chart"},
  {id:"smart-tools",file:"pages/smart-tools.html",label:"智能工具",icon:"grid"},
  {id:"frontier",file:"pages/frontier.html",label:"前沿工具",icon:"compass",children:["全球鹰","智研通"]},
