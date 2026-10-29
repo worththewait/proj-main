@@ -1,23 +1,1665 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>百舸情报 · 百舸数智平台</title>
-  <link rel="stylesheet" href="../styles.css" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>百舸情报 · 百舸数智平台</title>
+<!-- 复刻自《百舸情报-板块原型.html》单文件原型；移除重复的平台顶栏与侧栏。 -->
+<style>
+* { box-sizing: border-box; }
+  :root {
+    --canvas: #f4f6fb;
+    --surface: #ffffff;
+    --surface-subtle: #edf2fb;
+    --ink: #1d2433;
+    --muted: #626d82;
+    --line: #e1e7f1;
+    --line-strong: #cbd5e5;
+    --accent: #245bff;
+    --accent-hover: #1546d8;
+    --accent-soft: #e8efff;
+    --ai: #6d5ef7;
+    --ai-ink: #5842cf;
+    --ai-soft: #f0edff;
+    --research: #078b98;
+    --research-ink: #066d78;
+    --research-soft: #e5f6f5;
+    --success: #187247;
+    --pending: #8c5b08;
+    --radius: 14px;
+    --ease: cubic-bezier(.2,.8,.2,1);
+  }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--canvas); color: var(--ink); font-size: 14px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  a { text-decoration: none; }
+
+  /* ---------- 顶栏 54px（与平台一致：左品牌 / 右客服、通知、账号） ---------- */
+  .app-topbar { display: flex; align-items: center; justify-content: space-between; gap: 24px; height: 54px; padding: 0 20px;
+    background: var(--surface); border-bottom: 1px solid #edf0f5; flex-shrink: 0; }
+  .brand { display: flex; align-items: center; gap: 8px; height: 54px; color: #162b62; font-size: 21px; font-weight: 650; letter-spacing: -.5px; white-space: nowrap; }
+  .brand-mark { display: block; width: 23px; height: 27px; flex-shrink: 0; }
+  .brand-subtitle { margin-left: 5px; color: var(--muted); font-size: 11px; font-weight: 500; letter-spacing: 0; }
+  .topbar-actions { display: flex; align-items: center; gap: 6px; height: 100%; flex-shrink: 0; }
+  .topbar-icon { position: relative; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+    border: 0; border-radius: 7px; background: transparent; color: #5b6577; cursor: pointer; }
+  .topbar-icon:hover { background: var(--accent-soft); color: var(--accent); }
+  .topbar-icon svg { width: 18px; height: 18px; }
+  .topbar-icon .notification-dot { position: absolute; top: 7px; right: 8px; width: 6px; height: 6px; border-radius: 50%; background: #e5484d; box-shadow: 0 0 0 2px #fff; }
+  .account-entry { display: flex; align-items: center; gap: 9px; margin-left: 8px; padding: 4px 8px 4px 10px; border-radius: 9px; cursor: pointer; }
+  .account-entry:hover { background: var(--surface-subtle); }
+  .account-entry .ac-main { color: var(--ink); font-size: 13px; line-height: 1.4; }
+  .account-entry .ac-main small { display: block; color: var(--muted); font-size: 11px; }
+  .account-entry .ac-avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 12px; font-weight: 600; }
+
+  /* ---------- 外框 ---------- */
+  .app-layout { display: flex; height: calc(100vh - 54px); }
+  .sidebar { width: 210px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--line); display: flex; flex-direction: column; padding: 10px 12px 0; }
+  #sidebarNav { display: flex; flex-direction: column; flex: 1; overflow-y: auto; min-height: 0; scrollbar-width: thin; padding-bottom: 4px; }
+  .nav-section { padding: 17px 12px 7px; font-size: 11px; color: var(--muted); }
+  .nav-item { display: flex; align-items: center; gap: 12px; min-height: 34px; padding: 6px 12px; border-radius: 7px;
+    font-size: 13px; color: #656c7a; cursor: pointer; user-select: none; }
+  .nav-item:hover { background: #f0f4ff; color: var(--ink); }
+  .nav-item.active { background: #dfe8ff; color: var(--accent-hover); font-weight: 600; }
+  .nav-item.active .ic { color: var(--accent); }
+  .nav-item .ic { width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center; color: #7c8698; flex-shrink: 0; }
+  .nav-item .ic svg { width: 17px; height: 17px; }
+  .nav-item.nav-admin { margin-top: auto; border-radius: 7px; }
+  .nav-admin-sep { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); }
+  .sidebar-foot { min-height: 52px; display: flex; align-items: center; justify-content: flex-end; padding: 8px 4px 10px; }
+  .app-main { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--canvas); }
+
+  /* ---------- 模块标签栏 ---------- */
+  .intel-tabbar { display: flex; align-items: center; gap: 24px; height: 52px; padding: 0 48px; flex-shrink: 0;
+    background: var(--surface); border-bottom: 1px solid var(--line); }
+  .intel-tab { display: flex; align-items: center; height: 100%; padding: 0 2px; font-size: 13px; color: var(--muted);
+    cursor: pointer; position: relative; user-select: none; white-space: nowrap; }
+  .intel-tab:hover { color: var(--ink); }
+  .intel-tab.active { color: var(--accent-hover); font-weight: 600; }
+  .intel-tab.active::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--accent); border-radius: 2px; }
+  .tab-fav { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 11px;
+    border: 1px solid transparent; border-radius: 8px; background: transparent; font-size: 12.5px; color: #626d82;
+    cursor: pointer; white-space: nowrap; transition: all .13s; }
+  .tab-fav:hover { background: var(--accent-soft); color: var(--accent-hover); }
+  .tab-fav svg { width: 15px; height: 15px; }
+  .tab-fav .n { font-weight: 600; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+  .app-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+  .intel-tabbar.scrolled { box-shadow: 0 1px 6px rgba(29,36,51,.06); }
+
+  /* ---------- 单列页面 ---------- */
+  .doc { max-width: 1460px; margin: 0 auto; padding: 36px 48px 56px; }
+  .doc-read { max-width: 1180px; }
+
+  /* ---------- 页头（报头式：栏目名 + 大日期 + 报头线） ---------- */
+  .ph { position: relative; z-index: 200; padding-bottom: 17px; margin-bottom: 24px;
+    display: flex; align-items: flex-start; gap: 28px; }
+  .ph::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 1px; background: #dde4ef; }
+  .ph-body { flex: 1; min-width: 0; position: relative; z-index: 1; }
+  /* 报头浅蓝底（仅带插图的页头） */
+  .ph-art::before { content: ''; position: absolute; left: -48px; right: -48px; top: -6px; bottom: 0;
+    background: linear-gradient(180deg, rgba(36,91,255,.045) 0%, rgba(36,91,255,.014) 58%, rgba(36,91,255,0) 100%);
+    pointer-events: none; z-index: 0; }
+  .ph-top { display: flex; align-items: flex-start; gap: 18px; padding-bottom: 4px; }
+  .ph-t { flex: 1; min-width: 0; }
+  .ph-t h1 { margin: 0; font-size: 25px; font-weight: 600; letter-spacing: -.4px; color: var(--ink);
+    line-height: 1.3; display: flex; align-items: center; gap: 10px; }
+  .ph-t h1::before { content: ''; width: 3px; height: 18px; border-radius: 2px; flex-shrink: 0;
+    background: linear-gradient(180deg, #245BFF, #8FAEFF); }
+
+  /* 大日期：报头主视觉 */
+  .ph-date { display: flex; align-items: center; gap: 6px; margin-top: 12px; white-space: nowrap; }
+  .ph-date .ph-dwrap + .ph-nav { margin-left: 5px; }
+  .ph-date b { font-size: 33px; font-weight: 600; letter-spacing: -1.1px; color: var(--ink);
+    line-height: 1.12; font-variant-numeric: tabular-nums; }
+  .ph-date .ph-today { margin-left: 9px; height: 20px; padding: 0 7px; display: inline-flex; align-items: center;
+    font-size: 11.5px; font-weight: 600; color: var(--accent); background: #EBF1FF; border-radius: 5px; letter-spacing: .2px; }
+  .ph-date .wd2 { font-size: 13.5px; font-weight: 500; color: #46536b; margin-left: 9px; }
+  .ph-date .yr { font-size: 12.5px; color: #a3adbd; margin-left: 0; font-variant-numeric: tabular-nums; }
+
+  /* 日期旁：选择日期小图标 */
+  .ph-dwrap { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+  .cal-ic { width: 25px; height: 25px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+    border: 0; border-radius: 6px; background: transparent; color: #6f7b8e; cursor: pointer;
+    transition: all .13s; padding: 0; margin-top: 4px; }
+  .cal-ic:hover { background: var(--accent-soft); color: var(--accent); }
+  .cal-ic svg { width: 16px; height: 16px; }
+  .ph-nav { width: 27px; height: 27px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid #d5dfec; border-radius: 50%; background: #fff; color: #5b6779; font-size: 15px; line-height: 1;
+    cursor: pointer; transition: all .14s; flex-shrink: 0; padding: 0 0 2px;
+    box-shadow: 0 1px 2px rgba(29,36,51,.04); }
+  .ph-nav:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
+  .ph-nav.dis { color: #cdd7e6; border-color: #eaeef5; background: #fcfdff; cursor: default; }
+  .ph-nav.dis:hover { border-color: #eaeef5; background: #fcfdff; color: #cdd7e6; }
+
+  /* 文字信息行（跟踪页沿用） */
+  .ph-line { margin: 10px 0 0; display: flex; align-items: baseline; gap: 4px; }
+  .ph-line b { font-size: 22px; font-weight: 600; color: var(--ink); letter-spacing: -.4px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .ph-line .wd { font-size: 13px; color: var(--muted); margin-left: 6px; }
+  .ph-note { margin: 9px 0 0; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .ph-note .dv { color: var(--line-strong); margin: 0 8px; }
+  .ph-act { display: flex; align-items: center; gap: 8px; padding-top: 2px; flex-shrink: 0; }
+
+  /* 页头插图位（纯装饰，不参与交互） */
+  .ph-deco { position: relative; z-index: 1; flex: 0 0 auto; width: 300px; height: 96px;
+    margin-top: 2px; pointer-events: none; }
+  .ph-deco svg { width: 100%; height: 100%; display: block; }
+  @media (max-width: 1320px) { .ph-deco { width: 236px; height: 82px; } }
+  @media (max-width: 1120px) { .ph-deco { display: none; } }
+
+  /* ---------- 早报 + 7×24 同页：左主体 / 右快讯 ---------- */
+  .daily { display: grid; grid-template-columns: minmax(0, 1fr) clamp(300px, 24vw, 378px); gap: 24px; align-items: start; }
+  .col-head { display: flex; align-items: center; gap: 9px; height: 40px; margin-bottom: 4px; }
+  .col-head .ct-line { width: 3px; height: 15px; border-radius: 2px; flex-shrink: 0; background: linear-gradient(180deg, #245BFF, #8FAEFF); }
+  .col-head .ct { font-size: 16px; font-weight: 600; color: #1d2433; letter-spacing: .3px; }
+  .col-head .cn { font-size: 11.5px; color: #8b95a6; font-variant-numeric: tabular-nums; }
+  .col-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; height: 27px; padding: 0 10px;
+    font-size: 12px; color: #626d82; background: #fff; border: 1px solid #cbd5e5; border-radius: 8px; cursor: pointer; transition: all .13s; }
+  .col-btn:hover { color: #245BFF; border-color: #245BFF; }
+  .col-btn .r-ic { font-size: 12px; line-height: 1; display: inline-block; }
+  .col-btn.spinning .r-ic { animation: intel-spin .8s linear; }
+
+  .daily-side { position: sticky; top: 0; min-width: 0; }
+  .rl-wrap { background: #fff; border: 1px solid #e1e7f1; border-radius: var(--radius); overflow: hidden;
+    box-shadow: 0 1px 2px rgba(29,36,51,.04), 0 10px 30px -24px rgba(29,36,51,.16); }
+  .rl-body { max-height: calc(100vh - 250px); overflow-y: auto; }
+  .rl-body::-webkit-scrollbar { width: 6px; }
+  .rl-body::-webkit-scrollbar-thumb { background: #d6dfee; border-radius: 3px; }
+  .rl-body::-webkit-scrollbar-thumb:hover { background: #c5cfe2; }
+  .rl-day { position: sticky; top: 0; z-index: 1; padding: 8px 14px; font-size: 11.5px; font-weight: 600;
+    color: #626d82; letter-spacing: .3px; background: #f4f7fe; border-bottom: 1px solid #e4ecfb; }
+  .rl-row { display: flex; gap: 9px; padding: 10px 14px 10px 12px; cursor: pointer; border-bottom: 1px solid #e9edf5; transition: background .12s; }
+  .rl-row:hover { background: #f7f9fe; }
+  .rl-t { flex-shrink: 0; width: 34px; padding-top: 1px; font-size: 11.5px; color: #8b95a6; font-variant-numeric: tabular-nums; }
+  .rl-row.major .rl-t { color: #E5484D; font-weight: 600; }
+  .rl-tt { font-size: 13px; line-height: 1.55; color: #39465c; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .rl-row:hover .rl-tt { color: #245BFF; }
+  .rl-row.major .rl-tt { font-weight: 500; color: #1d2433; }
+  .rl-end { padding: 9px 0; text-align: center; font-size: 11.5px; color: #9aa4b5; background: #fbfcff; border-top: 1px solid var(--line); }
+  .rl-empty { padding: 52px 10px; text-align: center; font-size: 12.5px; color: #9aa4b5; }
+
+  .doc-head { display: flex; align-items: flex-end; gap: 12px; margin-bottom: 16px; min-height: 34px; }
+  .doc-head h2 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: .2px; color: #1d2433; line-height: 1.2; }
+  .doc-head h2::before { content: ''; display: inline-block; width: 4px; height: 18px; border-radius: 2px;
+    margin-right: 11px; vertical-align: -2px; background: linear-gradient(180deg, #245BFF, #8FAEFF); }
+  .doc-sub { margin: 7px 0 0; font-size: 12px; color: #7d8798; letter-spacing: .2px; font-variant-numeric: tabular-nums; }
+  .doc-head .head-act { margin-left: auto; display: flex; align-items: center; gap: 8px; padding-bottom: 2px; }
+  .live-dot { width: 7px; height: 7px; background: #187247; border-radius: 50%; display: inline-block; animation: intel-pulse 2s infinite; }
+  @keyframes intel-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(16,185,129,.5); } 50% { box-shadow: 0 0 0 4px rgba(16,185,129,0); } }
+
+  /* ---------- 早报 ---------- */
+  .eb-card { display: flex; flex-direction: column; gap: 14px; }
+  .eb-group { background: #fff; border: 1px solid #e1e7f1; border-radius: var(--radius); padding: 0 30px 4px;
+    box-shadow: 0 1px 2px rgba(29,36,51,.04), 0 10px 30px -24px rgba(29,36,51,.16); }
+  .eb-gh { display: flex; align-items: center; gap: 9px; height: 52px; padding: 0 30px; margin: 0 -30px;
+    border-radius: 13px 13px 0 0; background: #f4f7fe;
+    border-bottom: 1px solid #e1e7f1; cursor: pointer; user-select: none; transition: background .14s; }
+  .eb-group.collapsed .eb-gh { height: 44px; border-bottom-color: transparent; border-radius: 13px; }
+  .eb-gh:hover { background: #e8efff; }
+  .eb-gh .idx { width: 21px; flex-shrink: 0; font-size: 13px; font-weight: 700; letter-spacing: .6px;
+    color: #c2d1ee; font-variant-numeric: tabular-nums; }
+  .eb-gh .dt { width: 3px; height: 15px; border-radius: 2px; background: #245BFF; flex-shrink: 0; }
+  .eb-gh .nm { font-size: 15px; font-weight: 600; color: #1d2433; letter-spacing: .3px; }
+  .eb-gh .cn { font-size: 11.5px; color: #8b95a6; }
+  .eb-gh .chev { margin-left: auto; font-size: 10px; color: #a8b1c1; transition: transform .18s; }
+  .eb-group.collapsed .chev { transform: rotate(-90deg); }
+  .eb-group.collapsed .eb-list { display: none; }
+  .eb-row { padding: 14px 0 15px; cursor: pointer; position: relative; border-radius: 8px; transition: background .13s; }
+  .eb-row:hover { background: #f7f9fe; }
+  .eb-row + .eb-row { border-top: 1px solid #e9edf5; }
+  .eb-row.lead { padding: 16px 0 18px; }
+  .eb-row:last-child { padding-bottom: 20px; }
+  .eb-meta { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: #8b95a6; }
+  .eb-meta .src { color: #46536b; font-weight: 500; }
+  .eb-meta .sep { color: #d8dfeb; }
+  .eb-tt { margin: 6px 0 0; font-size: 14.8px; font-weight: 600; line-height: 1.6; color: var(--ink); letter-spacing: .1px; transition: color .12s; }
+  .eb-row.lead .eb-tt { font-size: 16.5px; line-height: 1.55; letter-spacing: 0; }
+  .eb-row:hover .eb-tt { color: #245BFF; }
+  .eb-sum { margin: 6px 0 0; font-size: 13px; line-height: 1.75; color: #626d82; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .eb-row.lead .eb-sum { font-size: 13.5px; line-height: 1.8; -webkit-line-clamp: 3; }
+  .eb-row::after { content: '\203A'; position: absolute; right: -18px; top: 20px; font-size: 16px; color: #bcc4d3; opacity: 0; transition: opacity .14s, transform .14s; }
+  .eb-row:hover::after { opacity: 1; transform: translateX(3px); }
+
+  .eb-empty { background: #fff; border: 1px solid #e1e7f1; border-radius: var(--radius); padding: 74px 20px 78px;
+    text-align: center; box-shadow: 0 1px 2px rgba(29,36,51,.04), 0 10px 30px -24px rgba(29,36,51,.16); }
+  .eb-empty .ic { width: 34px; height: 34px; color: #cdd8e8; }
+  .eb-empty .t { margin: 14px 0 0; font-size: 15px; font-weight: 600; color: #39465c; }
+  .eb-empty .s { margin: 7px 0 0; font-size: 12.5px; color: #9aa4b5; }
+
+  /* ---------- 7×24 时间轴 ---------- */
+  .lv-card { background: #fff; border: 1px solid #e1e7f1; border-radius: var(--radius); padding: 0 36px 22px 22px;
+    box-shadow: 0 1px 2px rgba(29,36,51,.04), 0 10px 30px -24px rgba(29,36,51,.16); }
+  .lv-row { display: grid; grid-template-columns: 76px 22px minmax(0, 1fr); }
+  .lv-t { padding-top: 19px; text-align: right; font-size: 12.5px; color: #7d8798; font-variant-numeric: tabular-nums; letter-spacing: .2px; }
+  .lv-spine { position: relative; }
+  .lv-spine::before { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: #dde7f2; }
+  .lv-row:first-child .lv-spine::before { top: 25px; }
+  .lv-row:last-child .lv-spine::before { bottom: auto; height: 25px; }
+  .lv-spine i { position: absolute; left: 50%; top: 22px; width: 7px; height: 7px; margin-left: -3.5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px #fff, 0 0 0 4.5px #dfe8ff; }
+  .lv-row.major .lv-spine i { background: #E5484D; box-shadow: 0 0 0 3px #fff, 0 0 0 4px #fbdcdd; }
+  .lv-c { padding: 18px 0 18px 18px; min-width: 0; }
+  .lv-tt { font-size: 15px; font-weight: 600; line-height: 1.55; color: #1d2433; cursor: pointer; }
+  .lv-tt:hover { color: #245BFF; }
+  .lv-tt .mj { display: inline-block; margin-right: 7px; font-size: 11px; font-weight: 600; color: #E5484D; background: #fdecec; border-radius: 3px; padding: 0 5px; line-height: 18px; vertical-align: 1px; }
+  .lv-tx { margin-top: 8px; font-size: 13.5px; line-height: 1.85; color: #626d82; }
+  .lv-tx p { margin: 0 0 9px; }
+  .lv-tx p:last-child { margin-bottom: 0; }
+  .lv-more { display: inline-flex; align-items: center; gap: 3px; margin-top: 9px; font-size: 12px; color: #8b95a6; cursor: pointer; user-select: none; transition: color .12s; }
+  .lv-more:hover { color: #245BFF; }
+  .lv-end { padding: 22px 0 2px; text-align: center; font-size: 12px; color: #9aa4b5; }
+
+  /* ---------- 跟踪 ---------- */
+  .tk-switch { display: flex; gap: 6px; }
+  .tk-switch-item { font-size: 12.5px; padding: 5px 14px; border-radius: 15px; background: #edf2fb; color: #626d82; cursor: pointer; border: 1px solid transparent; user-select: none; white-space: nowrap; }
+  .tk-switch-item:hover { color: #245BFF; }
+  .tk-switch-item.active { background: #E8EFFF; color: #245BFF; border-color: #c5d4fa; font-weight: 500; }
+  .tk-card { background: #fff; border: 1px solid #e1e7f1; border-radius: var(--radius); padding: 0 36px 22px 22px;
+    box-shadow: 0 1px 2px rgba(29,36,51,.04), 0 10px 30px -24px rgba(29,36,51,.16); }
+  .tk-day { display: flex; align-items: center; gap: 9px; height: 40px; margin: 0 -36px 0 -22px; padding: 0 36px 0 22px;
+    font-size: 12.5px; font-weight: 600; color: #626d82; letter-spacing: .3px;
+    background: #f4f7fe; border-top: 1px solid #e1e7f1; border-bottom: 1px solid #e1e7f1; }
+  .tk-day.first { margin-top: 0; border-top: 0; border-radius: 13px 13px 0 0; }
+  .tk-day:not(.first) { margin-top: 14px; }
+  .tk-day.today { color: #245BFF; background: #e8efff; }
+  .tk-day::before { content: ''; width: 3px; height: 13px; border-radius: 2px; background: #245BFF; opacity: .55; }
+  .tk-row { display: grid; grid-template-columns: 76px 22px minmax(0, 1fr); cursor: pointer; }
+  .tk-row .lv-c { padding: 11px 0 12px 15px; }
+  .tk-row .lv-tt { font-size: 14.5px; font-weight: 500; line-height: 1.5; }
+  .tk-src { margin-top: 4px; font-size: 11.5px; line-height: 1.4; color: #9aa4b5; }
+  .tk-row .lv-t { padding-top: 13px; }
+  .tk-row .lv-t { padding-top: 16px; }
+  .tk-row .lv-spine i { top: 16px; background: #c5d4fa; box-shadow: 0 0 0 3px #fff, 0 0 0 4.5px #eef2fd; }
+  .tk-row:hover .lv-spine i { background: var(--accent); }
+  .tk-row:hover .lv-tt { color: #245BFF; }
+  .tk-tag { display: inline-block; margin-right: 8px; font-size: 11.5px; color: #245BFF; background: #E8EFFF; border-radius: 3px; padding: 0 6px; line-height: 19px; vertical-align: 1px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .tk-new { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 600; color: #fff; background: #E5484D; border-radius: 9px; padding: 0 6px; line-height: 16px; vertical-align: 1.5px; }
+
+  .tk-topics { display: flex; flex-direction: column; gap: 12px; }
+  .tk-tcard { background: #fff; border: 1px solid #e1e7f1; border-radius: var(--radius); padding: 18px 24px; }
+  .tk-tcard-h { display: flex; align-items: center; gap: 10px; }
+  .tk-tcard-h .nm { font-size: 15px; font-weight: 600; color: #1d2433; }
+  .tk-tcard-h .mt { margin-left: auto; font-size: 11.5px; color: #8b95a6; white-space: nowrap; }
+  .tk-tcard-lt { margin-top: 11px; font-size: 13.5px; line-height: 1.8; color: #3f4c62; }
+  .tk-tcard-lt .tm { color: #245BFF; font-variant-numeric: tabular-nums; margin-right: 7px; }
+  .tk-tcard-f { margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end; }
+
+  .intel-page-btn { padding: 7px 16px; border: 1px solid #cbd5e5; border-radius: 8px; font-size: 12px; color: #626d82; background: #fff; cursor: pointer; }
+  .intel-page-btn:hover { border-color: #245BFF; color: #245BFF; }
+  .intel-page-btn.primary { background: #245BFF; color: #fff; border-color: #245BFF; }
+  .intel-page-btn.primary:hover { background: #1546D8; }
+  .intel-refresh-btn { display: inline-flex; align-items: center; gap: 5px; padding: 6px 12px; border: 1px solid #cbd5e5; border-radius: 8px; font-size: 12px; color: #626d82; background: #fff; cursor: pointer; }
+  .intel-refresh-btn:hover { border-color: #245BFF; color: #245BFF; }
+  .intel-refresh-btn .r-ic { font-size: 13px; line-height: 1; display: inline-block; }
+  .intel-refresh-btn.spinning .r-ic { animation: intel-spin .8s linear; }
+  @keyframes intel-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+  .intel-empty { padding: 70px 20px; text-align: center; color: #9aa4b5; font-size: 13px; }
+
+  /* ---------- 详情 ---------- */
+  .intel-back { margin-bottom: 16px; padding: 7px 16px; border: 1px solid #cbd5e5; border-radius: 8px; font-size: 12px; color: #626d82; background: #fff; cursor: pointer; }
+  .intel-back:hover { border-color: #245BFF; color: #245BFF; }
+  .dt-card { background: #fff; border: 1px solid #e1e7f1; border-radius: var(--radius); padding: 32px 42px 34px; }
+  .dt-title { font-size: 25px; font-weight: 600; line-height: 1.5; color: var(--ink); letter-spacing: -.3px; }
+  .dt-meta { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; font-size: 12.5px; color: var(--muted); flex-wrap: wrap; }
+  .dt-meta .src { color: #245BFF; font-weight: 600; }
+  .dt-meta .sep { color: #d8dfeb; }
+  .dt-meta .op { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+  .dt-meta .op span { cursor: pointer; display: inline-flex; align-items: center; gap: 4px; color: #626d82; }
+  .dt-meta .op span:hover { color: #245BFF; }
+  .dt-meta .op .fav-btn { height: 27px; padding: 0 11px; border: 1px solid var(--line-strong); border-radius: 7px;
+    font-size: 12px; color: #626d82; transition: all .13s; }
+  .dt-meta .op .fav-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .dt-meta .op .fav-btn.on { background: var(--accent-soft); border-color: #c5d4fa; color: var(--accent); font-weight: 600; }
+  .dt-flash { margin: 22px 0 0; padding: 18px 22px; background: var(--accent-soft); border-radius: 10px; }
+  .dt-flash-h { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; color: var(--accent-hover); margin-bottom: 8px; }
+  .dt-flash p { margin: 0; font-size: 14px; line-height: 1.95; color: #39465c; }
+  .dt-body { margin-top: 22px; font-size: 15px; line-height: 1.95; color: #3f4c62; }
+  .dt-body p { margin: 0 0 15px; }
+  .dt-acts { display: flex; gap: 10px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #f0f3f7; }
+
+  .dt-tl { margin-top: 26px; }
+  .dt-tl-item { position: relative; padding: 0 0 20px 22px; border-left: 2px solid #E8EFFF; }
+  .dt-tl-item:last-child { padding-bottom: 0; border-left-color: transparent; }
+  .dt-tl-dot { position: absolute; left: -7px; top: 3px; width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 2px solid #245BFF; }
+  .dt-tl-item.latest .dt-tl-dot { background: #245BFF; }
+  .dt-tl-time { font-size: 12px; color: #245BFF; font-weight: 500; margin-bottom: 5px; font-variant-numeric: tabular-nums; }
+  .dt-tl-text { font-size: 13.5px; color: #3f4c62; line-height: 1.75; }
+  .dt-tl-text .sc { display: block; margin-top: 4px; font-size: 11px; color: #9aa4b5; }
+
+  /* ---------- 早报配置 ---------- */
+  .cfg-card { background: #fff; border: 1px solid #e1e7f1; border-radius: var(--radius); overflow: hidden; padding-bottom: 12px; }
+  .cfg-sec { padding: 22px 30px 24px; border-bottom: 1px solid #f0f3f7; }
+  .cfg-sec:last-child { border-bottom: 0; }
+  .cfg-sec-h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 14px; }
+  .cfg-sec-h .t { font-size: 13.5px; font-weight: 600; color: #1d2433; }
+  .cfg-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid #edf1f6; border-left: 1px solid #edf1f6; }
+  .cfg-cell { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 44px; padding: 0 18px; border-right: 1px solid #edf1f6; border-bottom: 1px solid #edf1f6; font-size: 12.5px; color: #3d4b59; background: #fff; cursor: pointer; transition: background .12s; }
+  .cfg-cell:hover { background: #f7fafd; }
+  .cfg-cell .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .cfg-cell .mk { font-size: 12px; color: #dfe6ee; }
+  .cfg-cell.on { background: #eaf4fe; color: #245BFF; font-weight: 500; }
+  .cfg-cell.on .mk { color: #245BFF; font-weight: 700; }
+  .cfg-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 18px 0 0; }
+  .cfg-foot .sum { margin-right: auto; font-size: 12.5px; color: #8a95a1; }
+  .cfg-foot .sum b { color: #245BFF; font-variant-numeric: tabular-nums; }
+
+  /* ---------- 日历 ---------- */
+  .intel-date-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border: 1px solid #cbd5e5; border-radius: 8px; font-size: 12.5px; font-weight: 500; color: #245BFF; background: #fff; cursor: pointer; white-space: nowrap; }
+  .intel-date-btn:hover { border-color: #245BFF; }
+  .intel-date-btn .caret { font-size: 9px; color: #8a95a1; }
+  .intel-cal-pop { position: absolute; top: calc(100% + 10px); left: 0; z-index: 320; width: 312px; background: #fff;
+    border: 1px solid #cfdaea; border-radius: var(--radius); padding: 16px 18px 12px; display: none;
+    box-shadow: 0 18px 44px -8px rgba(29,36,51,.26), 0 4px 12px -2px rgba(29,36,51,.10); }
+  .intel-cal-pop.show { display: block; }
+  .intel-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .intel-cal-head .nav { width: 28px; height: 28px; border: none; background: transparent; color: #626d82; cursor: pointer; border-radius: 6px; font-size: 17px; line-height: 1; }
+  .intel-cal-head .nav:hover { background: #edf2fb; color: #245BFF; }
+  .intel-cal-head .ym { font-size: 13.5px; font-weight: 600; color: #1d2433; letter-spacing: .2px; }
+  .intel-cal-week, .intel-cal-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .intel-cal-week span { font-size: 11px; color: #9aa4b5; text-align: center; padding: 5px 0 7px; }
+  .intel-cal-days .day { position: relative; height: 36px; display: flex; align-items: center; justify-content: center; font-size: 12.5px; color: #39465c; border-radius: 7px; cursor: pointer; font-variant-numeric: tabular-nums; transition: background .12s; }
+  .intel-cal-days .day:hover { background: #edf2fb; }
+  .intel-cal-days .day.empty { cursor: default; }
+  .intel-cal-days .day.empty:hover { background: transparent; }
+  .intel-cal-days .day.has::after { content: ''; position: absolute; bottom: 6px; left: 50%; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: #245BFF; opacity: .6; }
+  .intel-cal-days .day.sel { background: #245BFF; color: #fff; font-weight: 600; }
+  .intel-cal-days .day.sel:hover { background: #1c4be0; }
+  .intel-cal-days .day.sel.has::after { background: #fff; opacity: .85; }
+  .intel-cal-foot { margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f3f7; display: flex; align-items: center; justify-content: flex-end; }
+  .intel-cal-foot span { font-size: 11.5px; color: #8b95a6; cursor: pointer; }
+  .intel-cal-foot span:hover { color: #245BFF; }
+
+  /* ---------- 弹窗 / 抽屉 / toast ---------- */
+  .intel-kw-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 61; display: none; align-items: center; justify-content: center; }
+  .intel-kw-overlay.show { display: flex; }
+  .intel-kw-modal { width: 480px; max-width: 92vw; background: #fff; border-radius: var(--radius); box-shadow: 0 8px 32px rgba(0,0,0,.15); overflow: hidden; }
+  .intel-kw-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid #edf0f5; }
+  .intel-kw-head h4 { margin: 0; font-size: 15px; font-weight: 600; color: #1d2433; }
+  .intel-kw-head .x { font-size: 16px; color: #8b95a6; cursor: pointer; line-height: 1; }
+  .intel-kw-head .x:hover { color: #626d82; }
+  .intel-kw-body { padding: 16px 20px 4px; max-height: 62vh; overflow-y: auto; }
+  .intel-kw-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px 18px; border-top: 1px solid #f0f2f5; }
+  .intel-kw-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .intel-kw-chip { font-size: 12px; padding: 5px 12px; border-radius: 14px; background: #f4f6fb; color: #626d82; cursor: pointer; border: 1px solid transparent; user-select: none; }
+  .intel-kw-chip:hover { border-color: #bcd2f0; color: #245BFF; }
+
+  .dr-mask { position: fixed; inset: 0; background: rgba(22,38,71,.24); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 70; }
+  .dr-mask.show { opacity: 1; pointer-events: auto; }
+  .thread-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 468px; max-width: 92vw; background: #fff; box-shadow: -10px 0 34px rgba(29,36,51,.14); transform: translateX(102%); transition: transform .26s cubic-bezier(.4,0,.2,1); z-index: 80; display: flex; flex-direction: column; }
+  .thread-drawer.show { transform: translateX(0); }
+  .td-head { padding: 20px 22px 15px; border-bottom: 1px solid #edf0f5; position: relative; }
+  .td-title { font-size: 16.5px; font-weight: 600; color: #1d2433; line-height: 1.45; padding-right: 26px; }
+  .td-meta { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: #8a95a1; flex-wrap: wrap; }
+  .td-meta .sep { color: #d8dfeb; }
+  .td-meta .pill { padding: 1px 7px; border-radius: 3px; background: #E8EFFF; color: #245BFF; font-size: 11px; }
+  .td-x { position: absolute; top: 18px; right: 18px; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 6px; color: #8a95a1; cursor: pointer; font-size: 13px; }
+  .td-x:hover { background: #f4f7fa; color: #39465c; }
+  .td-body { flex: 1; overflow-y: auto; padding: 6px 22px 16px; }
+  .td-sec { font-size: 12px; font-weight: 600; color: #8a95a1; letter-spacing: .4px; padding: 16px 0 12px; }
+  .td-node { position: relative; padding: 0 0 20px 22px; }
+  .td-node::before { content: ''; position: absolute; left: 3px; top: 17px; bottom: 0; width: 1px; background: #cfd9e4; }
+  .td-node:last-child::before { display: none; }
+  .td-node .dot { position: absolute; left: 0; top: 5px; width: 7px; height: 7px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 1.5px #b9cfe4; }
+  .td-node.latest .dot { background: #E5484D; box-shadow: inset 0 0 0 1.5px #E5484D; }
+  .td-node .tm { font-size: 11.5px; color: #245BFF; font-variant-numeric: tabular-nums; margin-bottom: 3px; }
+  .td-node .tx { font-size: 12.5px; color: #39465c; line-height: 1.62; }
+  .td-node .sc { display: block; margin-top: 4px; font-size: 11px; color: #9aa4b5; }
+  .td-foot { padding: 13px 22px 16px; border-top: 1px solid #edf0f5; display: flex; gap: 10px; align-items: center; }
+
+  /* ---------- 收藏抽屉 ---------- */
+  .fav-drawer { width: 442px; }
+  .fv-body { flex: 1; overflow-y: auto; padding: 4px 22px 20px; }
+  .fv-item { position: relative; padding: 14px 0 15px; border-bottom: 1px solid #f0f3f7; cursor: pointer; }
+  .fv-item:last-child { border-bottom: 0; }
+  .fv-tt { font-size: 14px; font-weight: 500; line-height: 1.6; color: #1d2433; padding-right: 30px; transition: color .12s; }
+  .fv-item:hover .fv-tt { color: var(--accent); }
+  .fv-meta { margin-top: 5px; display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: #8b95a6; }
+  .fv-meta .sep { color: #dbe2ed; }
+  .fv-meta .src { color: #626d82; }
+  .fv-x { position: absolute; right: -4px; top: 12px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;
+    border-radius: 6px; font-size: 11px; color: #c9d2df; cursor: pointer; transition: all .12s; }
+  .fv-x:hover { background: #fdecec; color: #E5484D; }
+  .fv-empty { padding: 90px 10px; text-align: center; color: #9aa4b5; font-size: 13px; line-height: 1.9; }
+  .fv-empty .ic { width: 32px; height: 32px; color: #dbe2ed; margin-bottom: 10px; }
+
+  .tk-row2 { display: flex; align-items: flex-start; gap: 12px; padding: 13px 0; border-bottom: 1px solid #f2f5f8; }
+  .tk-row2:last-child { border-bottom: 0; }
+  .tk-row2 .main { flex: 1; min-width: 0; }
+  .tk-row2 .nm { font-size: 13.5px; color: #1d2433; font-weight: 500; }
+  .tk-row2 .mt { margin-top: 4px; font-size: 11.5px; color: #8a95a1; }
+  .tk-row2 .lt { margin-top: 6px; font-size: 12px; color: #626d82; line-height: 1.6; }
+  .tk-row2 .ops { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
+  .tk-row2 .ops a { font-size: 12px; color: #245BFF; cursor: pointer; white-space: nowrap; }
+  .tk-row2 .ops a.dim { color: #8b95a6; }
+  .tk-row2 .ops a:hover { text-decoration: underline; }
+
+  .toast { position: fixed; left: 50%; bottom: 40px; transform: translateX(-50%) translateY(10px); background: rgba(29,36,51,.92); color: #fff; font-size: 13px; padding: 9px 18px; border-radius: 8px; opacity: 0; pointer-events: none; transition: all .22s; z-index: 90; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 1120px) {
+    .daily { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .daily-side { position: static; }
+    .rl-body { max-height: none; }
+  }
+
+  @media (max-width: 980px) {
+    .doc { padding: 20px 16px 50px; }
+    .eb-card, .lv-card, .tk-card { padding-left: 18px; padding-right: 18px; }
+    .dt-card { padding: 24px 20px 26px; }
+    .cfg-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  /* ---------- 入场 ---------- */
+  @keyframes docIn { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+  .doc > * { animation: docIn .26s cubic-bezier(.22,.61,.36,1) both; }
+  .doc > *:nth-child(2) { animation-delay: .04s; }
+  .doc > *:nth-child(3) { animation-delay: .08s; }
+
+  /* 嵌入平台 iframe 外壳：原型自带顶栏/侧栏已移除，内容区占满 iframe。 */
+  html, body { height: 100%; }
+  body { overflow: hidden; }
+  .intel-embed { display: flex; height: 100vh; height: 100dvh; min-height: 0; }
+  .intel-embed .app-main { height: 100%; }
+</style>
 </head>
-<body class="module-page" data-page="intel">
-  <main class="module-main">
-    <div class="content-scroll" id="contentScroll">
-      <div class="content-inner intel-page" id="content">
-<div class="page-header"><div><h1 id="pageTitle">百舸情报</h1><p id="pageDescription">相关能力将接入百舸数智工作空间。</p></div></div>
-<section class="integration-panel"><div class="empty-state"><span data-icon="layers" aria-hidden="true"></span><h2>正在集成</h2><p>相关内容接入后，将在这里呈现。</p></div></section>
-      </div>
-    </div>
-  </main>
-  <script src="../src/data.js"></script>
-  <script src="../src/ui.js"></script>
-  <script src="../src/page-bridge.js"></script>
-  <script src="../src/pages/placeholder.js"></script>
+<body data-page="intel">
+  <div class="intel-embed">
+    <main class="app-main">
+      <div class="intel-tabbar" id="tabbar"></div>
+      <div class="app-scroll" id="scroller"><div id="view"></div></div>
+    </main>
+  </div>
+
+<div class="intel-kw-overlay" id="kwOverlay">
+  <div class="intel-kw-modal">
+    <div class="intel-kw-head"><h4 id="kwTitle">标题</h4><span class="x" id="kwClose">✕</span></div>
+    <div class="intel-kw-body" id="kwBody"></div>
+    <div class="intel-kw-foot" id="kwFoot"></div>
+  </div>
+</div>
+
+<div class="dr-mask" id="drMask"></div>
+<aside class="thread-drawer" id="threadDrawer">
+  <div class="td-head">
+    <div class="td-title" id="tdTitle"></div>
+    <div class="td-meta" id="tdMeta"></div>
+    <span class="td-x" id="tdClose">✕</span>
+  </div>
+  <div class="td-body" id="tdBody"></div>
+  <div class="td-foot" id="tdFoot"></div>
+</aside>
+
+<aside class="thread-drawer fav-drawer" id="favDrawer">
+  <div class="td-head">
+    <div class="td-title" id="fvTitle">我的收藏</div>
+    <div class="td-meta" id="fvMeta"></div>
+    <span class="td-x" id="fvClose">✕</span>
+  </div>
+  <div class="fv-body" id="fvBody"></div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   百舸情报 · 早报 / 7×24 / 跟踪
+   功能范围与 H5 已上线版本一致，页面为 PC 单列版式
+   ========================================================= */
+
+/* 线性图标（18px 描边，与平台导航一致） */
+const ICONS = {
+  book:   '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 18.5V5.5"/>',
+  data:   '<ellipse cx="12" cy="6" rx="7.5" ry="3"/><path d="M4.5 6v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3V6"/><path d="M4.5 12v6c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-6"/>',
+  intel:  '<path d="M5 19V9"/><path d="M10 19V5"/><path d="M15 19v-7"/><path d="M20 19v-4"/>',
+  pen:    '<path d="M4 20h4l10-10a2.5 2.5 0 0 0-3.5-3.5L4.5 16.5z"/><path d="M14 7l3 3"/>',
+  read:   '<path d="M12 6.5C10.5 5 8.5 4.5 5 4.5v13c3.5 0 5.5.5 7 2 1.5-1.5 3.5-2 7-2v-13c-3.5 0-5.5.5-7 2z"/><path d="M12 6.5v13"/>',
+  check:  '<path d="M4.5 12.5l4.5 4.5L19.5 6.5"/>',
+  admin:  '<circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M18.4 5.6l-1.8 1.8M7.4 16.6l-1.8 1.8"/>',
+  cal:    '<rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 9.5h17"/><path d="M8 3v3.5M16 3v3.5"/>',
+  star:   '<path d="M12 4l2.4 5 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4L4.2 9.8l5.4-.8z"/>',
+  doc:    '<path d="M6 3.5h7l5 5V20.5H6z"/><path d="M13 3.5v5h5"/><path d="M9 13h6M9 16.5h4"/>'
+};
+const icon = n => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + (ICONS[n] || '') + '</svg>';
+
+const INTEL_TABS = [
+  { id: 'early', label: '今日情报' },
+  { id: 'track', label: '情报跟踪' }
+];
+
+/* ---------------- 定制内容：顺序即早报分组顺序 ---------------- */
+const SUB_ORDER = ['绿色船舶', 'LNG 加注', '甲醇燃料', '氨燃料', '运价指数', '新船订单', '新造船价格'];
+const DEFAULT_SUB = SUB_ORDER.slice();
+
+const CFG_GROUPS = [
+  { id: 'ship',  name: '船舶与海工', tags: ['绿色船舶', '造船', '航运', '散货船', '集装箱船', '气体船', '油船', '海工装备', '修船', '智能航行'] },
+  { id: 'power', name: '动力与燃料', tags: ['LNG 加注', '甲醇燃料', '氨燃料', '替代燃料', '船用主机', '核动力'] },
+  { id: 'mkt',   name: '市场与价格', tags: ['运价指数', '新造船价格', '新船订单', '二手船价', '铁矿石', '原油'] },
+  { id: 'rule',  name: '规则与其他', tags: ['IMO 规则', '欧盟碳税', '部委动向', '政策', '财经', '人工智能'] }
+];
+
+/* ---------------- 早报 ---------------- */
+/* 均为真实公开报道：src 为发布媒体，date/time 为真实发布时间（接口不提供原文链接） */
+const EARLY = [
+  { id: 'e1', grp: '新船订单', src: '国际船舶网', date: '10-27', time: '09:55',
+    title: '首次选择中国船厂！韩国高丽海运订造 6 艘 3100TEU 集装箱船',
+    summary: '10 月 26 日，中船黄埔文冲联合中国船舶工业贸易公司与韩国高丽海运（KMTC）在广州签署 6 艘 3100TEU 集装箱船建造合同。',
+    body: ['10 月 26 日，中船黄埔文冲船舶有限公司联合中国船舶工业贸易公司与韩国高丽海运株式会社（KMTC）在广州正式签署 6 艘 3100TEU 集装箱船建造合同。',
+           '高丽海运株式会社社长慎镛和出席签约。此前该公司的新造船项目主要放在韩国本土船厂，本次为其首次选择中国船厂建造。'] },
+
+  { id: 'e2', grp: '新船订单', src: '国际船舶网', date: '10-26', time: '09:39',
+    title: '摩纳哥船东首单！广船国际再获 2 艘 5 万吨化学品/成品油船订单',
+    summary: '10 月 23 日，中船广船国际成功承接摩纳哥 TRANSOCEAN 公司 2 艘 5 万吨化学品/成品油船建造订单。',
+    body: ['10 月 23 日，中船广船国际成功承接摩纳哥 TRANSOCEAN 公司 2 艘 5 万吨化学品/成品油船建造订单。',
+           '摩纳哥汇聚全球航运金融资源与优质高端船东，是国际航运核心圈层之一。该笔订单为 TRANSOCEAN 首次在中国船厂下单。'] },
+
+  { id: 'e3', grp: '新船订单', src: '国际船舶网', date: '10-26', time: '06:49',
+    title: '还是这家中国船厂！希腊船东 Danaos 追加 2 艘 9200TEU 集装箱船',
+    summary: '希腊船东 Danaos 计划在上海外高桥造船订造 2 艘 9200TEU 集装箱船，进一步扩大在中国船企的新造船投资。',
+    body: ['希腊船东 Danaos 被曝计划在上海外高桥造船订造 2 艘 9200TEU 集装箱船，进一步扩大在中国船企的新造船投资。',
+           '此前该公司已多次在中国船厂下单，本次为其在中国船厂的新一轮追加订造。'] },
+
+  { id: 'e4', grp: '新船订单', src: '国际船舶网', date: '10-24', time: '13:32',
+    title: '52 艘超级大单官宣！恒力重工承接三大主力船型双燃料集装箱船',
+    summary: '恒力重工与多家国际知名集装箱班轮公司达成建造协议，承接共 52 艘超大型双燃料集装箱船，包括 20 艘 19000TEU、12 艘 22000TEU 与 20 艘 24000TEU。',
+    body: ['恒力重工与多家国际知名集装箱班轮公司达成建造协议，承接共 52 艘超大型双燃料集装箱船。',
+           '订单涵盖 20 艘 19000TEU、12 艘 22000TEU 与 20 艘 24000TEU 三大主力船型。'] },
+
+  { id: 'e5', grp: '新船订单', src: '国际船舶网', date: '10-22', time: '06:15',
+    title: '23 艘超大型集装箱船订单曝光！MSC 今年在华累计订造 55 艘',
+    summary: '地中海航运再向两家中国船厂订造 23 艘超大型集装箱船，今年在中国船厂累计订造的集装箱船已增至 55 艘，订单总金额预计超过 100 亿美元。',
+    body: ['全球最大集装箱航运公司地中海航运（MSC）继续大举扩张船队，再向两家中国船厂订造 23 艘超大型集装箱船。',
+           '截至目前，该公司今年在中国船厂累计订造的集装箱船已增至 55 艘，订单总金额预计超过 100 亿美元。'] },
+
+  { id: 'e6', grp: '新船订单', src: '国际船舶网', date: '10-25', time: '20:59',
+    title: '228 艘！订单又涨了，9 月全球新签订单 673.6 万 CGT',
+    summary: '2026 年 9 月全球新签订单 228 艘、6735729CGT，较 8 月的 209 艘、6456332CGT 环比增加 19 艘、修正总吨上升 4.33%。',
+    body: ['2026 年 9 月份全球新签订单 228 艘，共计 6735729CGT。',
+           '与 2026 年 8 月的 209 艘、6456332CGT 相比，数量环比增加 19 艘，修正总吨环比上升 4.33%；与 2025 年 9 月的 346 艘、7191609CGT 相比，数量同比减少 118 艘，修正总吨同比下降 6.34%。'] },
+
+  { id: 'e7', grp: '甲醇燃料', src: '国际船舶网', date: '10-27', time: '17:34',
+    title: '扬州中远海运重工 11.4 万吨甲醇双燃料原油船进坞',
+    summary: '10 月 26 日，扬州中远海运重工承建的中远海运能源 11.4 万吨甲醇双燃料原油船系列船 N1221 轮按计划进入二号船坞。',
+    body: ['10 月 26 日，扬州中远海运重工承建的中远海运能源 11.4 万吨甲醇双燃料原油船系列船 N1221 轮，依照既定计划顺利进入公司二号船坞，并举行了进坞仪式。'] },
+
+  { id: 'e8', grp: '甲醇燃料', src: '国际船舶网', date: '10-26', time: '',
+    title: '广东中远海运重工第四艘 7999DWT 甲醇加注船试航凯旋',
+    summary: 'N1251 完成全部海上试验任务顺利返航，该系列四艘甲醇加注船建造项目进入收官阶段。',
+    body: ['10 月 26 日，广东中远海运重工建造的 7999DWT 甲醇加注船 N1251 圆满完成全部海上试验任务，顺利返航并安全靠泊码头。作为该系列四艘甲醇加注船的最后一艘，N1251 试航凯旋标志着这一绿色清洁能源船型系列建造项目进入收官阶段。',
+           'N1251 总长 114.9 米、型宽 19 米、型深 10 米，入级 NK 船级社，货舱采用特种涂层与双壳结构，可安全装载甲醇、柴油、汽油及生物柴油等多种产品。目前项目已进入试航意见整改销项和交付前筹备阶段。'] },
+
+  { id: 'e9', grp: '甲醇燃料', src: '国际船舶网', date: '10-21', time: '',
+    title: '一船下水一船试航！黄埔文冲 65000 吨甲醇双燃料散货船 4 号船下水',
+    summary: '该船为塞浦路斯 Lemissoler Navigation 建造，配置 2 座 1200 立方米甲醇燃料舱，由上海船舶研究设计院设计。',
+    body: ['10 月 21 日，黄埔文冲为塞浦路斯 Lemissoler Navigation 公司建造的 65000 载重吨甲醇双燃料散货船 4 号船 H2557 下水，标志着水平船台建造任务顺利落地，正式转入码头系泊试验阶段。',
+           '该船由上海船舶研究设计院设计，配置 2 座 1200 立方米甲醇燃料舱，配套中远海运旗下企业供应的甲醇供给系统，双燃料主机自由端匹配德国 RENK 全新轴带发电机。同期，4000kW 中型海洋救助船 H2494 完成试航任务。'] },
+
+  { id: 'e10', grp: '甲醇燃料', src: '中国日报网', date: '10-24', time: '',
+    title: '四艘甲醇动力船舶签约，远醇动力助力嘉兴打造绿色航运样板',
+    summary: '远醇动力与浙江鼎励航运达成 4 艘 1500 吨级船舶甲醇动力系统签约，其甲醇电动系统功率覆盖 40—420kW。',
+    body: ['10 月 24 日，嘉兴市港航管理服务中心、嘉兴市船舶行业协会一行到访马鞍山甲醇动力智造工厂，现场远醇动力与浙江鼎励航运有限公司达成 4 艘 1500 吨级船舶甲醇动力系统签约。',
+           '远醇动力依托吉利二十余年甲醇动力技术积淀，已形成功率覆盖 40—420kW 的甲醇电动系统型谱。目前搭载该系统的船舶已推广至长江、珠江、淮河、京杭大运河等主要水系，全国下水或正在建造的甲醇电动船舶已有 60 多艘，计划建造的超过 120 艘。'] },
+
+  { id: 'e11', grp: '氨燃料', src: '经济日报', date: '10-13', time: '',
+    title: '全球首例绿氨燃料船对船加注在浙江舟山完成',
+    summary: '1000 吨绿氨通过全球首艘专用液氨加注船盛航永乐号为比利时 CMB.TECH 旗下氨动力船 Mineral Europa 完成加注，创下六项全球第一。',
+    body: ['10 月 13 日，全球首例绿氨燃料船对船加注在浙江舟山锚地顺利完成。来自中国能建青氢一号松原氢能产业园项目的 1000 吨绿氨，通过全球首艘专用液氨加注船盛航永乐号，为比利时 CMB.TECH 海事集团旗下的氨动力船舶 Mineral Europa 完成燃料加注。',
+           '随后该船从舟山启航，跨越太平洋驶向澳洲开展商业航运。此次加注创造六个全球第一，包括全球首单绿氨远洋航运照付不议销售合同正式实施、全球首例绿氨船对船锚地商业化加注、全球首艘专用氨燃料加注船投入使用、全球首张船对船液氨加注牌照等。'] },
+
+  { id: 'e12', grp: '运价指数', src: '中财网', date: '10-26', time: '21:18',
+    title: 'SCFI 报 3681.34 点周涨 0.05%，集运连续三周小幅上行',
+    summary: '美西、美东运价微跌，欧洲与地中海航线分别小涨 0.7% 和 0.2%；散运 BDI 周涨 5.9%，海岬型船领涨、巴拿马型承压。',
+    body: ['中国出口集装箱运价指数 SCFI 报 3681.34 点，周涨 0.05%，已连续三周小幅上行；但美西、美东运价微跌，欧洲与地中海航线则分别小涨 0.7% 和 0.2%。',
+           '油运方面，BDTI 周跌 5.1%，而 BCTI 大涨 18.8%，成品油轮明显强于原油轮。散运 BDI 周涨 5.9%，海岬型船领涨，巴拿马型承压。'] },
+
+  { id: 'e13', grp: '运价指数', src: '上海航运交易所', date: '10-23', time: '',
+    title: 'CCFI 综合指数报 1876.27 点，较上期下跌 2.4%',
+    summary: '美西航线跌 4.2%、美东跌 2.6%、南非航线跌 5.4%，澳新航线逆势涨 5.0%、日本航线涨 2.5%。',
+    body: ['上海航运交易所发布的中国出口集装箱运价指数显示，本期（2026-10-23）综合指数报 1876.27 点，较上期 1922.64 点下跌 2.4%。',
+           '分航线看，美西航线报 1778.49 点、跌 4.2%，美东航线报 2026.09 点、跌 2.6%，南非航线跌 5.4%；澳新航线逆势上涨 5.0%，日本航线上涨 2.5%，地中海航线基本持平。'] },
+
+  { id: 'e14', grp: '运价指数', src: '搜航网', date: '10-19', time: '',
+    title: 'SCFI 报 3679.58 点连涨两周，地中海航线单周涨 8.26%',
+    summary: '上海至地中海基本港运价报 3250 美元/TEU、周涨 8.3%，欧洲 2335 美元/TEU；美西 7525 美元/FEU 跌 0.8%。',
+    body: ['最新一期上海出口集装箱运价指数（SCFI）报 3679.58 点，上涨 15.47 点，周涨幅 0.42%，连续第二周小幅回升。',
+           '上海至欧洲基本港运价报 2335 美元/TEU、周涨 2.7%，上海至地中海基本港运价报 3250 美元/TEU、周涨 8.3%；美国航线高位回落，上海至美西报 7525 美元/FEU、周跌 0.8%，美东报 10405 美元/FEU、周跌 1.1%。'] },
+
+  { id: 'e15', grp: '绿色船舶', src: '中国新闻网', date: '10-23', time: '23:40',
+    title: '湖北宜昌电化长江：全市船舶订单 230 余艘，新能源船占比超 75%',
+    summary: '宜昌产投（宜都）绿色智能船舶产业园在手订单超 50 艘、生产计划排至 2028 年；全市 71 个码头布局 179 台套岸电设施。',
+    body: ['10 月 23 日，宜昌产投（宜都）绿色智能船舶产业园内，一艘为荷兰船东定制的新能源货船已完成主体结构，11 月将入江交付。园区配备国内首创反拉式下水系统，企业在手订单超 50 艘，生产计划已排至 2028 年。',
+           '目前宜昌全市 71 个码头布局 179 台套岸电设施，长江宜昌段岸电累计使用量突破 7500 万千瓦时，相当于替代燃油 1.7 万吨；全市船舶订单 230 余艘，新能源船舶占比超 75%。'] },
+
+  { id: 'e16', grp: '绿色船舶', src: '新华财经', date: '10-21', time: '',
+    title: 'IMO 秘书长：上海绿色航运实践为全球提供可复制样本',
+    summary: '上海港累计完成绿色甲醇加注 3.6 万吨；2025 年保税 LNG 加注量 71.2 万立方米、同比增长 54%。',
+    body: ['国际海事组织（IMO）秘书长阿塞尼奥·多明格斯在 2026 北外滩国际航运论坛上表示，上海在绿色航运走廊建设及绿色甲醇加注等方面的实践，为全球其他地区提供了示范，印证了航运减碳的可行性。',
+           '今年 8 月，甲醇加注船海港致远轮在上海港绿华山锚地一次性为达飞欧斯米姆轮加注 8016 吨国产绿色甲醇，刷新当时全球绿色甲醇单次加注量纪录；截至 8 月 20 日，上海港累计完成绿色甲醇加注 3.6 万吨。2025 年上海港保税 LNG 加注量达 71.2 万立方米、同比增长 54%。'] },
+
+  { id: 'e17', grp: '绿色船舶', src: '上海市新闻办', date: '10-21', time: '',
+    title: '上海港—汉堡港绿色航运走廊路线图明确，墨尔本港加入上海港走廊朋友圈',
+    summary: '2026 北外滩国际航运论坛期间发布成果超 60 项，为历届之最，另含洋山船舶交管系统辅助决策 AI 首次向全球展示。',
+    body: ['10 月 21 日，2026 北外滩国际航运论坛闭幕日发布多项成果：上海港—汉堡港绿色航运走廊发展目标和路线图明确，墨尔本港加入上海港绿色航运走廊朋友圈，基于数字化交付的概念性数字船舶发布，洋山船舶交管系统辅助决策 AI 首次向全球展示。',
+           '论坛为期两天，同期举办上海浦东国际航运周、全球海事论坛等活动，一周内超过 60 场活动，预计吸引全球 1.5 万人次航运业人士参加。'] },
+
+  { id: 'e18', grp: 'LNG 加注', src: '中国水运网', date: '10-21', time: '',
+    title: '舟山金塘港区完成第二票跨关区保税 LNG 加注，单次约 8000 立方米',
+    summary: '加注船海洋石油 302 轮为达飞巴伊亚轮加注约 8000 立方米保税 LNG，气源从宁波保税仓库跨区域调运。',
+    body: ['10 月 21 日，在杭州海关所属舟山海关通关保障下，加注船海洋石油 302 轮为靠泊在宁波舟山港金塘港区甬舟集装箱码头的国际航行船舶达飞巴伊亚轮加注约 8000 立方米保税液化天然气（LNG）。',
+           '该批保税 LNG 系从中海浙江宁波液化天然气保税仓库出库，跨区域运输至舟山完成供船作业。继 10 月 1 日浙江省首单宁波提气、舟山加注保税 LNG 跨关区加注落地后，短短半个月港区完成第二票加注，标志着杭甬两地跨区域加注模式日趋成熟。'] },
+
+  { id: 'e19', grp: 'LNG 加注', src: '广州市黄埔区', date: '10-20', time: '',
+    title: '广州港大屿山锚地完成 1530 吨保税 LNG 船对船加注',
+    summary: '加注船海洋石油 301 轮为利比里亚籍散货船琉璃行星轮加注约 3400 立方米保税 LNG，相比燃油可减少碳排放 3673 吨。',
+    body: ['10 月 20 日，广州港大屿山 21DY 锚地，中国籍 LNG 运输加注船海洋石油 301 轮缓缓靠向利比里亚籍散货船琉璃行星轮，两船完成搭靠后，1530 吨保税液化天然气（约 3400 立方米）通过船对船方式完成加注。',
+           '相比传统燃油驱动，使用 LNG 可减少碳排放 3673 吨。锚地加注受潮汐、水深、风力制约，从两船搭靠到完成加注须在 10 小时内，这是黄埔边检站桂山岛执勤点投入运营以来首次护航 LNG 锚地加注作业。'] },
+
+  { id: 'e20', grp: '新造船价格', src: '财联社', date: '10-17', time: '',
+    title: '克拉克森新造船价格指数报 186.73 点，船台紧张支撑造价高位',
+    summary: '主流船厂订单基本排至 2029 至 2030 年，船台资源供不应求；中船广西公司称十五五期间造船订单饱满。',
+    body: ['克拉克森数据显示，10 月 9 日克拉克森造船价格指数报 186.73 点，较年初小幅回升。业内人士表示，目前市面上船台资源紧张、供不应求，支撑造价处于高位。',
+           '多家船厂反映，主流船厂订单基本排至 2029 年至 2030 年。中船广西公司副总经理刘占先表示，公司十五五期间的造船订单饱满，平陆运河开通将对航运业带来正面影响。'] },
+
+  { id: 'e21', grp: '新造船价格', src: '华创证券', date: '10-11', time: '',
+    title: '克拉克森二手船价格指数 224 点，环比涨 2.7%、同比涨 19%',
+    summary: 'VLCC 二手船价全面超过新船，VLCC 新船价 131 百万美元，5、10、15 年船龄二手船价分别为 215、190、160 百万美元。',
+    body: ['截至 9 月底，克拉克森二手船价格指数为 224 点，环比上涨 2.7%，同比上涨 19%。',
+           '分船型看，VLCC 二手船价全面超过新船：VLCC 新船价格 131 百万美元，5 年、10 年、15 年船龄二手船价分别为 215、190、160 百万美元。同期克拉克森新造船价格指数为 186.7 点，环比持平，同比上涨 0.8%。'] }
+];
+
+/* ---------------- 早报：往期 ---------------- */
+const EARLY_26 = [
+  { id: 'n1', grp: '新船订单', src: '国际船舶网', date: '10-24', time: '17:44',
+    title: '再获 4 艘订单！中船澄西发力支线集装箱船市场',
+    summary: '10 月 23 日，中船澄西联合中国船舶工业贸易有限公司与欧洲知名船东再签 4 艘 3700TEU 集装箱船建造合同。',
+    body: ['10 月 23 日，中船集团旗下中船澄西船舶修造有限公司联合中国船舶工业贸易有限公司与欧洲知名船东再签 4 艘 3700TEU 集装箱船建造合同。',
+           '该项目是公司继 910RFEU 和 3100TEU 之后再次承接集装箱船建造订单。'] },
+
+  { id: 'n2', grp: '新船订单', src: '国际船舶网', date: '10-25', time: '19:50',
+    title: '再订 2 艘！紫金矿业继续选择山东新能船业',
+    summary: '山东新能船业与紫金矿业集团签订 2 艘 3000DWT 散货船建造合同，系坦噶尼喀湖 4 艘 2000DWT 散货船项目后的续签合作。',
+    body: ['山东新能船业有限公司与紫金矿业集团成功签订 2 艘 3000DWT 散货船建造合同。',
+           '本次订单是继坦噶尼喀湖 4 艘 2000DWT 散货船项目后的续签合作。'] },
+
+  { id: 'n3', grp: '新船订单', src: '国际船舶网', date: '10-25', time: '06:49',
+    title: '3 艘 64000 吨散货船！象屿海装首获摩纳哥老牌船东订单',
+    summary: '摩纳哥船东 Gestion Maritime 首次进军 Ultramax 型散货船市场，在南通象屿海装订造 3 艘 64000 载重吨散货船。',
+    body: ['摩纳哥船东 Gestion Maritime 首次进军 Ultramax 型散货船市场，在南通象屿海装订造 3 艘 64000 载重吨散货船。'] },
+
+  { id: 'n4', grp: '绿色船舶', src: '人民日报', date: '10-19', time: '',
+    title: '宜昌绿舟破浪前行：船舶园区新能源订单占比九成以上',
+    summary: '宜昌船舶工业园不到 3 公里岸线汇聚 9 家造船企业，新能源船舶订单占九成以上，工期已排至 2028 年。',
+    body: ['宜昌船舶工业园这段不到 3 公里的长江岸线，汇聚 9 家造船企业。几年前船厂还在为传统船舶订单减少而发愁，现在园区新能源船舶订单占九成以上，工期已排至 2028 年。',
+           '宜昌持续推进电化长江、气化长江、氢化长江建设：全市 71 个码头布局 179 台套岸电设施，长江宜昌段岸电累计使用量突破 7500 万千瓦时；国内首艘 500 千瓦级氢燃料电池动力船三峡氢舟 1 号已投入交通巡查。'] },
+
+  { id: 'n5', grp: '新造船价格', src: '财联社', date: '10-17', time: '',
+    title: '船厂订单饱满，平陆运河打开造修船增量空间',
+    summary: '中船广西公司十五五期间造船订单饱满，2027 年中旬分段工序产能全面释放，2028 年底实现年建造 8 万吨级船舶 8 艘。',
+    body: ['造船市场持续景气，中船广西公司副总经理刘占先表示，目前公司十五五期间的造船订单饱满。平陆运河的开通，将对航运业发展带来正面影响，从而增加周边过往船舶的数量，有利于修船业务前景向好。',
+           '中船广西公司正在推进二期工程建设，确保 2027 年中旬分段工序产能全面释放，2028 年底前完成规划内造修船全流程改造提升，最终实现年建造 8 万吨级船舶 8 艘的目标。'] }
+];
+
+const EARLY_25 = [
+  { id: 'm1', grp: '新船订单', src: '国际船舶网', date: '10-22', time: '20:53',
+    title: '2 艘！黄海造船将获超低温金枪鱼延绳钓船订单',
+    summary: '中水渔业公告拟投资建造 2 艘超低温金枪鱼延绳钓船，并收购 1 艘二手油船，推进船队更新及运力扩张。',
+    body: ['10 月 22 日晚间，中水集团远洋股份有限公司（中水渔业）发布关于购买、建造船舶的公告，宣布拟投资建造 2 艘超低温金枪鱼延绳钓船，并收购 1 艘二手油船，进一步推进船队更新及运力扩张。'] },
+
+  { id: 'm2', grp: '新船订单', src: '国际船舶网', date: '10-21', time: '10:43',
+    title: '增至 9 艘！民营上市船企再获欧洲船东多用途船订单',
+    summary: '天海防务全资子公司江苏大津重工成功接获 1 艘 6600 吨多用途干货船订单。',
+    body: ['10 月 20 日晚间，天海融合防务装备技术股份有限公司宣布，其全资子公司江苏大津重工有限公司成功接获 1 艘 6600 吨多用途干货船订单。'] },
+
+  { id: 'm3', grp: '绿色船舶', src: '交通运输部', date: '10-13', time: '',
+    title: '三部门印发《内河新能源船舶推广应用行动方案（2026—2030年）》',
+    summary: '到 2028 年内河电动运输船舶突破 1000 艘、甲醇动力船舶突破 100 艘，长江干线甲醇加注服务能力全线贯通。',
+    body: ['交通运输部、工业和信息化部、国家能源局联合印发《内河新能源船舶推广应用行动方案（2026—2030年）》。',
+           '方案提出，到 2028 年内河新能源船舶保有量较 2025 年翻倍，其中电动运输船舶突破 1000 艘、甲醇动力船舶突破 100 艘；长江干线甲醇加注服务能力实现全线贯通，长三角水网地区船舶充换电设施基本成网，综合形成零碳水路运输通道 3000 公里。'] }
+];
+
+const EARLY_BY_DAY = { '10-27': EARLY, '10-26': EARLY_26, '10-25': EARLY_25 };
+Object.keys(EARLY_BY_DAY).forEach(k => EARLY_BY_DAY[k].forEach(n => { n.day = k; }));
+
+/* ---------------- 7×24 ---------------- */
+const LIVE = [
+  { day: '10-27', time: '20:19', src: '国际船舶网',
+    title: '一船下水一船铺龙骨！厦船重工两日双捷',
+    summary: '中远海运 8 万吨通用干散货船 MW469-1 在二号船台顺利下水，转入码头舾装与设备调试阶段。',
+    body: ['2026 年 10 月 26 日上午，由厦船重工承建的中远海运 8 万吨通用干散货船（MW469-1）在二号船台顺利下水，正式转入码头舾装、设备调试阶段。'] },
+
+  { day: '10-27', time: '20:17', src: '国际船舶网',
+    title: '沪东中华两艘 13600TEU 集装箱船同日开工',
+    summary: '13600TEU 集装箱船 H1953A 与 H1951A 于 10 月 26 日同日开工。',
+    body: ['10 月 26 日，沪东中华生产再传捷报，13600TEU 集装箱船 H1953A 与 H1951A 同日开工。'] },
+
+  { day: '10-27', time: '19:43', src: '国际船舶网',
+    title: '大连中远海运川崎为日本船东建造 64000 吨散货船命名',
+    summary: '6.4 万载重吨智能散货船 DE172 轮命名为 WORLD ROYAL，本系列三艘同型散货船建造项目收官。',
+    body: ['10 月 26 日，大连中远海运川崎（DACKS）为日本船东量身打造的 6.4 万载重吨智能散货船 DE172 轮正式命名为 WORLD ROYAL，标志着本系列三艘同型散货船建造项目圆满收官。'] },
+
+  { day: '10-27', time: '17:34', src: '国际船舶网',
+    title: '扬州中远海运重工 11.4 万吨甲醇双燃料原油船进坞',
+    summary: '中远海运能源 11.4 万吨甲醇双燃料原油船系列船 N1221 轮进入二号船坞。',
+    body: ['10 月 26 日，扬州中远海运重工承建的中远海运能源 11.4 万吨甲醇双燃料原油船系列船 N1221 轮，依照既定计划顺利进入公司二号船坞，并举行了进坞仪式。'] },
+
+  { day: '10-27', time: '17:30', src: '国际船舶网',
+    title: '江龙船艇为厦门港建造 40 米级钢铝混动引航船开工',
+    summary: '厦门港引航站 40 米级钢铝混动引航船设计建造开工仪式在江龙船艇珠海制造基地举行。',
+    body: ['10 月 27 日，厦门港引航站 40 米级钢铝混动引航船设计建造开工仪式，在江龙船艇珠海制造基地顺利举行。'] },
+
+  { day: '10-27', time: '10:03', src: '国际船舶网',
+    title: '成功去库存！大船海工交付一座自升式生活平台',
+    summary: 'AJ46-2 自升式生活平台命名，Van Es Holding 与 Jack-up Barge 代表、ABS 及股东代表出席。',
+    body: ['2026 年 10 月 23 日，由大连船舶海洋工程有限公司承建的 AJ46-2 自升式生活平台命名仪式举行。Van Es Holding 公司代表、Jack-up Barge 公司代表、ABS、大船海工股东代表出席。'] },
+
+  { day: '10-27', time: '09:55', src: '国际船舶网', major: true,
+    title: '高丽海运 6 艘 3100TEU 签约，首次选择中国船厂',
+    summary: '黄埔文冲联合中国船舶工业贸易公司与韩国高丽海运签署 6 艘 3100TEU 集装箱船建造合同。',
+    body: ['10 月 26 日，中船黄埔文冲船舶有限公司联合中国船舶工业贸易公司与韩国高丽海运株式会社（KMTC）在广州正式签署 6 艘 3100TEU 集装箱船建造合同。这是高丽海运首次选择中国船厂。'] },
+
+  { day: '10-27', time: '09:39', src: '国际船舶网',
+    title: '广船国际获摩纳哥船东 2 艘 5 万吨化学品/成品油船订单',
+    summary: '承接摩纳哥 TRANSOCEAN 公司 2 艘 5 万吨化学品/成品油船建造订单。',
+    body: ['10 月 23 日，中船广船国际成功承接摩纳哥 TRANSOCEAN 公司 2 艘 5 万吨化学品/成品油船建造订单。'] },
+
+  { day: '10-27', time: '06:49', src: '国际船舶网',
+    title: '希腊船东 Danaos 追加 2 艘 9200TEU 集装箱船',
+    summary: '计划在上海外高桥造船订造 2 艘 9200TEU 集装箱船。',
+    body: ['希腊船东 Danaos 被曝计划在上海外高桥造船订造 2 艘 9200TEU 集装箱船，进一步扩大在中国船企的新造船投资。'] },
+
+  { day: '10-26', time: '21:18', src: '中财网', major: true,
+    title: 'SCFI 报 3681.34 点周涨 0.05%，连续三周上行',
+    summary: '欧地航线小涨、美线微跌；BDI 周涨 5.9%，BCTI 大涨 18.8%。',
+    body: ['中国出口集装箱运价指数 SCFI 报 3681.34 点，周涨 0.05%，已连续三周小幅上行；美西、美东运价微跌，欧洲与地中海航线分别小涨 0.7% 和 0.2%。',
+           '油运方面 BDTI 周跌 5.1% 而 BCTI 大涨 18.8%；散运 BDI 周涨 5.9%，海岬型船领涨、巴拿马型承压。'] },
+
+  { day: '10-26', time: '21:10', src: '国际船舶网',
+    title: '武昌造船 18500DWT 成品油/化学品船 9 号船下水',
+    summary: '10 月 24 日该船顺利下水，项目团队聚焦周期缩短与完整性提升。',
+    body: ['10 月 24 日，武昌造船建造的 18500DWT 成品油/化学品船 9 号船顺利下水，向着按期交付再迈坚实一步。建造过程中，项目团队聚焦周期缩短与完整性提升两大核心目标。'] },
+
+  { day: '10-25', time: '20:59', src: '国际船舶网',
+    title: '9 月全球新签订单 228 艘、673.6 万 CGT',
+    summary: '环比增加 19 艘、修正总吨上升 4.33%；同比数量减少 118 艘。',
+    body: ['2026 年 9 月份全球新签订单 228 艘，共计 6735729CGT，较 8 月的 209 艘、6456332CGT 环比增加 19 艘，修正总吨上升 4.33%。',
+           '与 2025 年 9 月的 346 艘、7191609CGT 相比，数量同比减少 118 艘，修正总吨同比下降 6.34%。'] },
+
+  { day: '10-25', time: '19:50', src: '国际船舶网',
+    title: '紫金矿业再订 2 艘 3000DWT 散货船',
+    summary: '山东新能船业与紫金矿业签订 2 艘 3000DWT 散货船建造合同。',
+    body: ['山东新能船业有限公司与紫金矿业集团成功签订 2 艘 3000DWT 散货船建造合同，为坦噶尼喀湖 4 艘 2000DWT 散货船项目后的续签合作。'] },
+
+  { day: '10-25', time: '06:49', src: '国际船舶网',
+    title: '象屿海装首获摩纳哥船东 3 艘 64000 吨散货船订单',
+    summary: 'Gestion Maritime 首次进军 Ultramax 型散货船市场。',
+    body: ['摩纳哥船东 Gestion Maritime 首次进军 Ultramax 型散货船市场，在南通象屿海装订造 3 艘 64000 载重吨散货船。'] },
+
+  { day: '10-24', time: '17:44', src: '国际船舶网',
+    title: '中船澄西再获 4 艘 3700TEU 集装箱船订单',
+    summary: '与欧洲知名船东再签 4 艘 3700TEU 建造合同，继 910RFEU 和 3100TEU 之后再次承接集装箱船订单。',
+    body: ['10 月 23 日，中船澄西联合中国船舶工业贸易有限公司与欧洲知名船东再签 4 艘 3700TEU 集装箱船建造合同。'] },
+
+  { day: '10-24', time: '13:32', src: '国际船舶网', major: true,
+    title: '恒力重工承接 52 艘超大型双燃料集装箱船',
+    summary: '含 20 艘 19000TEU、12 艘 22000TEU 与 20 艘 24000TEU 三大主力船型。',
+    body: ['恒力重工与多家国际知名集装箱班轮公司达成建造协议，承接共 52 艘超大型双燃料集装箱船，包括 20 艘 19000TEU、12 艘 22000TEU 与 20 艘 24000TEU 三大主力船型。'] },
+
+  { day: '10-23', time: '23:40', src: '中国新闻网',
+    title: '宜昌全市船舶订单 230 余艘，新能源船占比超 75%',
+    summary: '宜都绿色智能船舶产业园在手订单超 50 艘，计划排至 2028 年。',
+    body: ['宜昌产投（宜都）绿色智能船舶产业园企业在手订单超 50 艘，生产计划已排至 2028 年。全市船舶订单 230 余艘，新能源船舶占比超 75%。'] },
+
+  { day: '10-22', time: '20:53', src: '国际船舶网',
+    title: '中水渔业拟建造 2 艘超低温金枪鱼延绳钓船',
+    summary: '同步收购 1 艘二手油船，推进船队更新及运力扩张。',
+    body: ['10 月 22 日晚间，中水渔业发布公告，拟投资建造 2 艘超低温金枪鱼延绳钓船，并收购 1 艘二手油船。'] },
+
+  { day: '10-22', time: '06:15', src: '国际船舶网', major: true,
+    title: 'MSC 再订 23 艘超大型集装箱船，今年在华累计 55 艘',
+    summary: '订单总金额预计超过 100 亿美元。',
+    body: ['地中海航运（MSC）再向两家中国船厂订造 23 艘超大型集装箱船。截至目前，该公司今年在中国船厂累计订造的集装箱船已增至 55 艘，订单总金额预计超过 100 亿美元。'] },
+
+  { day: '10-21', time: '10:43', src: '国际船舶网',
+    title: '大津重工接获 1 艘 6600 吨多用途干货船订单',
+    summary: '天海防务全资子公司，订单累计增至 9 艘。',
+    body: ['天海融合防务装备技术股份有限公司全资子公司江苏大津重工有限公司成功接获 1 艘 6600 吨多用途干货船订单。'] },
+
+  { day: '10-21', time: '09:00', src: '中国水运网',
+    title: '舟山金塘港区完成第二票跨关区保税 LNG 加注',
+    summary: '单次加注约 8000 立方米，气源从宁波保税仓库跨区域调运。',
+    body: ['10 月 21 日，加注船海洋石油 302 轮为靠泊宁波舟山港金塘港区甬舟集装箱码头的达飞巴伊亚轮加注约 8000 立方米保税 LNG。'] },
+
+  { day: '10-21', time: '08:30', src: '上海市新闻办',
+    title: '上海港—汉堡港绿色航运走廊路线图明确',
+    summary: '墨尔本港加入上海港绿色航运走廊朋友圈，洋山交管 AI 首次向全球展示。',
+    body: ['2026 北外滩国际航运论坛闭幕日，上海港—汉堡港绿色航运走廊发展目标和路线图明确，墨尔本港加入上海港绿色航运走廊朋友圈。'] },
+
+  { day: '10-20', time: '16:00', src: '新华财经',
+    title: 'IMO 秘书长：上海绿色甲醇加注迈出第一步',
+    summary: '上海港累计完成绿色甲醇加注 3.6 万吨，2025 年保税 LNG 加注量同比增 54%。',
+    body: ['国际海事组织秘书长阿塞尼奥·多明格斯表示，上海在甲醇加注方面迈出了第一步。截至 8 月 20 日，上海港累计完成绿色甲醇加注 3.6 万吨。'] }
+];
+
+LIVE.forEach((x, i) => { x.id = 'l' + i; });
+
+/* ---------------- 跟踪 ---------------- */
+const TRACKS = [
+  { id: 'kmtc', kw: '韩国高丽海运首单中国船厂', short: '高丽海运 6 艘', days: 2, count: 3, day: '10-27', isNew: true,
+    timeline: [
+      { time: '10-27 09:55', text: '黄埔文冲联合中船贸易与高丽海运签署 6 艘 3100TEU 集装箱船建造合同', src: '国际船舶网' },
+      { time: '10-26 18:00', text: '双方在广州举行签约仪式，高丽海运社长慎镛和出席', src: '国际船舶网' },
+      { time: '10-24 10:00', text: '外媒报道高丽海运启动 3100TEU 新造船询价，中韩船厂同时入围', src: '国际船舶网' } ] },
+
+  { id: 'methanol', kw: '甲醇双燃料船建造与交付', short: '甲醇双燃料船', days: 9, count: 4, day: '10-27', isNew: true,
+    timeline: [
+      { time: '10-27 17:34', text: '扬州中远海运重工 11.4 万吨甲醇双燃料原油船 N1221 轮进坞', src: '国际船舶网' },
+      { time: '10-26 10:00', text: '广东中远海运重工第四艘 7999DWT 甲醇加注船完成试航', src: '国际船舶网' },
+      { time: '10-24 15:00', text: '远醇动力与浙江鼎励航运签约 4 艘 1500 吨级甲醇动力系统', src: '中国日报网' },
+      { time: '10-21 12:00', text: '黄埔文冲 65000 吨甲醇双燃料散货船 4 号船下水', src: '国际船舶网' } ] },
+
+  { id: 'order', kw: '中国船厂超大型集装箱船订单潮', short: '集装箱船订单', days: 6, count: 4, day: '10-27', isNew: true,
+    timeline: [
+      { time: '10-27 09:55', text: '高丽海运 6 艘 3100TEU 落户黄埔文冲，首次选择中国船厂', src: '国际船舶网' },
+      { time: '10-26 06:49', text: '希腊船东 Danaos 追加 2 艘 9200TEU，继续选择外高桥造船', src: '国际船舶网' },
+      { time: '10-24 13:32', text: '恒力重工承接 52 艘超大型双燃料集装箱船', src: '国际船舶网' },
+      { time: '10-22 06:15', text: 'MSC 再订 23 艘，今年在华累计订造 55 艘', src: '国际船舶网' } ] },
+
+  { id: 'scfi', kw: 'SCFI 集运运价连续三周上行', short: 'SCFI 运价', days: 8, count: 3, day: '10-26', isNew: false,
+    timeline: [
+      { time: '10-26 21:18', text: 'SCFI 报 3681.34 点周涨 0.05%，连续三周小幅上行', src: '中财网' },
+      { time: '10-23 16:00', text: 'CCFI 综合指数报 1876.27 点，较上期下跌 2.4%', src: '上海航运交易所' },
+      { time: '10-19 15:00', text: 'SCFI 报 3679.58 点连涨两周，地中海航线单周涨 8.26%', src: '搜航网' } ] },
+
+  { id: 'lng', kw: '保税 LNG 跨关区加注常态化', short: 'LNG 跨关区加注', days: 21, count: 3, day: '10-21', isNew: false,
+    timeline: [
+      { time: '10-21 09:00', text: '舟山金塘港区完成第二票跨关区保税 LNG 加注，单次约 8000 立方米', src: '中国水运网' },
+      { time: '10-20 16:00', text: '广州港大屿山锚地完成 1530 吨保税 LNG 船对船加注', src: '广州市黄埔区' },
+      { time: '10-01 10:00', text: '浙江省首单宁波提气、舟山加注保税 LNG 跨关区加注落地', src: '中国水运网' } ] },
+
+  { id: 'nh3', kw: '绿氨燃料商业化加注', short: '绿氨加注', days: 15, count: 2, day: '10-13', isNew: false,
+    timeline: [
+      { time: '10-13 11:00', text: '全球首例绿氨船对船加注在舟山完成，1000 吨绿氨来自松原', src: '经济日报' },
+      { time: '08-20 09:00', text: '盛航永乐号完成加注功能改造，取得 CCS 首张氨燃料加注入级证书', src: '松原市商务局' } ] },
+
+  { id: 'zh', kw: '内河新能源船舶政策落地', short: '内河新能源政策', days: 15, count: 2, day: '10-13', isNew: false,
+    timeline: [
+      { time: '10-23 23:40', text: '宜昌全市船舶订单 230 余艘，新能源船占比超 75%', src: '中国新闻网' },
+      { time: '10-13 10:00', text: '三部门印发内河新能源船舶推广应用行动方案，2028 年电动运输船破 1000 艘', src: '交通运输部' } ] },
+
+  { id: 'price', kw: '新造船价格与船台排期', short: '新造船价格', days: 19, count: 2, day: '10-17', isNew: false,
+    timeline: [
+      { time: '10-17 12:00', text: '克拉克森新造船价格指数报 186.73 点，主流船厂订单排至 2029 至 2030 年', src: '财联社' },
+      { time: '10-11 09:00', text: '克拉克森二手船价格指数 224 点，环比涨 2.7%、同比涨 19%', src: '华创证券' } ] }
+];
+
+const ALL_TAGS = ['绿色船舶', 'LNG 加注', '甲醇燃料', '氨燃料', 'VLCC', '海工装备', '智能航行', '船用主机', '运价指数', '新造船价格', 'IMO 规则', '欧盟碳税'];
+
+/* ---------------- 状态 ---------------- */
+let view = 'early';
+let trackTab = 'feed';
+let detailItem = null;
+let detailTrack = null;
+let detailFrom = 'early';
+let subscribed = DEFAULT_SUB.slice();
+let ebCollapsed = {};
+let lvOpen = {};
+let selDate = { y: 2026, m: 10, d: 27 };
+const TODAY = { y: 2026, m: 10, d: 27 };
+let calYear = 2026, calMonth = 10;
+let pageScroll = 0;
+let favs = [];
+
+const pad2 = n => (n < 10 ? '0' : '') + n;
+const mdText = d => d.m + '月' + pad2(d.d) + '日';
+const mdOfDay = k => { const p = String(k).split('-'); return (+p[0]) + '月' + p[1] + '日'; };
+const dayKey = d => pad2(d.m) + '-' + pad2(d.d);
+const earlyOf = d => EARLY_BY_DAY[dayKey(d)] || [];
+const dayKeyBack = (d, k) => { const t = new Date(d.y, d.m - 1, d.d - k); return pad2(t.getMonth() + 1) + '-' + pad2(t.getDate()); };
+const liveOf = d => LIVE.filter(x => x.day === dayKey(d));
+/* 7×24 是连续时间流：右栏展示选中日期及前两日 */
+const liveDays = d => [0, 1, 2].map(k => dayKeyBack(d, k)).filter(k => LIVE.some(x => x.day === k));
+const dateText = () => selDate.y + '年' + pad2(selDate.m) + '月' + pad2(selDate.d) + '日';
+const dayLabel = d => {
+  const back = [1, 2, 3].map(k => dayKeyBack(TODAY, k));
+  const i = back.indexOf(d);
+  if (i === 0) return mdOfDay(d) + ' · 昨天';
+  if (i === 1) return mdOfDay(d) + ' · 前天';
+  return mdOfDay(d);
+};
+const WD = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+const wdText = d => WD[new Date(d.y, d.m - 1, d.d).getDay()];
+
+/* 页头：标题 · 大字信息 · 说明行 · 右侧操作 */
+/* 页头插图：海上情报小景 */
+function headDeco() {
+  return '<div class="ph-deco" aria-hidden="true">'
+    + '<svg viewBox="0 0 252 92" fill="none" xmlns="http://www.w3.org/2000/svg">'
+    + '<defs>'
+    + '<linearGradient id="phInk" x1="0" y1="0" x2="252" y2="0" gradientUnits="userSpaceOnUse">'
+    + '<stop offset="0" stop-color="#245BFF" stop-opacity="0"/>'
+    + '<stop offset=".34" stop-color="#245BFF" stop-opacity=".75"/>'
+    + '<stop offset="1" stop-color="#2F62FF" stop-opacity=".9"/>'
+    + '</linearGradient>'
+    + '<linearGradient id="phSea" x1="0" y1="0" x2="252" y2="0" gradientUnits="userSpaceOnUse">'
+    + '<stop offset="0" stop-color="#245BFF" stop-opacity="0"/>'
+    + '<stop offset=".3" stop-color="#245BFF" stop-opacity=".3"/>'
+    + '<stop offset="1" stop-color="#4E82FF" stop-opacity=".5"/>'
+    + '</linearGradient>'
+    + '</defs>'
+    + '<path d="M14 44 C 38 36, 60 48, 86 42" stroke="url(#phInk)" stroke-width="1" stroke-dasharray="2.6 4" opacity=".5"/>'
+    + '<circle cx="14" cy="44" r="1.9" fill="#245BFF" fill-opacity=".3"/>'
+    + '<path d="M92 64 H 200 C 206 64, 208 66, 203 69 C 197 75, 187 75, 175 75 H 113 C 103 75, 94 71, 92 64 Z" stroke="url(#phInk)" stroke-width="1.3" opacity=".62"/>'
+    + '<path d="M112 64 V 52 H 138 V 64" stroke="url(#phInk)" stroke-width="1.2" opacity=".5"/>'
+    + '<path d="M118 57 H 132" stroke="url(#phInk)" stroke-width="1" opacity=".32"/>'
+    + '<path d="M146 64 V 54 H 156 V 64" stroke="url(#phInk)" stroke-width="1.1" opacity=".42"/>'
+    + '<path d="M162 64 V 56 H 174 V 64" stroke="url(#phInk)" stroke-width="1" opacity=".34"/>'
+    + '<path d="M178 64 V 57 H 190 V 64" stroke="url(#phInk)" stroke-width="1" opacity=".34"/>'
+    + '<path d="M125 52 V 42" stroke="url(#phInk)" stroke-width="1.2" opacity=".55"/>'
+    + '<path d="M118 42 A 7 7 0 0 1 132 42" stroke="url(#phInk)" stroke-width="1" opacity=".34"/>'
+    + '<path d="M111 42 A 14 14 0 0 1 139 42" stroke="url(#phInk)" stroke-width="1" stroke-dasharray="2 4" opacity=".24"/>'
+    + '<circle cx="125" cy="41" r="2.3" fill="#245BFF" fill-opacity=".7"/>'
+    + '<path d="M6 79 C 40 75, 60 83, 92 79 S 150 75, 182 79 S 236 83, 252 79" stroke="url(#phSea)" stroke-width="1.1" opacity=".85"/>'
+    + '<path d="M0 86 C 34 82, 56 90, 88 86 S 148 82, 180 86 S 236 90, 252 86" stroke="url(#phSea)" stroke-width="1" opacity=".4"/>'
+    + '</svg></div>';
+}
+
+function pageHead(o) {
+  return '<div class="ph' + (o.deco ? ' ph-art' : '') + '">'
+    + '<div class="ph-body">'
+    + '<div class="ph-top">'
+    + '<div class="ph-t"><h1>' + o.title + '</h1></div>'
+    + '<div class="ph-act">' + (o.act || '') + '</div>'
+    + '</div>'
+    + (o.line || (o.big ? '<p class="ph-line"><b>' + o.big + '</b><span class="wd">' + o.wd + '</span></p>' : ''))
+    + (o.note ? '<p class="ph-note">' + o.note + '</p>' : '')
+    + '</div>'
+    + (o.deco || '')
+    + '</div>';
+}
+
+/* ---------------- 外壳 ---------------- */
+function renderShell() {
+  const cur = (view === 'earlycfg') ? 'early' : view;
+
+  document.getElementById('tabbar').innerHTML =
+    INTEL_TABS.map(t =>
+      '<div class="intel-tab' + (cur === t.id ? ' active' : '') + '" data-v="' + t.id + '">' + t.label + '</div>').join('')
+    + '<button class="tab-fav" id="tabFav" title="我的收藏">' + icon('star') + '<span>收藏</span>'
+    + (favs.length ? '<span class="n">' + favs.length + '</span>' : '')
+    + '</button>';
+
+  bindTabbar();
+}
+
+function bindTabbar() {
+  document.querySelectorAll('.intel-tab').forEach(t => { t.onclick = () => go(t.dataset.v); });
+  const tf = document.getElementById('tabFav');
+  if (tf) tf.onclick = openFavs;
+}
+
+/* ---------------- 早报 ---------------- */
+function earlyGroups() {
+  const arr = [];
+  const list = earlyOf(selDate);
+  SUB_ORDER.forEach(g => {
+    if (subscribed.indexOf(g) < 0) return;
+    const items = list.filter(n => n.grp === g);
+    if (items.length) arr.push({ name: g, items: items });
+  });
+  return arr;
+}
+
+/* 页头日期行：‹ 日期 星期 › （PC 端翻期在顶部） */
+function dateNav() {
+  const atLatest = dayKey(selDate) === dayKey(TODAY);
+  const isToday = dayKey(selDate) === dayKey(TODAY);
+  return '<div class="ph-date">'
+    + '<button class="ph-nav" data-period="-1" title="上一期">‹</button>'
+    + '<span class="ph-dwrap">'
+    + '<b>' + mdText(selDate) + '</b>'
+    + '<button class="cal-ic" id="dateBtn" title="选择日期">' + icon('cal') + '</button>'
+    + calPop()
+    + '</span>'
+    + '<button class="ph-nav' + (atLatest ? ' dis' : '') + '" data-period="1" title="下一期">›</button>'
+    + (isToday ? '<span class="ph-today">今天</span>' : '')
+    + '<span class="wd2">' + wdText(selDate) + '</span>'
+    + '<span class="yr">· ' + selDate.y + '</span>'
+    + '</div>';
+}
+
+function calPop() {
+  return '<div class="intel-cal-pop" id="calPop">'
+    + '<div class="intel-cal-head"><button class="nav" id="calPrev">‹</button><span class="ym" id="calYM"></span><button class="nav" id="calNext">›</button></div>'
+    + '<div class="intel-cal-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>'
+    + '<div class="intel-cal-days" id="calDays"></div>'
+    + '<div class="intel-cal-foot"><span id="calLatest">跳至最新一期</span></div>'
+    + '</div>';
+}
+
+function emptyEarly() {
+  const notLatest = dayKey(selDate) !== dayKey(TODAY);
+  return '<div class="eb-empty">'
+    + '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' + ICONS.doc + '</svg>'
+    + '<p class="t">' + mdText(selDate) + ' 暂无早报</p>'
+    + '<p class="s">该日期未采集到早报内容，可切换日期查看往期</p>'
+    + (notLatest ? '<div style="margin-top:18px"><button class="intel-page-btn" data-latest>回到最新一期</button></div>' : '')
+    + '</div>';
+}
+
+/* 早报条目时间：当日显示时分，往日显示真实发布日期 */
+function ebStamp(n) {
+  if (n.date === dayKey(selDate)) return n.time || '';
+  return mdOfDay(n.date) + (n.time ? ' ' + n.time : '');
+}
+
+function viewEarly() {
+  const groups = earlyGroups();
+
+  const body = groups.length ? groups.map((g, gi) => {
+    const rows = g.items.map((n, i) => {
+      const st = ebStamp(n);
+      return '<div class="eb-row' + (i === 0 ? ' lead' : '') + '" data-early="' + n.id + '">'
+        + '<div class="eb-meta"><span class="src">' + n.src + '</span>'
+        + (st ? '<span class="sep">·</span><span>' + st + '</span>' : '')
+        + '</div>'
+        + '<div class="eb-tt">' + n.title + '</div>'
+        + '<div class="eb-sum">' + n.summary + '</div></div>';
+    }).join('');
+    return '<section class="eb-group' + (ebCollapsed[g.name] ? ' collapsed' : '') + '">'
+      + '<header class="eb-gh" data-ebg="' + g.name + '"><span class="idx">' + pad2(gi + 1) + '</span><span class="dt"></span>'
+      + '<span class="nm">' + g.name + '</span>'
+      + '<span class="chev">▼</span></header>'
+      + '<div class="eb-list">' + rows + '</div></section>';
+  }).join('') : emptyEarly();
+
+  return '<div class="doc">'
+    + pageHead({ title: '今日情报', line: dateNav(), deco: headDeco() })
+    + '<div class="daily">'
+    + '<div class="daily-main">'
+    + '<div class="col-head"><span class="ct-line"></span><span class="ct">今日早报</span>'
+    + '<span class="col-btn" id="cfgEntry">⚙ 定制专属内容</span></div>'
+    + '<div class="eb-card">' + body + '</div>'
+    + '</div>'
+    + liveRail()
+    + '</div></div>';
+}
+
+/* 早报设置 */
+function cfgCell(t) {
+  const on = subscribed.indexOf(t) >= 0;
+  return '<div class="cfg-cell' + (on ? ' on' : '') + '" data-tag="' + t + '">'
+    + '<span class="nm">' + t + '</span><span class="mk">' + (on ? '✓' : '＋') + '</span></div>';
+}
+
+function viewEarlyCfg() {
+  return '<div class="doc">'
+    + pageHead({
+        title: '定制专属内容',
+        note: '已选 <span id="cfgSumH">' + subscribed.length + '</span> 项',
+        act: '<button class="intel-page-btn" data-cfgback>返回</button>'
+      })
+    + '<div class="cfg-card">'
+    + CFG_GROUPS.map(g =>
+        '<section class="cfg-sec">'
+        + '<div class="cfg-sec-h"><span class="t">' + g.name + '</span></div>'
+        + '<div class="cfg-grid">' + g.tags.map(cfgCell).join('') + '</div></section>').join('')
+    + '</div>'
+    + '<div class="cfg-foot">'
+    + '<button class="intel-page-btn" data-cfgdefault>恢复默认</button>'
+    + '<button class="intel-page-btn" data-cfgback>取消</button>'
+    + '<button class="intel-page-btn primary" data-cfgsave>保存</button>'
+    + '</div></div>';
+}
+
+/* ---------------- 7×24 右栏快讯 ---------------- */
+function liveRail() {
+  const list = liveOf(selDate);
+
+  const rows = list.length ? list.map(it =>
+    '<div class="rl-row' + (it.major ? ' major' : '') + '" data-live="' + it.id + '">'
+    + '<span class="rl-t">' + it.time + '</span>'
+    + '<span class="rl-tt">' + it.title + '</span></div>').join('')
+    : '<div class="rl-empty">当日暂无实时情报</div>';
+
+  return '<aside class="daily-side">'
+    + '<div class="col-head"><span class="live-dot"></span><span class="ct">7×24 实时</span>'
+    + '<span class="cn">' + mdText(selDate) + '</span>'
+    + '<span class="col-btn" id="btnRefresh" title="刷新"><span class="r-ic">⟳</span></span></div>'
+    + '<div class="rl-wrap"><div class="rl-body">' + rows + '</div>'
+    + '<div class="rl-end">已全部加载</div></div>'
+    + '</aside>';
+}
+
+/* ---------------- 跟踪 ---------------- */
+function trackEntries() {
+  return TRACKS.slice().sort((a, b) => {
+    const x = a.day + ' ' + a.timeline[0].time.slice(6), y = b.day + ' ' + b.timeline[0].time.slice(6);
+    return x < y ? 1 : (x > y ? -1 : 0);
+  });
+}
+
+function viewTrack() {
+  const head = pageHead({
+    title: '情报跟踪',
+    big: TRACKS.length + ' 个',
+    wd: '跟踪主题',
+
+    act: '<div class="tk-switch">'
+      + '<span class="tk-switch-item' + (trackTab === 'feed' ? ' active' : '') + '" data-tt="feed">最新动态</span>'
+      + '<span class="tk-switch-item' + (trackTab === 'topics' ? ' active' : '') + '" data-tt="topics">我的主题 ' + TRACKS.length + '</span>'
+      + '</div>'
+      + '<button class="intel-page-btn" id="btnAddTrack">＋ 添加跟踪</button>'
+      + '<button class="intel-page-btn" data-manage>管理</button>'
+  });
+
+  return '<div class="doc">' + head + (trackTab === 'feed' ? trackFeed() : trackTopics()) + '</div>';
+}
+
+function trackFeed() {
+  const groups = [];
+  trackEntries().forEach(t => {
+    let g = groups[groups.length - 1];
+    if (!g || g.day !== t.day) { g = { day: t.day, items: [] }; groups.push(g); }
+    g.items.push(t);
+  });
+
+  const html = groups.map((g, gi) => {
+    const list = g.items.map(t => {
+      const lt = t.timeline[0];
+      return '<div class="tk-row" data-thread="' + t.id + '">'
+        + '<div class="lv-t">' + lt.time.slice(6) + '</div>'
+        + '<div class="lv-spine"><i></i></div>'
+        + '<div class="lv-c">'
+        + '<div class="lv-tt"><span class="tk-tag">' + t.short + '</span>' + lt.text + '</div>'
+        + '<div class="tk-src">' + lt.src + '</div>'
+        + '</div></div>';
+    }).join('');
+    return '<div class="tk-day' + (gi === 0 ? ' first' : '') + (g.day === '10-27' ? ' today' : '') + '">' + dayLabel(g.day) + '</div>' + list;
+  }).join('');
+
+  return '<div class="tk-card">' + html
+    + '<div class="lv-end">已展示全部 ' + trackEntries().length + ' 条进展</div></div>';
+}
+
+function trackTopics() {
+  if (!TRACKS.length) return '<div class="tk-card"><div class="intel-empty">还没有跟踪主题</div></div>';
+  return '<div class="tk-topics">' + TRACKS.map(t => {
+    const lt = t.timeline[0];
+    return '<div class="tk-tcard">'
+      + '<div class="tk-tcard-h"><span class="nm">' + t.kw + '</span>'
+      + '<span class="mt">跟踪中 · ' + t.days + ' 天 · 累计 ' + t.count + ' 条</span></div>'
+      + '<div class="tk-tcard-lt"><span class="tm">' + lt.time + '</span>' + lt.text + '</div>'
+      + '<div class="tk-tcard-f">'
+      + '<button class="intel-page-btn primary" data-thread="' + t.id + '">查看脉络</button>'
+      + '<button class="intel-page-btn" data-unfollow="' + t.id + '">取消跟踪</button></div>'
+      + '</div>';
+  }).join('') + '</div>';
+}
+
+/* ---------------- 详情 ---------------- */
+function favKey(it) { return it.id || ('f' + it.title); }
+function isFav(it) { return !!it && favs.some(f => f.key === favKey(it)); }
+
+function viewDetail() {
+  const it = detailItem;
+  const on = isFav(it);
+  const dateTxt = it.day ? mdOfDay(it.day) : mdText(selDate);
+  return '<div class="doc doc-read">'
+    + '<button class="intel-back" id="btnBack">← 返回</button>'
+    + '<div class="dt-card">'
+    + '<div class="dt-title">' + it.title + '</div>'
+    + '<div class="dt-meta"><span class="src">' + it.src + '</span>'
+    + '<span class="sep">·</span><span>' + dateTxt + ' ' + it.time + '</span>'
+    + '<div class="op"><span id="btnFav" class="fav-btn' + (on ? ' on' : '') + '">' + (on ? '★ 已收藏' : '☆ 收藏') + '</span></div></div>'
+    + '<div class="dt-flash"><div class="dt-flash-h">◆ 百舸速读</div><p>' + it.summary + '</p></div>'
+    + '<div class="dt-body">' + it.body.map(p => '<p>' + p + '</p>').join('') + '</div>'
+    + '</div></div>';
+}
+
+function viewThreadDetail() {
+  const t = detailTrack;
+  const tl = t.timeline.map((n, i) =>
+    '<div class="dt-tl-item' + (i === 0 ? ' latest' : '') + '">'
+    + '<span class="dt-tl-dot"></span>'
+    + '<div class="dt-tl-time">' + n.time + '</div>'
+    + '<div class="dt-tl-text">' + n.text + '<span class="sc">来源：' + n.src + '</span></div>'
+    + '</div>').join('');
+
+  return '<div class="doc doc-read">'
+    + '<button class="intel-back" id="btnBack">← 返回</button>'
+    + '<div class="dt-card">'
+    + '<div class="dt-title">' + t.kw + '</div>'
+    + '<div class="dt-meta"><span>已跟踪 ' + t.days + ' 天</span><span class="sep">·</span>'
+    + '<span>累计汇聚 ' + t.count + ' 条相关情报</span></div>'
+    + '<div class="dt-tl">' + tl + '</div>'
+    + '</div>'
+    + '<div class="cfg-foot"><button class="intel-page-btn" id="btnUnfollow">取消跟踪该主题</button></div>'
+    + '</div>';
+}
+
+/* ---------------- 渲染 ---------------- */
+function render() {
+  const scroller = document.getElementById('scroller');
+  renderShell();
+  const el = document.getElementById('view');
+  if (detailItem) el.innerHTML = viewDetail();
+  else if (detailTrack) el.innerHTML = viewThreadDetail();
+  else if (view === 'early') el.innerHTML = viewEarly();
+  else if (view === 'earlycfg') el.innerHTML = viewEarlyCfg();
+  else el.innerHTML = viewTrack();
+  bind();
+  scroller.scrollTop = pageScroll;
+}
+
+function go(v) {
+  view = (v === 'live') ? 'early' : v;
+  detailItem = null;
+  detailTrack = null;
+  pageScroll = 0;
+  render();
+}
+
+/* ---------------- 事件 ---------------- */
+function bind() {
+  document.querySelectorAll('.intel-tab').forEach(t => {
+    t.onclick = () => go(t.dataset.v);
+  });
+  const cfgEntry = document.getElementById('cfgEntry');
+  if (cfgEntry) cfgEntry.onclick = () => { view = 'earlycfg'; detailItem = null; detailTrack = null; pageScroll = 0; render(); };
+
+  /* 早报分组折叠 */
+  document.querySelectorAll('[data-ebg]').forEach(h => {
+    h.onclick = () => {
+      const k = h.dataset.ebg;
+      ebCollapsed[k] = !ebCollapsed[k];
+      h.parentNode.classList.toggle('collapsed', !!ebCollapsed[k]);
+    };
+  });
+
+  /* 早报条目 */
+  document.querySelectorAll('[data-early]').forEach(r => {
+    r.onclick = () => {
+      const n = earlyOf(selDate).find(x => x.id === r.dataset.early);
+      if (!n) return;
+      detailFrom = 'early';
+      detailItem = n;
+      pageScroll = 0;
+      render();
+    };
+  });
+
+  /* 早报日期：点日期本体或日历图标都能开 */
+  const toggleCal = e => {
+    e.stopPropagation();
+    const pop = document.getElementById('calPop');
+    if (!pop) return;
+    if (pop.classList.contains('show')) { pop.classList.remove('show'); return; }
+    calYear = selDate.y; calMonth = selDate.m;
+    renderCal();
+    openCalPop();
+  };
+  const db = document.getElementById('dateBtn');
+  if (db) db.onclick = toggleCal;
+  const cprev = document.getElementById('calPrev'), cnext = document.getElementById('calNext');
+  if (cprev) cprev.onclick = () => { if (calMonth === 1) { calMonth = 12; calYear--; } else calMonth--; renderCal(); };
+  if (cnext) cnext.onclick = () => { if (calMonth === 12) { calMonth = 1; calYear++; } else calMonth++; renderCal(); };
+  const cl = document.getElementById('calLatest');
+  if (cl) cl.onclick = () => { selDate = { y: TODAY.y, m: TODAY.m, d: TODAY.d }; pageScroll = 0; render(); };
+
+  document.querySelectorAll('[data-period]').forEach(el => {
+    el.onclick = () => {
+      if (el.classList.contains('dis')) return;
+      const step = +el.dataset.period;
+      const d = new Date(selDate.y, selDate.m - 1, selDate.d + step);
+      selDate = { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
+      pageScroll = 0;
+      render();
+    };
+  });
+  document.querySelectorAll('[data-latest]').forEach(el => {
+    el.onclick = () => { selDate = { y: TODAY.y, m: TODAY.m, d: TODAY.d }; pageScroll = 0; render(); };
+  });
+
+  /* 早报设置 */
+  document.querySelectorAll('.cfg-cell[data-tag]').forEach(c => {
+    c.onclick = () => {
+      const t = c.dataset.tag, i = subscribed.indexOf(t);
+      if (i >= 0) subscribed.splice(i, 1); else subscribed.push(t);
+      const on = i < 0;
+      c.classList.toggle('on', on);
+      c.querySelector('.mk').textContent = on ? '✓' : '＋';
+      const s = document.getElementById('cfgSum');
+      if (s) s.textContent = subscribed.length;
+      const sh = document.getElementById('cfgSumH');
+      if (sh) sh.textContent = subscribed.length;
+    };
+  });
+  document.querySelectorAll('[data-cfgback]').forEach(el => { el.onclick = () => go('early'); });
+  document.querySelectorAll('[data-cfgsave]').forEach(el => { el.onclick = () => { go('early'); toast('已保存'); }; });
+  document.querySelectorAll('[data-cfgdefault]').forEach(el => {
+    el.onclick = () => { subscribed = DEFAULT_SUB.slice(); render(); toast('已恢复默认内容'); };
+  });
+
+  /* 7×24 */
+  document.querySelectorAll('[data-lvopen]').forEach(el => {
+    el.onclick = () => {
+      const i = +el.dataset.lvopen;
+      lvOpen[i] = !lvOpen[i];
+      pageScroll = document.getElementById('scroller').scrollTop;
+      render();
+    };
+  });
+  document.querySelectorAll('[data-live]').forEach(el => {
+    el.onclick = () => {
+      const it = LIVE.find(x => x.id === el.dataset.live);
+      if (!it) return;
+      detailFrom = 'early';
+      detailItem = it;
+      pageScroll = 0;
+      render();
+    };
+  });
+  const br = document.getElementById('btnRefresh');
+  if (br) br.onclick = function () {
+    this.classList.add('spinning');
+    setTimeout(() => { lvOpen = {}; pageScroll = 0; render(); toast('已更新到最新情报'); }, 700);
+  };
+
+  /* 跟踪 */
+  document.querySelectorAll('[data-tt]').forEach(s => {
+    s.onclick = () => { trackTab = s.dataset.tt; pageScroll = 0; render(); };
+  });
+  document.querySelectorAll('[data-thread]').forEach(el => {
+    el.onclick = e => {
+      e.stopPropagation();
+      const t = TRACKS.find(x => x.id === el.dataset.thread);
+      if (!t) return;
+      detailTrack = t; pageScroll = 0; render();
+    };
+  });
+  document.querySelectorAll('[data-unfollow]').forEach(el => {
+    el.onclick = e => {
+      e.stopPropagation();
+      const t = TRACKS.find(x => x.id === el.dataset.unfollow);
+      if (!t) return;
+      TRACKS.splice(TRACKS.indexOf(t), 1);
+      toast('已取消跟踪「' + t.kw + '」');
+      render();
+    };
+  });
+  const bat = document.getElementById('btnAddTrack');
+  if (bat) bat.onclick = openAddTrack;
+  document.querySelectorAll('[data-manage]').forEach(el => { el.onclick = openManage; });
+
+  /* 详情 */
+  const back = document.getElementById('btnBack');
+  if (back) back.onclick = () => {
+    const fromFav = detailFrom === 'fav';
+    detailItem = null; detailTrack = null; pageScroll = 0;
+    detailFrom = 'early';
+    render();
+    if (fromFav) openFavs();
+  };
+  const fav = document.getElementById('btnFav');
+  if (fav) fav.onclick = () => toggleFav(detailItem);
+  const unf = document.getElementById('btnUnfollow');
+  if (unf) unf.onclick = () => {
+    const i = TRACKS.indexOf(detailTrack);
+    if (i >= 0) TRACKS.splice(i, 1);
+    toast('已取消跟踪「' + detailTrack.kw + '」');
+    detailTrack = null; view = 'track'; pageScroll = 0; render();
+  };
+}
+
+/* ---------------- 收藏 ---------------- */
+function toggleFav(it) {
+  if (!it) return;
+  const k = favKey(it);
+  const i = favs.findIndex(f => f.key === k);
+  if (i >= 0) { favs.splice(i, 1); toast('已取消收藏'); }
+  else { favs.unshift({ key: k, item: it }); toast('已收藏'); }
+
+  renderShell();
+  if (detailItem) {
+    const on = isFav(it);
+    const b = document.getElementById('btnFav');
+    if (b) { b.textContent = on ? '★ 已收藏' : '☆ 收藏'; b.classList.toggle('on', on); }
+  }
+  if (document.getElementById('favDrawer').classList.contains('show')) renderFavs();
+}
+
+function openFavs() {
+  renderFavs();
+  document.getElementById('favDrawer').classList.add('show');
+  document.getElementById('drMask').classList.add('show');
+}
+
+function closeFavs() {
+  document.getElementById('favDrawer').classList.remove('show');
+  document.getElementById('drMask').classList.remove('show');
+}
+
+function renderFavs() {
+  document.getElementById('fvTitle').textContent = '我的收藏';
+  document.getElementById('fvMeta').innerHTML = favs.length ? '' : '<span>暂无收藏</span>';
+
+  const body = document.getElementById('fvBody');
+  body.innerHTML = favs.length
+    ? favs.map(f =>
+        '<div class="fv-item" data-fv="' + f.key + '">'
+        + '<div class="fv-tt">' + f.item.title + '</div>'
+        + '<div class="fv-meta"><span class="src">' + f.item.src + '</span><span class="sep">·</span>'
+        + '<span>' + (f.item.day ? mdOfDay(f.item.day) : mdText(selDate)) + ' ' + f.item.time + '</span></div>'
+        + '<span class="fv-x" data-fvx="' + f.key + '" title="取消收藏">✕</span></div>').join('')
+    : '<div class="fv-empty">'
+      + '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' + ICONS.star + '</svg>'
+      + '<div>还没有收藏的情报</div>'
+      + '<div style="font-size:12px;margin-top:4px">在情报详情页点击「收藏」即可加入</div></div>';
+
+  body.querySelectorAll('[data-fv]').forEach(el => {
+    el.onclick = () => {
+      const f = favs.find(x => x.key === el.dataset.fv);
+      if (!f) return;
+      closeFavs();
+      detailFrom = 'fav';
+      detailItem = f.item;
+      detailTrack = null;
+      pageScroll = 0;
+      render();
+    };
+  });
+  body.querySelectorAll('[data-fvx]').forEach(el => {
+    el.onclick = e => {
+      e.stopPropagation();
+      const i = favs.findIndex(x => x.key === el.dataset.fvx);
+      if (i >= 0) favs.splice(i, 1);
+      renderFavs();
+      renderShell();
+      toast('已取消收藏');
+    };
+  });
+}
+
+function renderCal() {
+  const first = new Date(calYear, calMonth - 1, 1);
+  const startDow = first.getDay();
+  const days = new Date(calYear, calMonth, 0).getDate();
+  let cells = '';
+  for (let i = 0; i < startDow; i++) cells += '<span class="day empty"></span>';
+  for (let d = 1; d <= days; d++) {
+    const sel = (calYear === selDate.y && calMonth === selDate.m && d === selDate.d);
+    const has = !!EARLY_BY_DAY[pad2(calMonth) + '-' + pad2(d)];
+    cells += '<span class="day' + (sel ? ' sel' : '') + (has ? ' has' : '') + '" data-day="' + d + '">' + d + '</span>';
+  }
+  document.getElementById('calDays').innerHTML = cells;
+  document.getElementById('calYM').textContent = calYear + '年' + pad2(calMonth) + '月';
+  document.querySelectorAll('#calDays .day[data-day]').forEach(el => {
+    el.onclick = () => {
+      selDate = { y: calYear, m: calMonth, d: +el.dataset.day };
+      document.getElementById('calPop').classList.remove('show');
+      pageScroll = 0;
+      render();
+    };
+  });
+}
+
+/* ---------------- 抽屉 / 弹窗 ---------------- */
+function openThread(id) {
+  const t = TRACKS.find(x => x.id === id);
+  if (!t) return;
+  const drawer = document.getElementById('threadDrawer');
+  const mask = document.getElementById('drMask');
+
+  document.getElementById('tdTitle').textContent = t.kw;
+  document.getElementById('tdMeta').innerHTML =
+    '<span class="pill">跟踪中</span>'
+    + '<span>已跟踪 ' + t.days + ' 天</span><span class="sep">·</span>'
+    + '<span>累计汇聚 ' + t.count + ' 条</span>';
+
+  document.getElementById('tdBody').innerHTML =
+    '<div class="td-sec">跟踪脉络 · ' + t.timeline.length + ' 个节点</div>'
+    + t.timeline.map((n, i) =>
+        '<div class="td-node' + (i === 0 ? ' latest' : '') + '"><span class="dot"></span>'
+        + '<div class="tm">' + n.time + (i === 0 ? ' · 最新' : '') + '</div>'
+        + '<div class="tx">' + n.text + '<span class="sc">来源：' + n.src + '</span></div></div>').join('');
+
+  document.getElementById('tdFoot').innerHTML =
+    '<button class="intel-page-btn primary" id="tdOpen">查看详情</button>'
+    + '<button class="intel-page-btn" id="tdUnfollow2">取消跟踪</button>';
+
+  document.getElementById('tdOpen').onclick = () => { closeThread(); detailTrack = t; pageScroll = 0; render(); };
+  document.getElementById('tdUnfollow2').onclick = () => {
+    const i = TRACKS.indexOf(t);
+    if (i >= 0) TRACKS.splice(i, 1);
+    closeThread(); toast('已取消跟踪「' + t.kw + '」'); render();
+  };
+
+  drawer.classList.add('show');
+  mask.classList.add('show');
+}
+
+function closeThread() {
+  document.getElementById('threadDrawer').classList.remove('show');
+  document.getElementById('drMask').classList.remove('show');
+}
+
+const overlay = document.getElementById('kwOverlay');
+function closeKw() { overlay.classList.remove('show'); }
+document.getElementById('kwClose').onclick = closeKw;
+overlay.onclick = e => { if (e.target === overlay) closeKw(); };
+
+function openAddTrack() {
+  document.getElementById('kwTitle').textContent = '添加跟踪';
+  document.getElementById('kwBody').innerHTML =
+    '<div class="intel-kw-chips">' + ALL_TAGS.map(t =>
+      '<span class="intel-kw-chip" data-add="' + t + '">' + t + '</span>').join('') + '</div>';
+  document.getElementById('kwFoot').innerHTML = '<button class="intel-page-btn" id="kwCancel">关闭</button>';
+  overlay.classList.add('show');
+  document.getElementById('kwCancel').onclick = closeKw;
+  document.querySelectorAll('#kwBody [data-add]').forEach(c => {
+    c.onclick = () => {
+      const tag = c.dataset.add;
+      if (TRACKS.some(t => t.kw === tag)) { toast('「' + tag + '」已在跟踪中'); return; }
+      TRACKS.unshift({ id: 'k' + Date.now(), kw: tag, short: tag, days: 1, count: 1, day: '10-27', isNew: true,
+        timeline: [{ time: '10-27 12:00', text: '已开始跟踪该主题，等待新情报汇聚', src: '系统' }] });
+      closeKw(); pageScroll = 0; render(); toast('已开始跟踪「' + tag + '」');
+    };
+  });
+}
+
+function openManage() {
+  document.getElementById('kwTitle').textContent = '我的跟踪 · ' + TRACKS.length + ' 个主题';
+  document.getElementById('kwBody').innerHTML = TRACKS.length
+    ? TRACKS.map(t => {
+        const lt = t.timeline[0];
+        return '<div class="tk-row2"><div class="main">'
+          + '<div class="nm">' + t.kw + '</div>'
+          + '<div class="mt">跟踪中 · 已跟踪 ' + t.days + ' 天 · 累计 ' + t.count + ' 条'
+          + (t.isNew ? ' · <span style="color:#E5484D">今日有更新</span>' : '') + '</div>'
+          + '<div class="lt">' + lt.time + '　' + lt.text + '</div></div>'
+          + '<div class="ops"><a data-mthread="' + t.id + '">查看脉络</a>'
+          + '<a class="dim" data-munfollow="' + t.id + '">取消跟踪</a></div></div>';
+      }).join('')
+    : '<div class="intel-empty">还没有跟踪主题</div>';
+
+  document.getElementById('kwFoot').innerHTML =
+    '<button class="intel-page-btn" id="kwCancel">关闭</button>'
+    + '<button class="intel-page-btn primary" id="kwAdd2">＋ 添加跟踪</button>';
+  overlay.classList.add('show');
+  document.getElementById('kwCancel').onclick = closeKw;
+  document.getElementById('kwAdd2').onclick = openAddTrack;
+
+  document.querySelectorAll('#kwBody [data-mthread]').forEach(el => {
+    el.onclick = () => { closeKw(); openThread(el.dataset.mthread); };
+  });
+  document.querySelectorAll('#kwBody [data-munfollow]').forEach(el => {
+    el.onclick = () => {
+      const t = TRACKS.find(x => x.id === el.dataset.munfollow);
+      if (!t) return;
+      TRACKS.splice(TRACKS.indexOf(t), 1);
+      toast('已取消跟踪「' + t.kw + '」');
+      openManage();
+      render();
+    };
+  });
+}
+
+/* ---------------- 日期浮窗定位（absolute 锚定 .ph-dwrap；右侧空间不足时改右对齐纠偏） ---------------- */
+function openCalPop() {
+  const pop = document.getElementById('calPop');
+  if (!pop) return;
+  // 页头入场动画未结束时打开浮窗会整体半透明，先落定动画
+  const ph = pop.closest('.ph');
+  if (ph) { ph.style.animation = 'none'; ph.style.opacity = '1'; ph.style.transform = 'none'; }
+  pop.style.left = '0'; pop.style.right = 'auto';
+  pop.classList.add('show');
+  // 视口纠偏：右侧空间不足时改为左对齐，避免被窗口边缘裁掉
+  const r = pop.getBoundingClientRect();
+  if (r.right > window.innerWidth - 12) {
+    pop.style.left = 'auto';
+    pop.style.right = '0';
+  }
+}
+function closeCalPop() {
+  const pop = document.getElementById('calPop');
+  if (pop) pop.classList.remove('show');
+}
+
+/* ---------------- toast ---------------- */
+let toastTimer = null;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  const pop = document.getElementById('calPop');
+  if (pop && pop.classList.contains('show')) pop.classList.remove('show');
+  if (document.getElementById('threadDrawer').classList.contains('show')) closeThread();
+  if (document.getElementById('favDrawer').classList.contains('show')) closeFavs();
+  if (overlay.classList.contains('show')) closeKw();
+});
+
+document.getElementById('fvClose').onclick = closeFavs;
+document.getElementById('drMask').onclick = () => { closeThread(); closeFavs(); };
+
+document.addEventListener('click', e => {
+  const pop = document.getElementById('calPop');
+  if (pop && pop.classList.contains('show') && !e.target.closest('.ph-dwrap')) pop.classList.remove('show');
+});
+
+document.getElementById('scroller').addEventListener('scroll', function () {
+  pageScroll = this.scrollTop;
+  document.getElementById('tabbar').classList.toggle('scrolled', this.scrollTop > 4);
+});
+
+render();
+</script>
+<script src="../src/data.js"></script>
+<script src="../src/ui.js"></script>
+<script src="../src/page-bridge.js"></script>
+<script>
+  if (window.BaigePage) window.BaigePage.onActivate(function(){});
+</script>
 </body>
 </html>

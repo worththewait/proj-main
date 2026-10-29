@@ -34,6 +34,18 @@
   const notificationTrigger = document.querySelector("#notificationTrigger");
   if (supportTrigger) supportTrigger.innerHTML = accountIcon("support");
   if (notificationTrigger) notificationTrigger.innerHTML = `${accountIcon("bell")}<span class="notification-dot" aria-hidden="true"></span>`;
+  const noticeStore = window.BaigeNoticeStore;
+  let selectedNoticeId = null;
+  const noticeSpeakerIcon = '<svg class="notice-speaker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7"/><path d="M18.5 6a8.5 8.5 0 0 1 0 12"/></svg>';
+  const noticeEmptyIcon = '<svg class="notice-empty-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="10" y="17" width="44" height="32" rx="4"/><path d="M10 36h12l4 6h12l4-6h12"/><circle cx="47" cy="18" r="10" fill="#f5f5f5"/><path d="m43.5 14.5 7 7m0-7-7 7"/></svg>';
+  function refreshNoticeIndicator() {
+    if (!notificationTrigger) return;
+    const dot = notificationTrigger.querySelector(".notification-dot");
+    const count = noticeStore ? noticeStore.unreadCount() : 0;
+    if (dot) dot.hidden = count === 0;
+    notificationTrigger.setAttribute("aria-label", count ? `通知提醒，${count}条未读` : "通知提醒，无未读通知");
+  }
+  refreshNoticeIndicator();
   let dialogTrigger = trigger;
   const dialog = document.createElement("dialog");
   dialog.id = "accountDialog";
@@ -93,9 +105,44 @@
   window.addEventListener("hashchange", () => { closeMenu(); if (dialog.open) dialog.close(); });
 
   function renderDialog(title, description, content, footer) {
+    dialog.className = "account-dialog";
+    dialog.setAttribute("aria-labelledby", "accountDialogTitle");
+    dialog.setAttribute("aria-describedby", "accountDialogDescription");
     dialog.innerHTML = `<header class="account-dialog-header"><h2 id="accountDialogTitle" tabindex="-1">${title}</h2><button class="icon-button" type="button" data-account-close aria-label="关闭">${icon("close")}</button></header>
       <div class="account-dialog-body"><p id="accountDialogDescription" class="account-dialog-intro">${description}</p>${content}</div>
       <footer class="account-dialog-footer">${footer || '<button class="primary-button" type="button" data-account-close>知道了</button>'}</footer>`;
+  }
+  function renderNoticePanels() {
+    const items = noticeStore ? noticeStore.active() : [];
+    if (selectedNoticeId && !items.some((item) => item.id === selectedNoticeId)) selectedNoticeId = null;
+    const list = dialog.querySelector("#noticeList");
+    const detail = dialog.querySelector("#noticeDetail");
+    if (!list || !detail) return;
+    list.innerHTML = items.length
+      ? items.map((item) => `<button class="notice-list-item${item.id === selectedNoticeId ? " is-active" : ""}" type="button" data-notice-id="${escapeHtml(item.id)}" aria-pressed="${item.id === selectedNoticeId}">${noticeSpeakerIcon}<span class="notice-list-copy"><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.createdAt)}</small></span></button>`).join("")
+      : '<p class="notice-list-empty">暂无通知</p>';
+    if (!selectedNoticeId) {
+      detail.innerHTML = `<div class="notice-detail-empty">${noticeEmptyIcon}<p>无数据</p></div>`;
+      return;
+    }
+    const item = items.find((entry) => entry.id === selectedNoticeId);
+    detail.innerHTML = item
+      ? `<h3>${escapeHtml(item.title)}</h3><div class="notice-detail-content">${escapeHtml(item.content)}</div>`
+      : `<div class="notice-detail-empty">${noticeEmptyIcon}<p>无数据</p></div>`;
+  }
+  function openNoticeDialog() {
+    selectedNoticeId = null;
+    if (noticeStore) noticeStore.markAllRead();
+    refreshNoticeIndicator();
+    dialog.className = "account-dialog notice-dialog";
+    dialog.setAttribute("aria-labelledby", "noticeDialogTitle");
+    dialog.removeAttribute("aria-describedby");
+    dialog.innerHTML = `<header class="notice-dialog-head"><h2 id="noticeDialogTitle" tabindex="-1">通知提醒</h2><button class="notice-dialog-close" type="button" data-account-close aria-label="关闭">${icon("close")}</button></header>
+      <div class="notice-dialog-body"><aside class="notice-list" id="noticeList" aria-label="通知列表"></aside><section class="notice-detail" id="noticeDetail" aria-live="polite"></section></div>
+      <footer class="notice-dialog-footer"><button class="secondary-button" type="button" data-account-close>取消</button><button class="primary-button" type="button" data-account-close>确认</button></footer>`;
+    renderNoticePanels();
+    if (!dialog.open) dialog.showModal();
+    dialog.querySelector("#noticeDialogTitle")?.focus({ preventScroll: true });
   }
   function openDialog(action, source = trigger) {
     dialogTrigger = source;
@@ -107,11 +154,8 @@
     if (action === "profile") {
       renderDialog("个人中心", "查看当前演示账户的基本信息。", `<dl class="account-profile"><div><dt>登录账号</dt><dd>${escapeHtml(account.email)}</dd></div><div><dt>用户角色</dt><dd>${escapeHtml(account.role)}</dd></div><div><dt>所属单位</dt><dd>${escapeHtml(account.organization)}</dd></div></dl><p class="account-notice">当前账号与角色为原型演示信息，实际账户资料待接入。</p>`);
     } else if (action === "notifications") {
-      if (notificationTrigger) {
-        notificationTrigger.querySelector(".notification-dot").hidden = true;
-        notificationTrigger.setAttribute("aria-label", "通知提醒，无未读通知");
-      }
-      renderDialog("通知提醒", "查看与账户相关的通知。当前内容为原型演示。", '<article class="account-welcome-notice"><small>演示通知</small><h3>欢迎使用百舸数智平台</h3><p>从首页发起专业问题，浏览常用工具，或从个人中心「后台系统」进入「自定义界面」配置推荐功能。</p></article><p class="account-notice">此欢迎消息仅用于展示通知样式，未连接真实通知服务。</p>');
+      openNoticeDialog();
+      return;
     } else if (action === "support") {
       renderDialog("客服帮助", "在这里查看使用指引，或记录问题与建议。", '<dl class="account-help-list"><div><dt>如何开始问答？</dt><dd>在首页输入问题后发送，即可进入对话；选择知识库问答，可指定行业、企业或部门知识库。</dd></div><div><dt>如何设置推荐功能？</dt><dd>从个人中心进入「后台系统」，打开「自定义界面」，在「推荐功能」中最多选择 4 项并保存。</dd></div><div><dt>功能无法使用怎么办？</dt><dd>在「了解平台功能」查看开通状态，未开通项可申请权限。</dd></div></dl><p class="account-notice">当前为客服帮助演示，尚未接入人工在线客服。系统反馈仅在原型内演示，不实际发送。</p>', '<button class="secondary-button" type="button" data-account-close>关闭</button><button class="primary-button" type="button" data-account-feedback>系统反馈</button>');
     } else if (action === "about") {
@@ -132,12 +176,24 @@
   supportTrigger?.addEventListener("click", () => openDialog("support", supportTrigger));
   notificationTrigger?.addEventListener("click", () => openDialog("notifications", notificationTrigger));
   dialog.addEventListener("click", (event) => {
+    const notice = event.target.closest("[data-notice-id]");
+    if (notice) {
+      selectedNoticeId = notice.dataset.noticeId;
+      renderNoticePanels();
+      dialog.querySelector(".notice-list-item.is-active")?.focus({ preventScroll: true });
+      return;
+    }
     if (event.target.closest("[data-account-close]")) dialog.close();
     else if (event.target.closest("[data-account-feedback]")) openDialog("feedback", dialogTrigger);
     else if (event.target.closest("[data-account-exit]")) {
       renderDialog("已退出演示", "退出登录流程演示已完成。", '<p class="account-exit-message">点击下方按钮返回平台，继续查看原型。</p>', '<button class="primary-button" type="button" data-account-close>返回演示</button>');
       dialog.querySelector("[data-account-close]").focus({ preventScroll: true });
     }
+  });
+  window.addEventListener("storage", (event) => {
+    if (event.key && !event.key.startsWith("baige.notice-center")) return;
+    refreshNoticeIndicator();
+    if (dialog.open && dialog.classList.contains("notice-dialog")) renderNoticePanels();
   });
   dialog.addEventListener("close", () => { (dialogTrigger?.isConnected ? dialogTrigger : trigger).focus({ preventScroll: true }); });
   dialog.addEventListener("input", (event) => {

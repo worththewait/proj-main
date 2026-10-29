@@ -36,6 +36,7 @@
     menu: '<path d="M4 6h16 M4 12h16 M4 18h16"/>',
     panel: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16"/>',
     close: '<path d="m6 6 12 12 M18 6 6 18"/>',
+    bell: '<path d="M5 10a7 7 0 0 1 14 0v6l2 3H3l2-3Z M10 22h4 M12 1v2"/>',
     down: '<path d="m6 9 6 6 6-6"/>',
     back: '<path d="M20 12H4 m6-6-6 6 6 6"/>',
   };

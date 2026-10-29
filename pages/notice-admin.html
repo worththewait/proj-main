@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通知公告 · 后台系统</title>
+  <link rel="stylesheet" href="../styles.css?v=20261027-management">
+  <link rel="stylesheet" href="../notice-admin.css?v=20261029-notice">
+</head>
+<body class="module-page notice-admin-page">
+  <main class="module-main">
+    <div class="content-scroll">
+      <div class="content-inner notice-admin">
+        <section class="notice-filter" aria-label="公告筛选">
+          <label class="notice-filter-field"><span>标题</span><input id="filterTitle" type="text" placeholder="输入标题"></label>
+          <label class="notice-filter-field"><span>创建人</span><input id="filterCreator" type="text" placeholder="输入创建人"></label>
+          <label class="notice-filter-field"><span>类型</span><select id="filterType"><option value="">全部类型</option><option value="通知">通知</option><option value="公告">公告</option></select></label>
+          <div class="notice-filter-actions"><button class="secondary-button" type="button" id="resetFilters">重置</button><button class="primary-button" type="button" id="queryFilters">查询</button></div>
+        </section>
+
+        <section class="notice-panel" aria-labelledby="noticeListTitle">
+          <header class="notice-panel-head"><h1 id="noticeListTitle">公告列表</h1><button class="primary-button" type="button" id="newNotice">新建公告</button></header>
+          <div class="notice-table-wrap">
+            <table class="notice-table">
+              <thead><tr><th class="col-title" scope="col">标题</th><th class="col-type" scope="col">类型</th><th class="col-status" scope="col">状态</th><th class="col-creator" scope="col">创建者</th><th class="col-time" scope="col">创建时间</th><th class="col-actions" scope="col" style="text-align:right">操作</th></tr></thead>
+              <tbody id="noticeTableBody"></tbody>
+            </table>
+          </div>
+          <footer class="notice-pager"><span class="notice-count" id="noticeCount">共 0 条数据</span><div class="notice-pages" id="noticePager" role="group" aria-label="公告分页"></div></footer>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="noticeEditor" class="notice-editor" aria-labelledby="noticeEditorTitle">
+    <form id="noticeForm" novalidate>
+      <header class="notice-editor-head"><h2 id="noticeEditorTitle">新建公告</h2><button class="notice-editor-close" type="button" id="noticeEditorClose" aria-label="关闭">×</button></header>
+      <div class="notice-editor-body">
+        <label class="notice-field"><span>标题 <b>*</b></span><input id="noticeFieldTitle" type="text" maxlength="100" placeholder="请输入标题" required></label>
+        <div class="notice-editor-row">
+          <label class="notice-field"><span>类型 <b>*</b></span><select id="noticeFieldType" required><option value="通知">通知</option><option value="公告">公告</option></select></label>
+          <div class="notice-field"><span>状态</span><div class="notice-segmented" role="group" aria-label="公告状态"><button type="button" data-notice-status="正常" aria-pressed="true">正常</button><button type="button" data-notice-status="关闭" aria-pressed="false">关闭</button></div></div>
+        </div>
+        <label class="notice-field"><span>内容 <b>*</b></span><textarea id="noticeFieldContent" maxlength="5000" placeholder="请输入公告内容" required></textarea></label>
+        <p class="notice-field-feedback" id="noticeFieldFeedback" role="status"></p>
+      </div>
+      <footer class="notice-editor-foot"><button class="secondary-button" type="button" id="noticeEditorCancel">取消</button><button class="primary-button" type="submit" id="noticeEditorSubmit">新增</button></footer>
+    </form>
+  </dialog>
+
+  <dialog id="noticeDeleteDialog" class="notice-confirm" aria-labelledby="noticeDeleteTitle">
+    <div class="notice-confirm-head"><h2 id="noticeDeleteTitle">删除公告？</h2></div>
+    <div class="notice-confirm-body">确定删除 <strong id="noticeDeleteName"></strong>？删除后前台通知提醒中将不再显示。</div>
+    <footer class="notice-confirm-foot"><button class="secondary-button" type="button" id="noticeDeleteCancel">取消</button><button class="primary-button" type="button" id="noticeDeleteConfirm">删除</button></footer>
+  </dialog>
+
+  <div class="notice-toast" id="noticeToast" role="status" aria-live="polite"></div>
+
+  <script src="../src/notice-store.js?v=20261029-notice"></script>
+  <script src="../src/pages/notice-admin.js?v=20261029-notice"></script>
+</body>
+</html>

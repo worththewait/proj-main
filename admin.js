@@ -4,6 +4,7 @@
   const views = {
     files: { src: "pages/library-admin.html?embed=admin&view=files&v=20261029-person-addon", title: "文件管理" },
     perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261029-person-addon", title: "权限管理" },
+    notices: { src: "pages/notice-admin.html?embed=admin&v=20261029-notice", title: "通知公告" },
     settings: { src: "pages/home-settings.html?embed=admin&v=20261029-news-pagination", title: "自定义界面" },
   };
   if (window.BaigeUI) window.BaigeUI.hydrate();
