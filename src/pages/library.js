@@ -8,7 +8,7 @@
     author: doc.author, type: doc.docType, abstract: doc.abstract,
     permissions: doc.permissions, permissionExpiry: doc.permissionExpiry,
     personPermissions: doc.personPermissions, personPermissionExpiry: doc.personPermissionExpiry,
-    ownerDept: doc.ownerDept, accessMode: doc.accessMode, accessModeExpiry: doc.accessModeExpiry, accessModePrevious: doc.accessModePrevious, id: doc.id,
+    ownerDept: doc.ownerDept, accessMode: doc.accessMode, id: doc.id,
   }));
   const { escapeHtml } = window.BaigeUI;
   const page = window.BaigePage;
@@ -88,17 +88,11 @@
   let lastFocus = null;
   const permLevel = (doc) => store.effectiveAccessLevel(doc, state.department, state.user);
   const isOwner = (doc) => doc.ownerDept === state.department;
-  const isPublic = (doc) => store.effectiveAccessMode(doc) !== "limited";
+  const isPublic = (doc) => doc.accessMode !== "limited";
   const canFull = (doc) => isPublic(doc) || isOwner(doc) || permLevel(doc) >= 3;
   const canDownload = (doc) => permLevel(doc) >= 4;
   const accessNote = (doc) => {
-    if (isPublic(doc)) {
-      if (doc.accessModeExpiry && Date.parse(doc.accessModeExpiry) > Date.now()) {
-        const expiry = new Date(doc.accessModeExpiry);
-        if (!Number.isNaN(expiry.getTime())) return `限时全部公开 · 至 ${expiry.toLocaleDateString("zh-CN")}`;
-      }
-      return "";
-    }
+    if (doc.accessMode !== "limited") return "";
     if (isOwner(doc)) return "有限公开 · 本部门全文";
     if (canFull(doc)) return "有限公开 · 已授权全文";
     return "有限公开 · 试读 2 页";

@@ -51,9 +51,9 @@ test("personal permissions are additive to the department baseline", () => {
   assert.match(html, /部门基础/);
   assert.match(html, /个人未加授/);
   assert.match(html, /revokeMinLevel/);
-  assert.match(html, /不额外授权（沿用公开基线）/);
+  assert.match(html, /不额外授权（沿用部门权限）/);
   assert.match(html, /个人权限必须高于部门基础权限/);
-  assert.match(html, /selectedLevel > 0 && selectedLevel <= revokeMinLevel/);
+  assert.match(html, /requested <= base \? 0 : requested/);
 });
 
 test("library upload wizard only offers manager types and auto-selects a single type", () => {
@@ -106,14 +106,15 @@ test("library admin page keeps the full file and permission views behind the pla
   assert.match(read("src/app.js"), /page\.file !== pageFile/);
 });
 
-test("document public range can be set with an expiry", () => {
+test("permission modal supports target-level limited and public modes", () => {
   const html = read("pages/library-admin.html");
-  assert.match(html, /name="revokePublishMode"/);
-  assert.match(html, /id="revokePublishExpiry"/);
-  assert.match(html, /function renderRevokePublish/);
-  assert.match(html, /BaigeLibraryStore\.setAccessMode/);
-  assert.match(html, /全部公开有效期/);
-  assert.match(html, /自动恢复有限公开/);
-  assert.match(read("src/pages/library.js"), /effectiveAccessMode/);
-  assert.match(read("src/pages/library.js"), /限时全部公开/);
+  assert.match(html, /name="revokeGrantMode"/);
+  assert.match(html, /id="grantModeBox"/);
+  assert.match(html, /function renderGrantMode/);
+  assert.match(html, /BaigeLibraryStore\.setGrantMode/);
+  assert.match(html, /class="src-tabs"/);
+  assert.match(html, /class="type-chip/);
+  assert.doesNotMatch(html, /data-access="limited"/);
+  assert.match(html, /全部公开只影响当前部门/);
+  assert.match(html, /不含下载/);
 });

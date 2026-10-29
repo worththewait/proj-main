@@ -51,9 +51,14 @@ test("library store merges home, permission and file seed data", () => {
     assert.ok(store.departments.includes(doc.ownerDept));
     assert.ok(["public", "limited"].includes(doc.accessMode));
     assert.ok(doc.title && doc.category && doc.fileType);
-    assert.equal(doc.permissionModel, 2);
-    for (const dept of store.departments) assert.equal(doc.permissions[dept], 0);
-    assert.equal(store.effectiveLevel(doc, doc.ownerDept), 3);
+    if (doc.accessMode === "public") {
+      for (const dept of store.departments) assert.equal(doc.permissions[dept], 3);
+    } else {
+      assert.equal(doc.permissions[doc.ownerDept], 3);
+      for (const dept of store.departments) {
+        if (dept !== doc.ownerDept) assert.equal(doc.permissions[dept], 0);
+      }
+    }
   }
 });
 
@@ -133,15 +138,13 @@ test("library store mutations are shared by permission, file and home views", ()
     abstract: "测试上传文档",
   }]);
   assert.equal(store.loadDocs().length, before + 1);
-  assert.equal(created[0].permissions["经济研究中心"], 0);
-  assert.equal(store.effectiveLevel(created[0], "经济研究中心"), 3);
+  assert.equal(created[0].permissions["经济研究中心"], 3);
 
-  store.setPermissions([created[0].id], "经济研究中心", 4, "2020-01-01T00:00:00.000Z");
-  assert.equal(store.getDoc(created[0].id).permissions["经济研究中心"], 4);
-  assert.equal(store.effectiveLevel(store.getDoc(created[0].id), "经济研究中心"), 3);
+  store.setPermissions([created[0].id], "经济研究中心", 3, "2020-01-01T00:00:00.000Z");
+  assert.equal(store.getDoc(created[0].id).permissions["经济研究中心"], 3);
+  assert.equal(store.effectiveLevel(store.getDoc(created[0].id), "经济研究中心"), 0);
   assert.equal(store.purgeExpired(), 1);
   assert.equal(store.getDoc(created[0].id).permissions["经济研究中心"], 0);
-  assert.equal(store.effectiveLevel(store.getDoc(created[0].id), "经济研究中心"), 3);
 
   store.setPermissions([created[0].id], "经济研究中心", 4);
   assert.equal(store.effectiveLevel(store.getDoc(created[0].id), "经济研究中心"), 4);
@@ -187,29 +190,38 @@ test("personal permissions cannot reduce the department baseline", () => {
   assert.equal(store.effectiveAccessLevel(store.getDoc(doc.id), "动力研究院", "power-1"), 3);
 
   store.setPermissions([doc.id], "动力研究院", 0);
-  assert.equal(store.effectiveAccessLevel(store.getDoc(doc.id), "动力研究院", "power-1"), 3);
+  assert.equal(store.effectiveAccessLevel(store.getDoc(doc.id), "动力研究院", "power-1"), 0);
 
   store.setPermissions([doc.id], "动力研究院", 1);
   store.setPersonPermissions([doc.id], "power-1", 4);
   assert.equal(store.effectiveAccessLevel(store.getDoc(doc.id), "动力研究院", "power-1"), 4);
 });
 
-test("document public mode supports an expiry and reverts to limited", () => {
+test("target public mode affects only the selected department or person", () => {
   const { store } = createStore();
   const doc = store.loadDocs().find((item) => item.accessMode === "limited");
   assert.ok(doc);
   const future = new Date(Date.now() + 86400000).toISOString();
-  store.setAccessMode([doc.id], "public", future);
-  const updated = store.getDoc(doc.id);
-  assert.equal(updated.accessMode, "public");
-  assert.equal(updated.accessModeExpiry, future);
-  assert.equal(updated.accessModePrevious, "limited");
-  assert.equal(store.effectiveAccessMode(updated), "public");
+  store.setGrantMode([doc.id], "dept", "动力研究院", "public", 3, future);
+  let updated = store.getDoc(doc.id);
+  assert.equal(updated.permissions["动力研究院"], 3);
+  assert.equal(store.isDeptPublicGrant(updated, "动力研究院"), true);
+  assert.equal(store.effectiveLevel(updated, "动力研究院"), 3);
+  assert.equal(store.effectiveLevel(updated, "技术经济中心"), 0);
 
-  updated.accessModeExpiry = new Date(Date.now() - 1000).toISOString();
-  assert.equal(store.effectiveAccessMode(updated), "limited");
+  store.setGrantMode([doc.id], "person", "power-1", "public", 3, future);
+  updated = store.getDoc(doc.id);
+  assert.equal(store.isPersonPublicGrant(updated, "power-1"), true);
+  assert.equal(store.effectivePersonLevel(updated, "power-1"), 3);
+  assert.equal(store.effectiveAccessLevel(updated, "动力研究院", "power-1"), 3);
+
+  store.setGrantMode([doc.id], "person", "power-1", "limited", 0, null);
+  updated = store.getDoc(doc.id);
+  assert.equal(store.isPersonPublicGrant(updated, "power-1"), false);
+
+  updated.permissionExpiry["动力研究院"] = new Date(Date.now() - 1000).toISOString();
+  assert.equal(store.isDeptPublicGrant(updated, "动力研究院"), false);
   store.purgeExpired();
-  assert.equal(updated.accessMode, "limited");
-  assert.equal(updated.accessModeExpiry, null);
-  assert.equal(updated.accessModePrevious, null);
+  assert.equal(store.getDoc(doc.id).permissions["动力研究院"], 0);
+  assert.equal(store.getDoc(doc.id).publicDept["动力研究院"], undefined);
 });

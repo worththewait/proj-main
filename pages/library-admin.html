@@ -447,6 +447,8 @@
 #libPermRoot .pbadge.on{ background:var(--primary-soft); color:var(--primary); font-weight:600; }
 #libPermRoot .pbadge.off{ background:#f1f3f6; color:var(--faint); }
 #libPermRoot .pbadge.none{ background:#fde8e8; color:var(--red); font-weight:600; }
+#libPermRoot .pbadge.limited{ background:#fff4e5; color:#a45a12; font-weight:600; }
+#libPermRoot .pbadge.public{ background:#eef3fb; color:#5b6b82; font-weight:600; }
 #libPermRoot .act-cell{ text-align:right; white-space:nowrap; }
 #libPermRoot .row-act{ font-size:11.5px; cursor:pointer; padding:3px 11px; border:1px solid var(--line2); border-radius:6px; color:var(--text2); display:inline-block; transition:all var(--tr); }
 #libPermRoot .row-act:hover{ border-color:var(--primary); color:var(--primary); }
@@ -464,14 +466,26 @@
 /* 弹窗 */
 #libPermRoot .mask{ position:fixed; inset:0; background:rgba(20,30,50,.45); display:none; align-items:center; justify-content:center; z-index:180; }
 #libPermRoot .mask.show{ display:flex; }
-#libPermRoot .modal{ width:460px; max-width:92vw; max-height:calc(100vh - 40px); background:#fff; border-radius:16px; overflow-y:auto; box-shadow:0 24px 70px rgba(0,0,0,.2); }
-#libPermRoot .modal-head{ display:flex; align-items:center; justify-content:space-between; padding:16px 20px; border-bottom:1px solid var(--line); }
+#libPermRoot .modal{ width:460px; max-width:92vw; max-height:calc(100vh - 40px); display:flex; flex-direction:column; background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.2); }
+#libPermRoot .modal-head{ display:flex; align-items:center; justify-content:space-between; flex:0 0 auto; padding:16px 20px; border-bottom:1px solid var(--line); }
 #libPermRoot .modal-head b{ font-size:15px; color:var(--text); }
 #libPermRoot .close{ cursor:pointer; color:var(--muted); font-size:20px; line-height:1; transition:color var(--tr); }
 #libPermRoot .close:hover{ color:var(--text); }
-#libPermRoot .modal-body{ padding:18px 20px; }
+#libPermRoot .modal-body{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:18px 20px; overscroll-behavior:contain; }
 #libPermRoot .scope-desc{ font-size:12px; color:var(--text2); background:#f8fafd; border-radius:9px; padding:11px 14px; margin-bottom:14px; line-height:1.7; }
 #libPermRoot .scope-desc b{ color:var(--red); }
+#libPermRoot .grant-mode{ margin:0 0 13px; padding:10px 11px; border:1px solid var(--line); border-radius:9px; background:#fafbfe; }
+#libPermRoot .grant-mode .gm-head{ margin:0 0 7px; color:#2a3a4d; font-size:12px; font-weight:600; }
+#libPermRoot .grant-mode .gm-options{ display:flex; gap:8px; flex-wrap:wrap; }
+#libPermRoot .grant-mode .gm-option{ display:flex; align-items:flex-start; gap:7px; flex:1 1 160px; padding:8px 9px; border:1px solid var(--line2); border-radius:7px; background:#fff; cursor:pointer; }
+#libPermRoot .grant-mode .gm-option:has(input:checked){ border-color:var(--primary); background:#f5f9ff; }
+#libPermRoot .grant-mode .gm-option input{ margin:2px 0 0; accent-color:var(--primary); flex-shrink:0; }
+#libPermRoot .grant-mode .gm-option span{ display:flex; flex-direction:column; gap:1px; min-width:0; }
+#libPermRoot .grant-mode .gm-option b{ color:#2a3a4d; font-size:12px; font-weight:600; line-height:1.4; }
+#libPermRoot .grant-mode .gm-option:has(input:checked) b{ color:var(--primary); }
+#libPermRoot .grant-mode .gm-option small{ color:var(--muted); font-size:10px; line-height:1.45; }
+#libPermRoot .grant-mode .gm-info{ margin:7px 0 0; color:var(--muted); font-size:10.5px; line-height:1.5; }
+#libPermRoot .level-list[hidden], #libPermRoot .level-none[hidden]{ display:none !important; }
 #libPermRoot .level-list{ display:flex; flex-direction:column; gap:8px; }
 #libPermRoot .level-item{ display:flex; align-items:center; gap:12px; border:1px solid var(--line2); border-radius:10px; padding:11px 14px; cursor:pointer; transition:all var(--tr); position:relative; }
 #libPermRoot .level-item:hover{ border-color:var(--primary); }
@@ -498,7 +512,7 @@
 #libPermRoot .level-none.sel{ background:#f5f9ff; border-color:var(--primary); }
 #libPermRoot .perm-source{ margin-top:4px; font-size:10.5px; color:var(--muted); line-height:1.5; }
 #libPermRoot .perm-effective{ font-size:10.5px; color:var(--primary); font-weight:600; line-height:1.5; }
-#libPermRoot .modal-foot{ padding:13px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px; }
+#libPermRoot .modal-foot{ flex:0 0 auto; padding:13px 20px; border-top:1px solid var(--line); display:flex; justify-content:flex-end; gap:10px; background:#fff; }
 #libPermRoot .toast{ position:fixed; top:64px; left:50%; transform:translateX(-50%); background:rgba(30,40,60,.88); color:#fff; padding:10px 22px; border-radius:8px; font-size:12.5px; z-index:200; opacity:0; transition:opacity .3s; pointer-events:none; box-shadow:0 6px 20px rgba(0,0,0,.2); }
 #libPermRoot .toast.show{ opacity:1; }
 </style>
@@ -606,21 +620,6 @@
   #libPermRoot .access-pill{font-size:9.5px;font-weight:500;border-radius:4px;padding:1px 5px;white-space:nowrap}
   #libPermRoot .access-pill.limited{background:#fff4e5;color:#a45a12}
   #libPermRoot .access-pill.public{background:#eef3fb;color:#5b6b82}
-  #libPermRoot .revoke-public{margin:0 0 13px;padding:0 0 13px;border-bottom:1px solid var(--line)}
-  #libPermRoot .revoke-public .rp-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 8px;color:#2a3a4d;font-size:12.5px;font-weight:600}
-  #libPermRoot .revoke-public .rp-head span{color:var(--muted);font-size:10.5px;font-weight:400}
-  #libPermRoot .revoke-public .rp-note{margin:-2px 0 8px;color:var(--muted);font-size:10.5px;line-height:1.5}
-  #libPermRoot .revoke-public .pub-option{padding:9px 11px}
-  #libPermRoot .revoke-public .perm-expiry-box{margin-top:8px;padding:9px 10px}
-  #libPermRoot .pub-options{display:flex;flex-direction:column;gap:8px;margin:0 0 13px}
-  #libPermRoot .pub-option{display:flex;align-items:flex-start;gap:10px;padding:11px 13px;border:1px solid var(--line2);border-radius:9px;background:#fff;cursor:pointer;transition:border-color var(--tr),background var(--tr)}
-  #libPermRoot .pub-option:hover{border-color:var(--primary)}
-  #libPermRoot .pub-option:has(input:checked){border-color:var(--primary);background:#f5f9ff}
-  #libPermRoot .pub-option input{margin:2px 0 0;accent-color:var(--primary);flex-shrink:0}
-  #libPermRoot .pub-option span{display:flex;flex-direction:column;gap:2px;min-width:0}
-  #libPermRoot .pub-option b{color:#2a3a4d;font-size:12.5px;font-weight:600;line-height:1.5}
-  #libPermRoot .pub-option small{color:var(--muted);font-size:10.5px;line-height:1.5}
-  #libPermRoot .pub-option:has(input:checked) b{color:var(--primary)}
 </style>
 <style id="library-admin-people-tree">
   #libPermRoot .dept-node{margin:1px 0}
@@ -932,7 +931,6 @@
           </div>
         </div>
         <div class="type-row" id="typeRow"></div>
-  
         <div class="scope-bar">
           <span class="info" id="scopeInfo"></span>
           <div class="acts">
@@ -972,34 +970,22 @@
   <!-- 设置权限弹窗 -->
   <div class="mask" id="revokeMask" onclick="if(event.target===this)closeRevoke()">
     <div class="modal">
-      <div class="modal-head"><b>设置权限与公开范围</b><span class="close" onclick="closeRevoke()">×</span></div>
+      <div class="modal-head"><b>设置权限</b><span class="close" onclick="closeRevoke()">×</span></div>
       <div class="modal-body">
         <div class="scope-desc" id="revokeDesc"></div>
-        <div class="revoke-public">
-          <div class="rp-head">文档公开范围 <span>对所有部门生效</span></div>
-          <div class="rp-note">公开范围变更会对所选文档全局生效；下方权限级别只作用于当前授权对象。</div>
-          <div class="pub-options">
-            <label class="pub-option"><input type="radio" name="revokePublishMode" value="limited" onchange="onRevokePublishModeChange('limited')" /><span><b>有限公开</b><small>归属部门可查看全文，其他部门仅可试读前 2 页。</small></span></label>
-            <label class="pub-option"><input type="radio" name="revokePublishMode" value="public" onchange="onRevokePublishModeChange('public')" /><span><b>全部公开</b><small>所有部门都可查看全文；可设置到期时间，到期自动恢复有限公开。</small></span></label>
+        <div class="grant-mode" id="grantModeBox">
+          <div class="gm-head">授权模式</div>
+          <div class="gm-options">
+            <label class="gm-option"><input type="radio" name="revokeGrantMode" value="limited" onchange="onRevokeGrantModeChange('limited')" /><span><b>有限公开</b><small>按原 0—4 级权限授权</small></span></label>
+            <label class="gm-option"><input type="radio" name="revokeGrantMode" value="public" onchange="onRevokeGrantModeChange('public')" /><span><b>全部公开</b><small>仅当前对象可在线查看全文，不含下载</small></span></label>
           </div>
-          <div class="perm-expiry-box" id="revokePublishExpiryBox">
-            <div class="pe-head">全部公开有效期</div>
-            <select id="revokePublishExpiry" onchange="onRevokePublishExpiryChange(this.value)" aria-label="全部公开有效期">
-              <option value="permanent">永久有效</option>
-              <option value="7">7 天后自动恢复有限公开</option>
-              <option value="30">30 天后自动恢复有限公开</option>
-              <option value="90">90 天后自动恢复有限公开</option>
-              <option value="custom">自定义到期日期</option>
-            </select>
-            <input type="date" id="revokePublishExpiryDate" onchange="onRevokePublishExpiryDateChange(this.value)" aria-label="全部公开到期日期" hidden />
-            <div class="pe-hint" id="revokePublishExpiryHint">全部公开到期后自动恢复有限公开。</div>
-          </div>
+          <div class="gm-info" id="grantModeInfo" hidden>全部公开只影响当前部门/人员，其他部门/人员仍按有限公开处理；不含下载。</div>
         </div>
         <div class="level-list" id="levelList"></div>
-        <div class="level-none" onclick="pickNone()"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm4.2 12.8-1.4 1.4L12 13.4l-2.8 2.8-1.4-1.4L10.6 12 7.8 9.2l1.4-1.4L12 10.6l2.8-2.8 1.4 1.4L13.4 12z"/></svg><span id="revokeNoneLabel">不赋予（无全文权限，有限公开仅可试读前 2 页）</span></div>
+        <div class="level-none" onclick="pickNone()"><svg viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm4.2 12.8-1.4 1.4L12 13.4l-2.8 2.8-1.4-1.4L10.6 12 7.8 9.2l1.4-1.4L12 10.6l2.8-2.8 1.4 1.4L13.4 12z"/></svg><span id="revokeNoneLabel">不额外授权（沿用文档公开范围）</span></div>
         <div class="perm-expiry-box" id="permExpiryBox">
-          <div class="pe-head">授权有效期</div>
-          <select id="revokeExpiry" onchange="onRevokeExpiryChange(this.value)" aria-label="授权有效期">
+          <div class="pe-head">授权时间</div>
+          <select id="revokeExpiry" onchange="onRevokeExpiryChange(this.value)" aria-label="授权时间">
             <option value="permanent">永久有效</option>
             <option value="7">7 天后自动回收</option>
             <option value="30">30 天后自动回收</option>
@@ -1007,7 +993,7 @@
             <option value="custom">自定义到期日期</option>
           </select>
           <input type="date" id="revokeExpiryDate" onchange="onRevokeExpiryDateChange(this.value)" aria-label="自定义到期日期" hidden />
-          <div class="pe-hint" id="revokeExpiryHint">权限到期后自动回收，无需手动操作。</div>
+          <div class="pe-hint" id="revokeExpiryHint">授权到期后自动回收，无需手动操作。</div>
         </div>
       </div>
       <div class="modal-foot">
@@ -2790,12 +2776,12 @@ function reloadDocsFromStore(){
     const basePerm = isPerson
       ? (dept ? BaigeLibraryStore.effectiveLevel(d, dept) : 0)
       : (curDept && DEPTS.includes(curDept) ? BaigeLibraryStore.effectiveLevel(d, curDept) : 3);
-    const baselinePerm = isPerson
-      ? (dept ? BaigeLibraryStore.effectiveLevel(d, dept) : 0)
-      : (curDept && DEPTS.includes(curDept) ? BaigeLibraryStore.departmentBaseline(d, curDept) : 3);
     const extraPerm = isPerson ? BaigeLibraryStore.effectivePersonLevel(d, targetPerson) : 0;
     const effectivePerm = isPerson ? Math.max(basePerm, extraPerm) : basePerm;
     const fromPerson = isPerson && extraPerm > basePerm;
+    const grantPublic = isPerson
+      ? BaigeLibraryStore.isPersonPublicGrant(d, targetPerson)
+      : (curDept && DEPTS.includes(curDept) ? BaigeLibraryStore.isDeptPublicGrant(d, curDept) : false);
     return {
       ...d,
       name: d.title,
@@ -2804,9 +2790,9 @@ function reloadDocsFromStore(){
       type: d.category,
       isPerson,
       basePerm,
-      baselinePerm,
       extraPerm,
       perm: effectivePerm,
+      grantPublic,
       permSource: fromPerson ? 'person' : 'dept',
       permExpiry: fromPerson
         ? (d.personPermissionExpiry?.[targetPerson] || null)
@@ -2814,11 +2800,31 @@ function reloadDocsFromStore(){
     };
   });
 }
+function persistCurrentPermissions(){
+  if(!DEPTS.includes(curDept)) return;
+  const groups = new Map();
+  DOCS.forEach(d => {
+    const requested = Number(d.perm) || 0;
+    const base = Number(d.basePerm) || 0;
+    const level = targetType === 'person' && requested <= base ? 0 : requested;
+    const expiry = level > 0 ? (d.permExpiry || null) : null;
+    const key = level + '|' + (expiry || '');
+    if(!groups.has(key)) groups.set(key, { level, expiry, ids: [] });
+    groups.get(key).ids.push(d.id);
+  });
+  if(targetType === 'person' && targetPerson){
+    groups.forEach(g => BaigeLibraryStore.setPersonPermissions(g.ids, targetPerson, g.level, g.expiry));
+  } else {
+    groups.forEach(g => BaigeLibraryStore.setPermissions(g.ids, curDept, g.level, g.expiry));
+  }
+  reloadDocsFromStore();
+}
+
 let source='all', curType='all', kw='', page=1, size=12, aiMode=false;
 let selected = new Set();
 let revokeTarget = null;
 
-const LV_NAME = {0:'不赋予',1:'可搜索',2:'可见',3:'可在线查看',4:'可下载'};
+const LV_NAME = {0:'不额外授权',1:'可搜索',2:'可见',3:'可在线查看',4:'可下载'};
 const LV_DESC = {1:'仅可通过检索命中标题/摘要等元信息',2:'可浏览列表与详情元数据，不可看全文',3:'可在线预览全文，不可下载（默认）',4:'完整权限，可下载（需按需授予）'};
 
 function setSource(s){
@@ -2839,7 +2845,6 @@ function renderTypes(){
     types.map(t=>`<span class="type-chip ${curType===t?'active':''}" onclick="setType('${t}')">${t}</span>`).join('');
 }
 function setType(t){ curType=t; renderTypes(); resetList(); }
-
 function filtered(){
   return DOCS.filter(d=>{
     if(source==='crawl' && d.src!=='crawl') return false;
@@ -2855,7 +2860,7 @@ function filtered(){
 
 function render(){
   const list=filtered();
-  const denied = list.filter(d=>d.perm===0).length;
+  const unassigned = list.filter(d=>d.perm===0).length;
   const adjusted = list.filter(d=>d.perm!==0 && d.perm!==3).length;
   const pages=Math.max(1, Math.ceil(list.length/size));
   if(page>pages) page=pages;
@@ -2864,16 +2869,16 @@ function render(){
   if(!cur.length){ tbody.innerHTML='<tr><td colspan="6" class="empty">当前筛选条件下暂无文档</td></tr>'; }
   else {
     tbody.innerHTML = cur.map(d=>{
-      const accessMode = BaigeLibraryStore.effectiveAccessMode(d);
-      const publicExpiry = accessMode === 'public' && d.accessModeExpiry && Date.parse(d.accessModeExpiry) > Date.now()
-        ? new Date(d.accessModeExpiry).toLocaleDateString('zh-CN') : '';
-      const cls = d.perm===0 ? 'denied' : (d.perm===3 ? '' : 'adjusted');
+      const cls = d.perm!==0 && d.perm!==3 ? 'adjusted' : '';
+      const baseMode = d.grantPublic ? 'public' : d.accessMode;
+      const baseLabel = baseMode === 'public' ? '全部公开' : '有限公开';
+      const levels = d.grantPublic ? '' : (Number(d.perm) > 0 ? permBadges(d.perm) : '');
       return `<tr class="${cls}">
         <td><input type="checkbox" class="row-ck" data-id="${d.id}" ${selected.has(d.id)?'checked':''} onchange="toggleSelect(${d.id},this.checked)"></td>
-        <td><div class="d-name">${d.name}<span class="access-pill ${accessMode==='limited'?'limited':'public'}" onclick="singleRevoke(${d.id})" title="调整权限和公开范围" style="cursor:pointer">${accessMode==='limited'?'有限公开':'全部公开'}</span></div><div class="d-sub">${d.org} · ${d.author} · ${d.date}${publicExpiry ? ' · 全部公开至 ' + publicExpiry : ''}</div></td>
+        <td><div class="d-name">${d.name}<span class="access-pill ${d.accessMode==='limited'?'limited':'public'}">${d.accessMode==='limited'?'有限公开':'全部公开'}</span></div><div class="d-sub">${d.org} · ${d.author} · ${d.date}</div></td>
         <td><span class="d-src ${d.src==='crawl'?'src-crawl':'src-upload'}">${d.srcLabel}</span></td>
         <td class="src-type">${d.type || '—'}</td>
-        <td>${permBadges(d.perm)}${permSourceHtml(d)}${permExpiryHtml(d)}</td>
+        <td><span class="pbadge ${baseMode==='public'?'public':'limited'}">${baseLabel}</span>${levels}${d.grantPublic ? '' : permSourceHtml(d)}${permExpiryHtml(d)}</td>
         <td class="act-cell">
           ${d.perm===0
             ? '<span class="row-act grant" onclick="singleRevoke('+d.id+')">授权</span>'
@@ -2885,7 +2890,7 @@ function render(){
   document.getElementById('ckAll').checked = cur.length>0 && cur.every(d=>selected.has(d.id));
   document.getElementById('scopeInfo').innerHTML =
     (aiMode?'<span style="color:var(--primary)">AI 语义匹配</span> · ':'') +
-    '当前范围 <b>'+list.length+'</b> 篇 · 不赋予 <b style="color:var(--red)">'+denied+'</b> 篇 · 已调整 <b style="color:var(--orange)">'+adjusted+'</b> 篇 · 已选 '+selected.size+' 篇';
+    '当前范围 <b>'+list.length+'</b> 篇 · 未额外授权 <b style="color:var(--muted)">'+unassigned+'</b> 篇 · 已调整 <b style="color:var(--orange)">'+adjusted+'</b> 篇 · 已选 '+selected.size+' 篇';
   document.getElementById('pinfo').textContent = '共 '+list.length+' 篇 · 第 '+page+'/'+pages+' 页';
   document.getElementById('btnRevokeSel').disabled = selected.size===0;
   document.getElementById('btnScope').disabled = list.length===0;
@@ -2904,7 +2909,7 @@ function resetList(){ page=1; render(); }
 /* 当前权限列：拥有全部展示，不赋予显式红标 */
 const PERM_NAMES = ['可搜索','可见','可在线查看','可下载'];
 function permBadges(p){
-  if(p===0) return '<span class="pbadge none">不赋予</span>';
+  if(p===0) return '';
   return PERM_NAMES.map((n,i)=>'<span class="pbadge '+(p>=(i+1)?'on':'off')+'">'+n+'</span>').join('');
 }
 function permSourceHtml(d){
@@ -2924,8 +2929,7 @@ function permExpiryHtml(d){
 /* 设置权限弹窗 */
 let selectedLevel=3, revokeCount=0, revokeMinLevel=0;
 let revokeExpiryMode='permanent', revokeExpiryDate='';
-let revokePublishMode='limited', revokePublishDirty=false;
-let revokePublishExpiryMode='permanent', revokePublishExpiryDate='';
+let revokeGrantMode='limited';
 function targetDocsForRevoke(){
   if(revokeTarget==='selected') return [...selected].map(id=>DOCS.find(d=>d.id===id)).filter(Boolean);
   if(revokeTarget==='scope') return filtered();
@@ -2935,45 +2939,47 @@ function openRevoke(count){
   revokeCount = count;
   const isPerson = targetType === 'person' && Boolean(targetPerson);
   const docs = targetDocsForRevoke();
-  const allPublic = docs.length > 0 && docs.every(d => BaigeLibraryStore.effectiveAccessMode(d) === 'public');
-  revokePublishMode = allPublic ? 'public' : 'limited';
-  revokePublishDirty = false;
-  revokePublishExpiryMode = 'permanent';
-  revokePublishExpiryDate = '';
-  const floors = docs.map(d=>Number(d.baselinePerm)||0);
+  const bases = docs.map(d=>Number(d.basePerm)||0);
   const extras = docs.map(d=>Number(d.extraPerm)||0);
-  revokeMinLevel = floors.length ? Math.max(...floors) : 0;
+  revokeMinLevel = isPerson && bases.length ? Math.max(...bases) : 0;
   const currentExtra = extras.length ? Math.max(...extras) : 0;
-  selectedLevel = isPerson ? (currentExtra > revokeMinLevel ? currentExtra : 0) : (revokeMinLevel >= 3 ? 0 : 3);
+  selectedLevel = isPerson ? (currentExtra > revokeMinLevel ? currentExtra : 0) : 3;
+  const hasLimited = docs.some(d => d.accessMode === 'limited');
+  const currentPublic = docs.length > 0 && docs.every(d => isPerson
+    ? BaigeLibraryStore.isPersonPublicGrant(d, targetPerson)
+    : BaigeLibraryStore.isDeptPublicGrant(d, curDept));
+  revokeGrantMode = hasLimited && currentPublic ? 'public' : 'limited';
+  const grantModeBox = document.getElementById('grantModeBox');
+  if(grantModeBox) grantModeBox.hidden = !hasLimited;
   const targetName = isPerson ? ((BaigeLibraryStore.people.find(p=>p.id===targetPerson)?.name || '人员') + '（' + curDept + '）') : curDept;
   const personNote = isPerson
     ? '个人权限必须高于部门基础权限；低于或等于部门基础的级别不可选，只能选择高于部门基础或不额外授权。所选文档部门基础不同时，以最高基础为准。'
-    : '可多选，勾选高级别自动包含低级别。公开范围决定基线，低于基线的级别不会生效。';
+    : '可多选，勾选高级别自动包含低级别。';
   document.getElementById('revokeDesc').innerHTML = '请选择要赋予 <b>'+targetName+'</b> 对所选 <b>'+count+'</b> 篇文档的权限。'+personNote;
   const noneLabel = document.getElementById('revokeNoneLabel');
-  if(noneLabel) noneLabel.textContent = isPerson || revokeMinLevel > 0 ? '不额外授权（沿用公开基线）' : '不赋予（无全文权限，有限公开仅可试读前 2 页）';
+  if(noneLabel) noneLabel.textContent = isPerson ? '不额外授权（沿用部门权限）' : '不额外授权（沿用文档公开范围）';
   const noneOption = document.querySelector('#revokeMask .level-none');
-  if(noneOption) noneOption.classList.toggle('is-no-extra', isPerson || revokeMinLevel > 0);
+  if(noneOption) noneOption.classList.toggle('is-no-extra', isPerson);
   const modalTitle = document.querySelector('#revokeMask .modal-head b');
-  if(modalTitle) modalTitle.textContent = '设置权限与公开范围';
+  if(modalTitle) modalTitle.textContent = isPerson ? '设置个人加授权限' : '设置权限';
   const confirmButton = document.querySelector('#revokeMask .modal-foot .btn.primary');
   if(confirmButton) confirmButton.textContent = isPerson ? '确认加授' : '确认赋予';
   revokeExpiryMode = 'permanent';
   revokeExpiryDate = '';
   renderLevels();
-  renderRevokePublish();
+  renderGrantMode();
   document.getElementById('revokeMask').classList.add('show');
 }
 const LV_ICON = ['M10 2a8 8 0 1 0 4.9 14.3l5 5 1.4-1.4-5-5A8 8 0 0 0 10 2zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12z','M12 5c-4 0-7 2.6-7 6 0 1.5.6 2.9 1.5 4L5 19l4-1.5c1 .4 2 .5 3 .5 4 0 7-2.6 7-6s-3-6-7-6zm0 2c2.8 0 5 1.8 5 4s-2.2 4-5 4c-.8 0-1.6-.2-2.3-.5l-.3-.1-2 .8.8-2-.1-.3C9.8 14.4 7 13 7 11c0-2.2 2.2-4 5-4z','M5 3h14a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zm2 3v6l2 2 2-2V6h2v6l-4 4-4-4V6h2zm9 10v2H8v-2h8z','M12 2a1 1 0 0 1 1 1v6h6a1 1 0 1 1 0 2h-6v6a1 1 0 1 1-2 0v-6H5a1 1 0 1 1 0-2h6V3a1 1 0 0 1 1-1z'];
 function renderLevels(){
   document.getElementById('levelList').innerHTML = PERM_NAMES.map((n,i)=>{
     const lv=i+1;
-    const disabled = lv <= revokeMinLevel;
+    const disabled = targetType === 'person' && lv <= revokeMinLevel;
     const checked = !disabled && selectedLevel>=lv;
     const click = disabled ? '' : `onclick="toggleLevel(${lv},${!checked})"`;
     return `<label class="level-item ${checked?'sel':''} ${disabled?'is-disabled':''}" data-lv="${lv}" ${click}>
       <span class="lv-ic"><svg viewBox="0 0 24 24"><path d="${LV_ICON[i]}"/></svg></span>
-      <span class="lv-body"><span class="lv-name">${n}</span><div class="lv-desc">${disabled ? (targetType === 'person' ? '已包含在部门基础权限中' : '已包含在公开基线中') : LV_DESC[lv]}</div></span>
+      <span class="lv-body"><span class="lv-name">${n}</span><div class="lv-desc">${disabled ? '已包含在部门基础权限中' : LV_DESC[lv]}</div></span>
       <span class="lv-check"><svg viewBox="0 0 24 24"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z"/></svg></span>
     </label>`;
   }).join('');
@@ -2982,7 +2988,7 @@ function renderLevels(){
   renderRevokeExpiry();
 }
 function toggleLevel(lv, checked){
-  if(lv <= revokeMinLevel) return;
+  if(targetType === 'person' && lv <= revokeMinLevel) return;
   if(checked){ selectedLevel = Math.max(selectedLevel, lv); }
   else { selectedLevel = Math.min(selectedLevel, lv-1); }
   renderLevels();
@@ -3002,63 +3008,49 @@ function renderRevokeExpiry(){
   const select = document.getElementById('revokeExpiry');
   const date = document.getElementById('revokeExpiryDate');
   const hint = document.getElementById('revokeExpiryHint');
-  const noExtra = selectedLevel === 0 || selectedLevel <= revokeMinLevel;
-  const disabled = selectedLevel === 0 || noExtra;
+  const publicMode = revokeGrantMode === 'public';
+  const noExtra = targetType === 'person' && selectedLevel <= revokeMinLevel;
+  const disabled = !publicMode && (selectedLevel === 0 || noExtra);
   if(select){ select.disabled = disabled; select.value = revokeExpiryMode; }
   if(date){ date.disabled = disabled; date.hidden = disabled || revokeExpiryMode !== 'custom'; date.value = revokeExpiryDate || ''; }
   if(hint){
-    if(disabled) hint.textContent = (targetType === 'person' || revokeMinLevel > 0) ? '不额外授权时沿用公开基线，无需设置有效期。' : '不赋予权限时无需设置有效期。';
+    if(disabled) hint.textContent = targetType === 'person' ? '不额外授权时沿用部门基础权限，无需设置有效期。' : '不额外授权时无需设置有效期。';
+    else if(publicMode) hint.textContent = revokeExpiryMode === 'custom'
+      ? (revokeExpiryDate ? '将在 ' + revokeExpiryDate + ' 23:59 自动回收全部公开；不含下载。' : '请选择到期日期；到期当天 23:59 自动回收全部公开。')
+      : (revokeExpiryMode === 'permanent' ? '永久有效；全部公开仅在线查看全文，不含下载。' : '将在 ' + revokeExpiryMode + ' 天后自动回收全部公开；不含下载。');
     else if(revokeExpiryMode === 'custom') hint.textContent = revokeExpiryDate ? '将在 ' + revokeExpiryDate + ' 23:59 自动回收权限。' : '请选择到期日期，到期当天 23:59 自动回收。';
     else if(revokeExpiryMode === 'permanent') hint.textContent = '永久有效；也可改为限时授权，到期自动回收。';
     else hint.textContent = '将在 ' + revokeExpiryMode + ' 天后自动回收权限，无需手动操作。';
   }
 }
-function onRevokePublishModeChange(value){
-  revokePublishMode = value === 'public' ? 'public' : 'limited';
-  revokePublishDirty = true;
-  renderRevokePublish();
+function onRevokeGrantModeChange(value){
+  revokeGrantMode = value === 'public' ? 'public' : 'limited';
+  renderGrantMode();
 }
-function onRevokePublishExpiryChange(value){
-  revokePublishExpiryMode = value;
-  revokePublishDirty = true;
-  renderRevokePublish();
-}
-function onRevokePublishExpiryDateChange(value){
-  revokePublishExpiryDate = value;
-  revokePublishDirty = true;
-  renderRevokePublish();
-}
-function renderRevokePublish(){
-  const limited = revokePublishMode === 'limited';
-  document.querySelectorAll('input[name="revokePublishMode"]').forEach(input => {
-    input.checked = input.value === revokePublishMode;
+function renderGrantMode(){
+  const publicMode = revokeGrantMode === 'public';
+  document.querySelectorAll('input[name="revokeGrantMode"]').forEach(input => {
+    input.checked = input.value === revokeGrantMode;
   });
-  const box = document.getElementById('revokePublishExpiryBox');
-  if(box) box.style.display = limited ? 'none' : '';
-  const select = document.getElementById('revokePublishExpiry');
-  const date = document.getElementById('revokePublishExpiryDate');
-  const hint = document.getElementById('revokePublishExpiryHint');
-  if(select){ select.disabled = limited; select.value = revokePublishExpiryMode; }
-  if(date){ date.disabled = limited; date.hidden = limited || revokePublishExpiryMode !== 'custom'; date.value = revokePublishExpiryDate || ''; }
-  if(hint){
-    if(limited) hint.textContent = '有限公开：归属部门可查看全文，其他部门仅可试读前 2 页。';
-    else if(revokePublishExpiryMode === 'permanent') hint.textContent = '全部公开永久有效；所有部门可查看全文。';
-    else if(revokePublishExpiryMode === 'custom') hint.textContent = revokePublishExpiryDate
-      ? '将在 ' + revokePublishExpiryDate + ' 23:59 自动恢复有限公开。'
-      : '请选择到期日期；到期当天 23:59 自动恢复有限公开。';
-    else hint.textContent = '将在 ' + revokePublishExpiryMode + ' 天后自动恢复有限公开。';
-  }
+  const levelList = document.getElementById('levelList');
+  const none = document.querySelector('#revokeMask .level-none');
+  const info = document.getElementById('grantModeInfo');
+  if(levelList){ levelList.hidden = publicMode; levelList.style.display = publicMode ? 'none' : ''; }
+  if(none){ none.hidden = publicMode; none.style.display = publicMode ? 'none' : ''; }
+  if(info) info.hidden = !publicMode;
+  renderRevokeExpiry();
 }
 function singleRevoke(id){ revokeTarget={id:id}; openRevoke(1); }
 function revokeSelected(){ if(!selected.size) return; revokeTarget='selected'; openRevoke(selected.size); }
 function revokeScope(){ const list=filtered(); if(!list.length){ showToast('当前筛选范围为空'); return; } revokeTarget='scope'; openRevoke(list.length); }
 function confirmRevoke(){
-  if(selectedLevel > 0 && selectedLevel <= revokeMinLevel){
-    showToast(targetType === 'person' ? '个人权限必须高于部门基础权限' : '权限级别不能低于公开基线','warning');
+  if(revokeGrantMode === 'limited' && targetType === 'person' && selectedLevel > 0 && selectedLevel <= revokeMinLevel){
+    showToast('个人权限必须高于部门基础权限','warning');
     return;
   }
   let expiresAt = null;
-  if(selectedLevel > 0 && revokeExpiryMode !== 'permanent'){
+  const needsExpiry = revokeGrantMode === 'public' || selectedLevel > 0;
+  if(needsExpiry && revokeExpiryMode !== 'permanent'){
     if(revokeExpiryMode === 'custom'){
       if(!revokeExpiryDate){ showToast('请选择授权到期日期','warning'); return; }
       const custom = new Date(revokeExpiryDate + 'T23:59:59');
@@ -3071,61 +3063,38 @@ function confirmRevoke(){
     }
   }
   const ids = revokeTarget==='selected' ? [...selected] : revokeTarget==='scope' ? filtered().map(d=>d.id) : [revokeTarget.id];
-  const publicChanged = revokePublishDirty;
-  let publicExpiresAt = null;
-  if(publicChanged && revokePublishMode === 'public' && revokePublishExpiryMode !== 'permanent'){
-    if(revokePublishExpiryMode === 'custom'){
-      if(!revokePublishExpiryDate){ showToast('请选择全部公开到期日期','warning'); return; }
-      const custom = new Date(revokePublishExpiryDate + 'T23:59:59');
-      if(Number.isNaN(custom.getTime()) || custom.getTime() <= Date.now()){ showToast('全部公开到期日期必须晚于当前时间','warning'); return; }
-      publicExpiresAt = custom.toISOString();
-    } else {
-      const date = new Date();
-      date.setDate(date.getDate() + Number(revokePublishExpiryMode));
-      publicExpiresAt = date.toISOString();
-    }
-  }
-  if(publicChanged) BaigeLibraryStore.setAccessMode(ids, revokePublishMode, publicExpiresAt);
-  if(targetType === 'person' && targetPerson){
-    try {
-      BaigeLibraryStore.setPersonPermissions(ids, targetPerson, selectedLevel, expiresAt);
-    } catch {
-      BaigeLibraryStore.setPersonPermissions(ids, targetPerson, 0);
-    }
+  const isPerson = targetType === 'person' && Boolean(targetPerson);
+  const kind = isPerson ? 'person' : 'dept';
+  const targetId = isPerson ? targetPerson : curDept;
+  const count = BaigeLibraryStore.setGrantMode(ids, kind, targetId, revokeGrantMode, revokeGrantMode === 'public' ? 3 : selectedLevel, expiresAt);
+  selected.clear(); closeRevoke(); reloadDocsFromStore(); render();
+  const expiryText = expiresAt ? '，授权至 ' + new Date(expiresAt).toLocaleDateString('zh-CN') : '';
+  if(revokeGrantMode === 'public'){
+    showToast('已设置 ' + count + ' 篇文档对该' + (isPerson ? '人员' : '部门') + '全部公开（仅在线查看全文，不含下载）' + expiryText);
+  } else if(selectedLevel === 0){
+    showToast('已清除 ' + count + ' 篇文档的授权。');
+  } else if(isPerson){
+    showToast('已更新 ' + count + ' 篇文档的个人加授。' + expiryText);
   } else {
-    BaigeLibraryStore.setPermissions(ids, curDept, selectedLevel, expiresAt);
-  }
-  reloadDocsFromStore();
-  const n = ids.length;
-  selected.clear(); closeRevoke(); render();
-  const expiryText = expiresAt ? '，有效至 ' + new Date(expiresAt).toLocaleDateString('zh-CN') : '';
-  const publicText = publicChanged ? '；公开范围已同步' : '';
-  if(selectedLevel === 0){
-    showToast('已清除额外授权，回落到公开基线。'+publicText);
-  } else if(targetType === 'person'){
-    showToast('已更新 '+n+' 篇文档的个人加授。'+expiryText+publicText);
-  } else {
-    showToast('已将 '+n+' 篇文档权限设置为【'+LV_NAME[selectedLevel]+'】'+expiryText+publicText);
+    showToast('已将 ' + count + ' 篇文档权限设置为【' + LV_NAME[selectedLevel] + '】' + expiryText);
   }
 }
 function singleRestore(id){
   const person = targetType === 'person';
-  if(person && targetPerson) BaigeLibraryStore.setPersonPermissions([id], targetPerson, 0);
-  else BaigeLibraryStore.setPermissions([id], curDept, 0);
-  reloadDocsFromStore();
+  const d=DOCS.find(x=>x.id===id);
+  if(d){ d.perm = person ? 0 : 3; d.permExpiry=null; }
+  persistCurrentPermissions();
   render();
-  showToast(person ? '已清除该文档的个人加授，权限回落到部门基础权限。' : '已清除额外授权，权限回落到公开基线。');
+  showToast(person ? '已清除该文档的个人加授，权限回落到部门基础权限。' : '已恢复默认权限（可在线查看）');
 }
 function restoreAll(){
   if(!curDept){ showToast('请先选择部门'); return; }
   const person = targetType === 'person';
   const n=DOCS.length;
-  const ids=DOCS.map(d=>d.id);
-  if(person && targetPerson) BaigeLibraryStore.setPersonPermissions(ids, targetPerson, 0);
-  else BaigeLibraryStore.setPermissions(ids, curDept, 0);
-  reloadDocsFromStore();
+  DOCS.forEach(d=>{ d.perm = person ? 0 : 3; d.permExpiry=null; });
+  persistCurrentPermissions();
   selected.clear(); render();
-  showToast(person ? '已清除全部 '+n+' 篇文档的个人加授，权限回落到部门基础权限。' : '已清除全部 '+n+' 篇文档的额外授权，权限回落到公开基线。');
+  showToast(person ? '已清除全部 '+n+' 篇文档的个人加授，权限回落到部门基础权限。' : '已将全部 '+n+' 篇文档恢复默认权限（可搜索/可见/可在线查看）');
 }
 function closeRevoke(){ document.getElementById('revokeMask').classList.remove('show'); }
 
