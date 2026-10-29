@@ -45,7 +45,7 @@
         <h2 id="toolGroup${index}">${group}</h2>
         <div class="tool-list">${groupedTools.map((tool) => `
           <button class="tool-entry" data-tool="${escapeHtml(tool.name)}" data-tool-group="${escapeHtml(tool.group)}">
-            <span class="tool-icon">${icon(tool.icon)}</span>
+            <span class="tool-icon">${window.BaigeDirectoryIcons.icon(tool.icon)}</span>
             <span class="tool-entry-copy"><span class="tool-name">${escapeHtml(tool.name)}</span>
             <span class="tool-description">${escapeHtml(tool.description)}</span></span>
           </button>`).join("")}</div>

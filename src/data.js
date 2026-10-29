@@ -6,7 +6,6 @@ const tools = [
  {name:"OCR识别",group:"文档处理",icon:"scan",description:"将图片、扫描件中的文字转为可编辑内容。"},
  {name:"纠错校对",group:"文档处理",icon:"check",description:"检查错别字、语病与标点，完善文本表达。"},
  {name:"提示词生成",group:"写作创作",icon:"chat",description:"明确任务、角色与要求，组织有效的提示词。"},
- {name:"专业编写",group:"写作创作",icon:"pen",description:"围绕专业主题，辅助搭建框架与撰写内容。"},
  {name:"公文写作",group:"写作创作",icon:"file",description:"规范公文结构与措辞，辅助起草日常材料。"},
  {name:"PPT生成",group:"写作创作",icon:"slides",description:"将主题与提纲整理为逻辑清晰的演示文稿。"},
  {name:"文献伴读",group:"研究辅助",icon:"book",description:"梳理文献重点，理解研究方法与核心结论。"},

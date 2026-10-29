@@ -272,3 +272,5 @@ body[data-page="smart-tools"] {
     column-gap: 28px;
   }
 }
+
+[data-page="smart-tools"] .tool-entry .home-directory-glyph { width: 25px; height: 25px; }

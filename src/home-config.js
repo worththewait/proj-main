@@ -38,7 +38,7 @@
     {id:'knowledge', date:'2026-10-24', title:'知识库问答，让回答有据可循',
       body:'知识库问答支持行业、企业、部门三个范围。可跨分类选择多个知识库，确认后将问题与所选范围带入对话。当前为原型演示，实际文档检索与模型回答待接入。', status:'published', destination:{route:'qa',child:'对话'}},
     {id:'tools', date:'2026-10-24', title:'专业工具，贯通资料处理与内容创作',
-      body:'从文档翻译、OCR识别到专业编写、PPT生成与思维导图生成，按任务选择对应工具。工具目录与独立页签可体验操作流程，实际处理能力待接入。', status:'published', destination:{route:'smart-tools',child:''}},
+      body:'从文档翻译、OCR识别到公文写作、PPT生成与思维导图生成，按任务选择对应工具。工具目录与独立页签可体验操作流程，实际处理能力待接入。', status:'published', destination:{route:'smart-tools',child:''}},
     {id:'library-news', date:'2026-10-23', title:'文库资源，支持专业资料查阅', body:'在百舸文库中浏览分类资源，查找所需的行业资料与研究文献。', status:'published', destination:{route:'library',child:''}},
     {id:'datasets-news', date:'2026-10-22', title:'高质量数据集，汇聚船海领域资源', body:'通过数据集目录了解船海产业、标准、质量及科技成果等数据资源。', status:'published', destination:{route:'datasets',child:''}},
     {id:'writing-news', date:'2026-10-21', title:'百舸写作，辅助组织专业内容', body:'从写作入口开始整理主题与内容框架，探索专业写作工作流程。', status:'published', destination:{route:'writing',child:''}},
@@ -86,7 +86,7 @@
     const result=defaults(); let value;
     try {value=JSON.parse(window.localStorage.getItem(storageKey));} catch {}
     if (value?.version===2) {
-      result.recommendedIds=validateRecommendations(value.recommendedIds)??result.recommendedIds;
+      result.recommendedIds=validateRecommendations(Array.isArray(value.recommendedIds) ? value.recommendedIds.filter(id=>id!=="tool:专业编写") : value.recommendedIds)??result.recommendedIds;
       result.slides=carousel.validate(safeSlides(value.slides))||result.slides;
       result.updates=validateUpdates(safeUpdates(value.updates))??result.updates;
       if (!value.examples20261028 && Array.isArray(value.updates)) {

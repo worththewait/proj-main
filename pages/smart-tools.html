@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>智能工具 · 百舸数智平台</title>
   <link rel="stylesheet" href="../styles.css" />
-  <link rel="stylesheet" href="../tools-visual.css" />
+  <link rel="stylesheet" href="../tools-visual.css?v=20261029-icons" />
 </head>
 <body class="module-page" data-page="smart-tools">
   <main class="module-main">
@@ -15,7 +15,7 @@
 
       </div>
     </div>
-    <!-- 修改目录布局在此处；工具名称、分类与说明统一维护在 src/data.js。 -->
+    <!-- 修改目录布局在此处；工具名称、分类与说明统一维护在 src/data.js?v=20261029-remove-writing。 -->
     <template id="catalogTemplate">
       <section class="featured-section" aria-labelledby="featuredTitle">
         <div class="featured-heading"><h1 id="featuredTitle">热门工具</h1>
@@ -53,10 +53,11 @@
       <section class="integration-panel"><div class="empty-state"><span data-detail-icon></span><h2>正在集成</h2><p>相关内容接入后，将在这里呈现。</p><button class="secondary-button" data-shortcut="smart-tools">继续浏览工具<span data-icon="arrow" aria-hidden="true"></span></button></div></section>
     </template>
   </main>
-  <script src="../src/data.js"></script>
+  <script src="../src/data.js?v=20261029-remove-writing"></script>
   <script src="../src/ui.js"></script>
   <script src="../src/page-bridge.js"></script>
+  <script src="../src/home-directory-icons.js"></script>
   <script src="../src/tool-workspace.js"></script>
-  <script src="../src/pages/smart-tools.js"></script>
+  <script src="../src/pages/smart-tools.js?v=20261029-icons"></script>
 </body>
 </html>
