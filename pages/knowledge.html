@@ -5,15 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>知识库 · 百舸数智平台</title>
   <link rel="stylesheet" href="../styles.css" />
-  <link rel="stylesheet" href="../knowledge.css?v=20261029-knowledge" />
+  <link rel="stylesheet" href="../knowledge.css?v=20261030-tabs" />
 </head>
 <body class="module-page" data-page="knowledge">
   <main class="module-main">
     <div class="content-scroll" id="contentScroll">
       <div class="content-inner knowledge-hub" id="content">
         <header class="kb-hero">
-          <h1>企业知识文档 <span>智能应用</span></h1>
-          <p>统一管理行业、企业、部门与个人知识资源</p>
+          <div class="kb-hero-copy">
+            <h1>企业知识文档 <span>智能应用</span></h1>
+            <p>统一管理行业、企业、部门与个人知识资源</p>
+          </div>
           <form class="kb-search" id="kbSearchForm" role="search">
             <label class="kb-search-field">
               <span data-icon="search" aria-hidden="true"></span>
@@ -31,12 +33,14 @@
           </form>
         </header>
 
-        <div id="kbSections"></div>
+        <nav class="kb-tabs" id="kbTabs" role="tablist" aria-label="知识库分类"></nav>
+        <div class="kb-workbar" id="kbWorkbar"></div>
+        <div class="kb-view" id="kbSections" role="tabpanel" aria-label="知识库内容"></div>
 
         <section class="kb-empty" id="kbEmpty" hidden>
           <span data-icon="search" aria-hidden="true"></span>
-          <h2>没有找到匹配的知识库</h2>
-          <p>试试其他关键词，或清空企业、部门和文件类型筛选。</p>
+          <h2 id="kbEmptyTitle">没有找到匹配的知识库</h2>
+          <p id="kbEmptyCopy">试试其他关键词，或清空企业、部门和文件类型筛选。</p>
           <button class="kb-secondary-button" type="button" id="kbReset">清空筛选</button>
         </section>
       </div>
@@ -66,6 +70,6 @@
   <script src="../src/data.js"></script>
   <script src="../src/ui.js"></script>
   <script src="../src/page-bridge.js"></script>
-  <script src="../src/pages/knowledge.js?v=20261029-knowledge"></script>
+  <script src="../src/pages/knowledge.js?v=20261030-tabs"></script>
 </body>
 </html>
