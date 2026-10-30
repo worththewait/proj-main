@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>百舸问答 · 百舸数智平台</title>
   <link rel="stylesheet" href="../styles.css?v=20261026-xd" />
-  <link rel="stylesheet" href="../qa-visual.css?v=20261029-history-list" />
+  <link rel="stylesheet" href="../qa-visual.css?v=20261030-no-attachment" />
 </head>
 <body class="module-page qa-module" data-page="qa">
   <main class="module-main qa-workspace">
@@ -64,9 +64,8 @@
               </div>
               <label class="sr-only" for="homePrompt">输入你的问题</label>
               <textarea id="homePrompt" rows="3" placeholder="请输入你的问题，Enter 发送，Shift + Enter 换行" aria-describedby="conversationFeedback"></textarea>
-              <div id="conversationAttachments" class="qa-attachments" hidden></div>
               <div class="qa-composer-toolbar">
-                <input type="file" id="attachmentInput" multiple hidden /><button type="button" id="addAttachment" class="qa-attachment-button" aria-label="添加附件"><span data-icon="plus"></span></button><div class="qa-modes" role="group" aria-label="问答模式">
+                <div class="qa-modes" role="group" aria-label="问答模式">
                   <button class="qa-mode-button is-active" type="button" id="generalMode" aria-pressed="true"><span data-icon="chat" aria-hidden="true"></span>通用问答</button>
                   <button class="qa-mode-button" type="button" id="knowledgeMode" aria-pressed="false" aria-haspopup="dialog" aria-expanded="false" aria-controls="knowledgePicker"><span data-icon="book" aria-hidden="true"></span><span id="knowledgeModeLabel">知识问答</span></button><button class="qa-mode-button" type="button" id="webSearchMode" aria-pressed="false" title="联网搜索（演示）"><span data-icon="globe" aria-hidden="true"></span>联网搜索</button>
                 </div>
@@ -103,6 +102,6 @@
   <script src="../src/page-bridge.js?v=20261023-comments"></script>
   <script src="../src/qa-session.js"></script>
   <script src="../src/conversation-data.js"></script>
-  <script src="../src/pages/home.js?v=20261029-history-list"></script>
+  <script src="../src/pages/home.js?v=20261030-no-attachment"></script>
 </body>
 </html>
