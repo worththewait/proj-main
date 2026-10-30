@@ -99,7 +99,7 @@ body { background:#f5f7fb; }
 .fv-body { padding:8px 24px 24px; }
 .fv-tt { font-size:14px; line-height:1.7; }
 .fv-meta { font-size:12px; color:#75839a; }
-/* 栏目名直接作为可切换的页面标题，日期与收藏共用这一行。 */
+/* 栏目名直接作为可切换的页面标题，日期归入早报工具行。 */
 .intel-tabbar { position:relative; z-index:300; width:100%; max-width:1460px; margin:0 auto; height:auto; min-height:76px; padding:20px 30px 12px; gap:24px; border:0; background:transparent; }
 .intel-tabbar.scrolled { box-shadow:none; }
 .intel-title-tabs { display:flex; align-items:center; gap:28px; flex-shrink:0; }
@@ -111,10 +111,12 @@ body { background:#f5f7fb; }
 .intel-title-tabs .intel-tab:not(.active):hover { color:#1d2433; }
 .intel-title-tabs .intel-tab:focus-visible { outline:2px solid #7898ee; outline-offset:4px; border-radius:2px; }
 .intel-header-tools { margin-left:auto; display:flex; align-items:center; gap:24px; padding-bottom:8px; }
-.intel-header-tools .ph-date b { font-size:15px; font-weight:500; letter-spacing:0; }
-.intel-header-tools .ph-date .wd2 { margin-left:4px; }
-.intel-header-tools .cal-ic { margin-top:0; }
-.intel-header-tools .intel-cal-pop { left:auto; right:0; }
+.daily-main > .col-head { gap:20px; height:auto; min-height:34px; flex-wrap:wrap; }
+.daily-main > .col-head > .ct { flex-shrink:0; }
+.daily-main > .col-head .ph-date b { font-size:16px; font-weight:500; letter-spacing:0; }
+.daily-main > .col-head .ph-date { gap:7px; }
+.daily-main > .col-head .ph-date .wd2 { margin-left:4px; }
+.daily-main > .col-head .cal-ic { margin-top:0; }
 .intel-header-tools .tab-fav { margin-left:0; padding-inline:0; }
 .intel-track-tools { display:flex; align-items:center; gap:8px; margin-bottom:18px; min-height:34px; flex-wrap:wrap; }
 .intel-track-tools .tk-switch { margin-right:auto; }

@@ -458,7 +458,7 @@
   .intel-embed { display: flex; height: 100vh; height: 100dvh; min-height: 0; }
   .intel-embed .app-main { height: 100%; }
 </style>
-<link rel="stylesheet" href="../intel-visual.css?v=20261029-title-tabs" />
+<link rel="stylesheet" href="../intel-visual.css?v=20261030-early-date" />
 </head>
 <body data-page="intel">
   <div class="intel-embed">
@@ -985,7 +985,6 @@ function renderShell() {
       return '<' + tag + ' class="intel-title-item"><button type="button" class="intel-tab' + (active ? ' active' : '') + '" aria-pressed="' + active + '" data-v="' + t.id + '">' + t.label + '</button></' + tag + '>';
     }).join('') + '</div>'
     + '<div class="intel-header-tools">'
-    + (view === 'early' && !detailItem && !detailTrack ? dateNav() : '')
     + '<button class="tab-fav" id="tabFav" title="我的收藏">' + icon('star') + '<span>收藏</span>'
     + (favs.length ? '<span class="n">' + favs.length + '</span>' : '')
     + '</button></div>';
@@ -997,7 +996,6 @@ function bindTabbar() {
   document.querySelectorAll('.intel-tab').forEach(t => { t.onclick = () => go(t.dataset.v); });
   const tf = document.getElementById('tabFav');
   if (tf) tf.onclick = openFavs;
-  bindDateNav();
 }
 
 /* ---------------- 早报 ---------------- */
@@ -1109,6 +1107,7 @@ function viewEarly() {
     + '<div class="daily">'
     + '<div class="daily-main">'
     + '<div class="col-head"><span class="ct-line"></span><span class="ct">今日早报</span>'
+    + dateNav()
     + '<button type="button" class="col-btn" id="cfgEntry">定制内容</button></div>'
     + '<div class="eb-card">' + body + '</div>'
     + '</div>'
@@ -1289,6 +1288,7 @@ function go(v) {
 
 /* ---------------- 事件 ---------------- */
 function bind() {
+  bindDateNav();
   const liveToggle = document.getElementById('liveToggle');
   if (liveToggle) liveToggle.onclick = () => { const open = liveToggle.closest('.doc').classList.toggle('show-live'); liveToggle.setAttribute('aria-expanded', String(open)); liveToggle.textContent = open ? '收起快讯' : '7×24 快讯'; };
   document.querySelectorAll('.intel-tab').forEach(t => {
