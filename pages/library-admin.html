@@ -931,6 +931,7 @@
           </div>
         </div>
         <div class="type-row" id="typeRow"></div>
+        <div class="type-row" id="accessRow"></div>
         <div class="scope-bar">
           <span class="info" id="scopeInfo"></span>
           <div class="acts">
@@ -2809,7 +2810,7 @@ function reloadDocsFromStore(){
     };
   });
 }
-let source='all', curType='all', kw='', page=1, size=12, aiMode=false;
+let source='all', curType='all', curAccess='all', kw='', page=1, size=12, aiMode=false;
 let selected = new Set();
 let revokeTarget = null;
 
@@ -2834,11 +2835,22 @@ function renderTypes(){
     types.map(t=>`<span class="type-chip ${curType===t?'active':''}" onclick="setType('${t}')">${t}</span>`).join('');
 }
 function setType(t){ curType=t; renderTypes(); resetList(); }
+function renderAccess(){
+  const row = document.getElementById('accessRow');
+  if (!row) return;
+  row.innerHTML = '<span class="lb">公开方式</span>' + [
+    ['all', '全部'],
+    ['public', '全部公开'],
+    ['limited', '有限公开'],
+  ].map(([value, label]) => `<span class="type-chip ${curAccess===value?'active':''}" onclick="setAccess('${value}')">${label}</span>`).join('');
+}
+function setAccess(value){ curAccess = ['public','limited'].includes(value) ? value : 'all'; renderAccess(); resetList(); }
 function filtered(){
   return DOCS.filter(d=>{
     if(source==='crawl' && d.src!=='crawl') return false;
     if(source==='upload' && d.src!=='upload') return false;
     if(curType!=='all' && d.type!==curType) return false;
+    if(curAccess!=='all' && d.accessMode!==curAccess) return false;
     if(kw){
       const q=kw.toLowerCase();
       if(!(d.name+' '+d.org+' '+d.author+' '+d.type+' '+d.date).toLowerCase().includes(q)) return false;
@@ -3143,7 +3155,7 @@ function clearKw(){
 }
 
 
-reloadDocsFromStore(); renderDepts(); renderTypes(); renderAdminIdentity(); renderLibDeptSwitcher();
+reloadDocsFromStore(); renderDepts(); renderTypes(); renderAccess(); renderAdminIdentity(); renderLibDeptSwitcher();
 setInterval(() => {
   if(BaigeLibraryStore.purgeExpired()){
     reloadDocsFromStore();

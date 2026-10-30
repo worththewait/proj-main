@@ -139,3 +139,14 @@ test("limited and all-public permissions use different level ranges", () => {
   assert.match(html, /grantModeBox\.hidden = !allLimited/);
   assert.match(html, /BaigeLibraryStore\.clearPermissions/);
 });
+
+test("permission management filters documents by public mode", () => {
+  const html = read("pages/library-admin.html");
+  assert.match(html, /id="accessRow"/);
+  assert.match(html, /curAccess='all'/);
+  assert.match(html, /function renderAccess\(\)/);
+  assert.match(html, /function setAccess\(value\)/);
+  assert.match(html, /d\.accessMode!==curAccess/);
+  assert.match(html, /全部公开/);
+  assert.match(html, /有限公开/);
+});
