@@ -276,11 +276,6 @@
 .qa-history-example { display:flex; align-items:center; gap:8px; width:100%; margin-top:24px; padding:10px; border:0; border-radius:8px; background:#eef2fa; color:#3f5372; text-align:left; cursor:pointer; }
 .qa-history-example .icon { width:17px; height:17px; }
 .qa-history-example .icon:last-child { margin-left:auto; }
-.qa-attachment-button { display:grid; place-items:center; width:36px; height:36px; padding:0; border:0; border-radius:50%; background:transparent; color:#63728a; cursor:pointer; }
-.qa-attachment-button .icon { width:19px; height:19px; }
-.qa-attachments { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0; }
-.qa-attachments[hidden] { display:none; }
-.qa-attachments span { padding:4px 8px; border-radius:6px; background:#edf2fc; color:#52637d; font-size:12px; }
 .qa-source-paper .is-cited { padding:10px; margin:0 -10px; border-left:3px solid #7195ee; background:#eaf0ff; }
 .qa-references-panel.is-expanded { z-index:10; top:58px; bottom:0; left:0; width:100%; padding:24px max(24px, calc((100% - 850px) / 2)); }
 /* 紧凑入口悬浮在对话区域，不再占据独立的一行。 */

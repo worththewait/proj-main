@@ -10,6 +10,8 @@ test("knowledge page implements the four-scope knowledge hub", () => {
   assert.match(html, /企业知识文档/);
   assert.match(html, /id="kbSearchForm"/);
   assert.match(html, /id="kbSections"/);
+  assert.match(html, /id="kbTabs"/);
+  assert.match(html, /id="kbWorkbar"/);
   assert.match(html, /id="kbEmpty"/);
   assert.match(html, /knowledge\.css/);
   assert.match(html, /src\/pages\/knowledge\.js/);
@@ -26,10 +28,14 @@ test("knowledge page implements the four-scope knowledge hub", () => {
   assert.match(js, /data-kb-delete/);
   assert.match(js, /personalPanel/);
   assert.match(js, /matchesBase/);
+  assert.match(js, /data-kb-tab/);
+  assert.match(js, /kb-group-head/);
 
   const css = read("knowledge.css");
   assert.match(css, /\.kb-grid/);
   assert.match(css, /\.kb-card/);
   assert.match(css, /\.kb-table/);
   assert.match(css, /\.kb-search/);
+  assert.match(css, /\.kb-tabs/);
+  assert.match(css, /\.kb-group-head/);
 });
