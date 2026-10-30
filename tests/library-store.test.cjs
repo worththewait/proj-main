@@ -51,13 +51,9 @@ test("library store merges home, permission and file seed data", () => {
     assert.ok(store.departments.includes(doc.ownerDept));
     assert.ok(["public", "limited"].includes(doc.accessMode));
     assert.ok(doc.title && doc.category && doc.fileType);
-    if (doc.accessMode === "public") {
-      for (const dept of store.departments) assert.equal(doc.permissions[dept], 3);
-    } else {
-      assert.equal(doc.permissions[doc.ownerDept], 3);
-      for (const dept of store.departments) {
-        if (dept !== doc.ownerDept) assert.equal(doc.permissions[dept], 0);
-      }
+    assert.equal(doc.permissions[doc.ownerDept], 4);
+    for (const dept of store.departments) {
+      if (dept !== doc.ownerDept) assert.equal(doc.permissions[dept], 3);
     }
   }
 });
@@ -138,16 +134,17 @@ test("library store mutations are shared by permission, file and home views", ()
     abstract: "测试上传文档",
   }]);
   assert.equal(store.loadDocs().length, before + 1);
-  assert.equal(created[0].permissions["经济研究中心"], 3);
+  assert.equal(created[0].permissions[created[0].ownerDept], 4);
+  assert.equal(created[0].permissions["动力研究院"], 3);
 
-  store.setPermissions([created[0].id], "经济研究中心", 3, "2020-01-01T00:00:00.000Z");
-  assert.equal(store.getDoc(created[0].id).permissions["经济研究中心"], 3);
-  assert.equal(store.effectiveLevel(store.getDoc(created[0].id), "经济研究中心"), 0);
+  store.setPermissions([created[0].id], "动力研究院", 4, "2020-01-01T00:00:00.000Z");
+  assert.equal(store.getDoc(created[0].id).permissions["动力研究院"], 4);
+  assert.equal(store.effectiveLevel(store.getDoc(created[0].id), "动力研究院"), 0);
   assert.equal(store.purgeExpired(), 1);
-  assert.equal(store.getDoc(created[0].id).permissions["经济研究中心"], 0);
+  assert.equal(store.effectiveLevel(store.getDoc(created[0].id), "动力研究院"), 3);
 
-  store.setPermissions([created[0].id], "经济研究中心", 4);
-  assert.equal(store.effectiveLevel(store.getDoc(created[0].id), "经济研究中心"), 4);
+  store.setPermissions([created[0].id], "动力研究院", 3);
+  assert.equal(store.effectiveLevel(store.getDoc(created[0].id), "动力研究院"), 3);
 
   store.updateDoc(created[0].id, { secretStatus: "hit", parseStatus: "unparsed" });
   assert.equal(store.getDoc(created[0].id).secretStatus, "hit");
@@ -158,6 +155,7 @@ test("library store mutations are shared by permission, file and home views", ()
   store.setPersonPermissions([created[0].id], "power-1", 4, "2020-01-01T00:00:00.000Z");
   assert.equal(store.effectivePersonLevel(store.getDoc(created[0].id), "power-1"), 0);
   assert.equal(store.purgeExpired(), 1);
+  assert.equal(store.effectiveAccessLevel(store.getDoc(created[0].id), "动力研究院", "power-1"), 3);
 
   assert.equal(store.removeDocs([created[0].id]), 1);
   assert.equal(store.getDoc(created[0].id), null);
@@ -197,31 +195,110 @@ test("personal permissions cannot reduce the department baseline", () => {
   assert.equal(store.effectiveAccessLevel(store.getDoc(doc.id), "动力研究院", "power-1"), 4);
 });
 
-test("target public mode affects only the selected department or person", () => {
+test("limited publication uses target-level public grants for full text and download", () => {
   const { store } = createStore();
   const doc = store.loadDocs().find((item) => item.accessMode === "limited");
   assert.ok(doc);
   const future = new Date(Date.now() + 86400000).toISOString();
-  store.setGrantMode([doc.id], "dept", "动力研究院", "public", 3, future);
-  let updated = store.getDoc(doc.id);
-  assert.equal(updated.permissions["动力研究院"], 3);
-  assert.equal(store.isDeptPublicGrant(updated, "动力研究院"), true);
-  assert.equal(store.effectiveLevel(updated, "动力研究院"), 3);
-  assert.equal(store.effectiveLevel(updated, "技术经济中心"), 0);
+  assert.equal(store.effectiveLevel(doc, "动力研究院"), 3);
+  assert.equal(store.isTrialAccess(doc, "动力研究院"), true);
 
-  store.setGrantMode([doc.id], "person", "power-1", "public", 3, future);
+  store.setGrantMode([doc.id], "dept", "动力研究院", "public", 4, future);
+  let updated = store.getDoc(doc.id);
+  assert.equal(updated.permissions["动力研究院"], 4);
+  assert.equal(store.isDeptPublicGrant(updated, "动力研究院"), true);
+  assert.equal(store.effectiveLevel(updated, "动力研究院"), 4);
+  assert.equal(store.isTrialAccess(updated, "动力研究院"), false);
+  assert.equal(store.effectiveLevel(updated, "技术经济中心"), 3);
+
+  store.setGrantMode([doc.id], "person", "power-1", "public", 4, future);
   updated = store.getDoc(doc.id);
   assert.equal(store.isPersonPublicGrant(updated, "power-1"), true);
-  assert.equal(store.effectivePersonLevel(updated, "power-1"), 3);
-  assert.equal(store.effectiveAccessLevel(updated, "动力研究院", "power-1"), 3);
+  assert.equal(store.effectivePersonLevel(updated, "power-1"), 4);
+  assert.equal(store.effectiveAccessLevel(updated, "动力研究院", "power-1"), 4);
+  assert.equal(store.isTrialAccess(updated, "动力研究院", "power-1"), false);
 
   store.setGrantMode([doc.id], "person", "power-1", "limited", 0, null);
   updated = store.getDoc(doc.id);
   assert.equal(store.isPersonPublicGrant(updated, "power-1"), false);
+  assert.equal(store.effectivePersonLevel(updated, "power-1"), 0);
 
   updated.permissionExpiry["动力研究院"] = new Date(Date.now() - 1000).toISOString();
   assert.equal(store.isDeptPublicGrant(updated, "动力研究院"), false);
   store.purgeExpired();
-  assert.equal(store.getDoc(doc.id).permissions["动力研究院"], 0);
+  assert.equal(store.effectiveLevel(store.getDoc(doc.id), "动力研究院"), 3);
+  assert.equal(store.getDoc(doc.id).permissions["动力研究院"], undefined);
   assert.equal(store.getDoc(doc.id).publicDept["动力研究院"], undefined);
+});
+
+test("all-public documents use 0-4 target levels and never use target public mode", () => {
+  const { store } = createStore();
+  const doc = store.loadDocs().find((item) => item.accessMode === "public");
+  assert.ok(doc);
+  assert.equal(store.effectiveLevel(doc, "动力研究院"), 3);
+  assert.equal(store.isTrialAccess(doc, "动力研究院"), false);
+
+  store.setPermissions([doc.id], "动力研究院", 1);
+  let updated = store.getDoc(doc.id);
+  assert.equal(store.effectiveLevel(updated, "动力研究院"), 1);
+  store.setPermissions([doc.id], "动力研究院", 4);
+  updated = store.getDoc(doc.id);
+  assert.equal(store.effectiveLevel(updated, "动力研究院"), 4);
+  assert.equal(store.isDeptPublicGrant(updated, "动力研究院"), false);
+
+  store.setGrantMode([doc.id], "dept", "动力研究院", "public", 4, null);
+  updated = store.getDoc(doc.id);
+  assert.equal(store.effectiveLevel(updated, "动力研究院"), 4);
+  assert.equal(store.isDeptPublicGrant(updated, "动力研究院"), false);
+});
+
+test("limited publication numeric grants cannot use level 4", () => {
+  const { store } = createStore();
+  const doc = store.loadDocs().find((item) => item.accessMode === "limited");
+  assert.ok(doc);
+  store.setPermissions([doc.id], "动力研究院", 4);
+  assert.equal(store.effectiveLevel(store.getDoc(doc.id), "动力研究院"), 3);
+  assert.throws(
+    () => store.setPersonPermissions([doc.id], "power-1", 4),
+    /有限公开文档的个人下载只能通过全部公开/,
+  );
+});
+
+test("restore clears overrides and returns to document defaults", () => {
+  const { store } = createStore();
+  const doc = store.loadDocs().find((item) => item.accessMode === "limited");
+  assert.ok(doc);
+  const future = new Date(Date.now() + 86400000).toISOString();
+  store.setGrantMode([doc.id], "dept", "动力研究院", "public", 4, future);
+  assert.equal(store.effectiveLevel(store.getDoc(doc.id), "动力研究院"), 4);
+  assert.equal(store.clearPermissions([doc.id], "dept", "动力研究院"), 1);
+  assert.equal(store.effectiveLevel(store.getDoc(doc.id), "动力研究院"), 3);
+  assert.equal(store.getDoc(doc.id).permissionExpiry["动力研究院"], undefined);
+  assert.equal(store.getDoc(doc.id).publicDept["动力研究院"], undefined);
+});
+
+test("legacy v3 documents migrate without losing uploads and public grants", () => {
+  const { store, storage } = createStore();
+  const legacy = [{
+    id: 1,
+    title: "旧版权限文档.pdf",
+    category: "智库成果",
+    source: "upload",
+    ownerDept: "经济研究中心",
+    accessMode: "limited",
+    permissions: { "经济研究中心": 3, "动力研究院": 0, "技术经济中心": 0 },
+    permissionExpiry: { "动力研究院": "2026-12-31T15:59:59.000Z" },
+    publicDept: { "动力研究院": true },
+    personPermissions: {},
+    personPermissionExpiry: {},
+    publicPerson: {},
+  }];
+  storage.set("baige.library.docs.v3", JSON.stringify(legacy));
+  const [doc] = store.loadDocs();
+  assert.equal(doc.title, "旧版权限文档.pdf");
+  assert.equal(doc.permissions[doc.ownerDept], 4);
+  assert.equal(doc.permissions["动力研究院"], 4);
+  assert.equal(doc.permissions["技术经济中心"], 3);
+  assert.equal(store.isDeptPublicGrant(doc, "动力研究院"), true);
+  assert.ok(storage.has("baige.library.docs.v4"));
 });
