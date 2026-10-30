@@ -59,7 +59,7 @@
   });
   const demoReply = "这是一条演示回复。感谢你的提问，实际智能问答能力正在接入中。";
   function renderChat() {
-    messages.innerHTML = chat.map(item => `<div class="qa-chat-message qa-chat-${item.role}"><span class="qa-chat-label">${item.role === "user" ? "我" : "百舸问答"}</span><p>${escapeHtml(item.text)}</p>${item.attachments?.length ? `<small>${escapeHtml(item.attachments.join("、"))}</small>` : ""}</div>`).join("");
+    messages.innerHTML = chat.map(item => `<div class="qa-chat-message qa-chat-${item.role}"><span class="qa-chat-label">${item.role === "user" ? "我" : "百舸问答"}</span><p>${escapeHtml(item.text)}</p></div>`).join("");
     scroll.scrollTop = scroll.scrollHeight;
   }
   function typeReply(item) {
@@ -237,16 +237,6 @@
     picker.close();
     field.focus();
   });
-  let attachmentNames = [];
-  const attachmentInput = document.querySelector("#attachmentInput");
-  const attachmentRoot = document.querySelector("#conversationAttachments");
-  document.querySelector("#addAttachment").addEventListener("click", () => attachmentInput.click());
-  attachmentInput.addEventListener("change", () => {
-    attachmentNames = Array.from(attachmentInput.files || [], file => file.name);
-    attachmentRoot.hidden = !attachmentNames.length;
-    attachmentRoot.innerHTML = attachmentNames.map(name => `<span>${escapeHtml(name)}</span>`).join("");
-    feedback.textContent = "仅显示文件名，演示中不会上传文件。";
-  });
   field.addEventListener("input", () => {
     send.disabled = !field.value.trim();
     feedback.textContent = "";
@@ -268,8 +258,7 @@
     conversation.classList.add("is-chatting");
     if (!current) { current = {id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, title: request.question.slice(0, 40), mode:request.mode, createdAt:Date.now(), messages: chat}; conversations.unshift(current); }
     current.updatedAt = Date.now();
-    chat.push({role: "user", text: request.question, attachments: [...attachmentNames]});
-    attachmentNames = []; attachmentInput.value = ""; attachmentRoot.innerHTML = ""; attachmentRoot.hidden = true;
+    chat.push({role: "user", text: request.question});
     const reply = {role: "assistant", text: "", pending:true};
     chat.push(reply);
     renderChat();
