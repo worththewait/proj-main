@@ -1,7 +1,8 @@
 (() => {
   "use strict";
 
-  const DOC_KEY = "baige.library.docs.v3";
+  const DOC_KEY = "baige.library.docs.v4";
+  const LEGACY_DOC_KEY = "baige.library.docs.v3";
   const DEPT_KEY = "baige.library.dept.v1";
   const MANAGE_KEY = "baige.library.manage-dept.v1";
   const USER_KEY = "baige.library.user.v1";
@@ -53,14 +54,19 @@
   function writeStorage(key, value) {
     try { localStorage.setItem(key, value); } catch { /* file:// or private mode */ }
   }
-  function blankPermissions() {
-    return Object.fromEntries(DEPARTMENTS.map((dept) => [dept, 3]));
+  function blankPermissions(ownerDept) {
+    return Object.fromEntries(DEPARTMENTS.map((dept) => [dept, dept === ownerDept ? 4 : 3]));
   }
   function limitedPermissions(ownerDept) {
-    return Object.fromEntries(DEPARTMENTS.map((dept) => [dept, dept === ownerDept ? 3 : 0]));
+    return blankPermissions(ownerDept);
   }
-  function normalizePermissions(value) {
-    return { ...blankPermissions(), ...(value && typeof value === "object" ? value : {}) };
+  function normalizePermissions(value, ownerDept, accessMode) {
+    const permissions = { ...blankPermissions(ownerDept), ...(value && typeof value === "object" ? value : {}) };
+    // The owner department always keeps the full permission set.
+    if (ownerDept) permissions[ownerDept] = 4;
+    // Limited-public documents can only reach download through the target-level public grant.
+    if (accessMode === "limited") return permissions;
+    return permissions;
   }
   function normalizeExpiry(value) {
     return Object.fromEntries(DEPARTMENTS.map((dept) => [dept, value && value[dept] ? String(value[dept]) : null]));
@@ -77,16 +83,12 @@
     const previousOwner = DEPARTMENTS.includes(doc.ownerDept) ? doc.ownerDept : "";
     const accessMode = doc.accessMode === "limited" ? "limited" : "public";
     const permissions = doc.permissions
-      ? normalizePermissions(doc.permissions)
-      : accessMode === "limited" ? limitedPermissions(ownerDept) : blankPermissions();
+      ? normalizePermissions(doc.permissions, ownerDept, accessMode)
+      : accessMode === "limited" ? limitedPermissions(ownerDept) : blankPermissions(ownerDept);
     const permissionExpiry = normalizeExpiry(doc.permissionExpiry);
     // Re-home documents by their type and keep the responsible department's owner access.
     if (previousOwner !== ownerDept) {
-      permissions[ownerDept] = Math.max(3, Number(permissions[ownerDept]) || 0);
-      if (previousOwner) {
-        if (accessMode === "limited" && Number(permissions[previousOwner]) === 3) permissions[previousOwner] = 0;
-        if (Number(permissions[previousOwner]) === 0) permissionExpiry[previousOwner] = null;
-      }
+      permissions[ownerDept] = 4;
       permissionExpiry[ownerDept] = null;
     }
     return {
@@ -111,8 +113,8 @@
       origin: doc.origin || "library",
       permissions,
       permissionExpiry,
-      publicDept: normalizePersonMap(doc.publicDept),
-      publicPerson: normalizePersonMap(doc.publicPerson),
+      publicDept: accessMode === "limited" ? normalizePersonMap(doc.publicDept) : {},
+      publicPerson: accessMode === "limited" ? normalizePersonMap(doc.publicPerson) : {},
       personPermissions: normalizePersonMap(doc.personPermissions),
       personPermissionExpiry: normalizePersonMap(doc.personPermissionExpiry),
     };
@@ -193,11 +195,13 @@
 
   function effectiveLevel(doc, dept) {
     if (!doc || !dept) return 0;
-    const level = Number(doc.permissions?.[dept] ?? 0);
+    if (dept === doc.ownerDept) return 4;
+    const level = Number(doc.permissions?.[dept] ?? 3);
     if (level <= 0) return 0;
     const expiry = doc.permissionExpiry?.[dept];
     if (expiry && Date.parse(expiry) <= Date.now()) return 0;
-    return level;
+    if (doc.accessMode === "limited" && !doc.publicDept?.[dept]) return Math.min(level, 3);
+    return Math.min(level, 4);
   }
 
   function effectivePersonLevel(doc, personId) {
@@ -206,7 +210,8 @@
     if (level <= 0) return 0;
     const expiry = doc.personPermissionExpiry?.[personId];
     if (expiry && Date.parse(expiry) <= Date.now()) return 0;
-    return level;
+    if (doc.accessMode === "limited" && !doc.publicPerson?.[personId]) return Math.min(level, 3);
+    return Math.min(level, 4);
   }
 
   function effectiveAccessLevel(doc, dept, personId) {
@@ -214,11 +219,19 @@
   }
 
   function isDeptPublicGrant(doc, dept) {
-    return Boolean(doc?.publicDept?.[dept]) && effectiveLevel(doc, dept) >= 3;
+    return doc?.accessMode === "limited" && Boolean(doc.publicDept?.[dept]) && effectiveLevel(doc, dept) >= 4;
   }
 
   function isPersonPublicGrant(doc, personId) {
-    return Boolean(doc?.publicPerson?.[personId]) && effectivePersonLevel(doc, personId) >= 3;
+    return doc?.accessMode === "limited" && Boolean(doc.publicPerson?.[personId]) && effectivePersonLevel(doc, personId) >= 4;
+  }
+
+  function isTrialAccess(doc, dept, personId = "") {
+    if (!doc || doc.accessMode !== "limited") return false;
+    if (dept === doc.ownerDept) return false;
+    if (dept && isDeptPublicGrant(doc, dept)) return false;
+    if (personId && isPersonPublicGrant(doc, personId)) return false;
+    return effectiveAccessLevel(doc, dept, personId) > 0;
   }
 
   function purgeExpired(save = true) {
@@ -230,8 +243,8 @@
         const expiry = doc.permissionExpiry?.[dept];
         if (!expiry || Number(doc.permissions?.[dept] || 0) <= 0) return;
         if (Date.parse(expiry) <= now) {
-          doc.permissions[dept] = 0;
-          doc.permissionExpiry[dept] = null;
+          delete doc.permissions[dept];
+          delete doc.permissionExpiry[dept];
           if (doc.publicDept) delete doc.publicDept[dept];
           changed += 1;
         }
@@ -240,8 +253,8 @@
         const expiry = doc.personPermissionExpiry?.[person.id];
         if (!expiry || Number(doc.personPermissions?.[person.id] || 0) <= 0) return;
         if (Date.parse(expiry) <= now) {
-          doc.personPermissions[person.id] = 0;
-          doc.personPermissionExpiry[person.id] = null;
+          delete doc.personPermissions[person.id];
+          delete doc.personPermissionExpiry[person.id];
           if (doc.publicPerson) delete doc.publicPerson[person.id];
           changed += 1;
         }
@@ -249,6 +262,26 @@
     });
     if (changed && save) persist();
     return changed;
+  }
+
+  function migrateLegacyDocs(list) {
+    return list.map((doc) => {
+      const ownerDept = managerForCategory(doc.category).dept;
+      const accessMode = doc.accessMode === "limited" ? "limited" : "public";
+      const permissions = { ...(doc.permissions || {}) };
+      const publicDept = accessMode === "limited" ? normalizePersonMap(doc.publicDept) : {};
+      const publicPerson = accessMode === "limited" ? normalizePersonMap(doc.publicPerson) : {};
+      permissions[ownerDept] = 4;
+      if (accessMode === "limited") {
+        DEPARTMENTS.forEach((dept) => {
+          if (dept !== ownerDept && Number(permissions[dept]) === 0) permissions[dept] = 3;
+          if (publicDept[dept]) permissions[dept] = 4;
+        });
+      }
+      const personPermissions = { ...(doc.personPermissions || {}) };
+      Object.keys(publicPerson).forEach((personId) => { personPermissions[personId] = 4; });
+      return { ...doc, permissions, personPermissions, publicDept, publicPerson };
+    });
   }
 
   function loadDocs() {
@@ -260,6 +293,17 @@
         if (validateStored(parsed)) {
           cache = parsed.map((doc, index) => normalizeDoc(doc, Number(doc.id) || index + 1));
           if (purgeExpired(false)) persist();
+          return cache;
+        }
+      } catch { /* rebuild below */ }
+    }
+    const legacy = readStorage(LEGACY_DOC_KEY);
+    if (legacy) {
+      try {
+        const parsed = JSON.parse(legacy);
+        if (validateStored(parsed)) {
+          cache = migrateLegacyDocs(parsed).map((doc, index) => normalizeDoc(doc, Number(doc.id) || index + 1));
+          persist();
           return cache;
         }
       } catch { /* rebuild below */ }
@@ -359,7 +403,7 @@
         category: item.category || "其他",
         docType: item.docType || "文件",
         origin: item.origin || "upload",
-        permissions: item.permissions || (accessMode === "limited" ? limitedPermissions(ownerDept) : blankPermissions()),
+        permissions: item.permissions || (accessMode === "limited" ? limitedPermissions(ownerDept) : blankPermissions(ownerDept)),
       }, nextId++);
     });
     docs.unshift(...created);
@@ -371,7 +415,7 @@
     const doc = loadDocs().find((item) => Number(item.id) === Number(id));
     if (!doc) return null;
     Object.assign(doc, patch);
-    if (patch && patch.permissions) doc.permissions = normalizePermissions(patch.permissions);
+    if (patch && patch.permissions) doc.permissions = normalizePermissions(patch.permissions, doc.ownerDept, doc.accessMode);
     if (patch && patch.permissionExpiry) doc.permissionExpiry = normalizeExpiry(patch.permissionExpiry);
     if (patch && patch.personPermissions) doc.personPermissions = normalizePersonMap(patch.personPermissions);
     if (patch && patch.personPermissionExpiry) doc.personPermissionExpiry = normalizePersonMap(patch.personPermissionExpiry);
@@ -381,12 +425,13 @@
 
   function setPermissions(ids, dept, level, expiresAt = null) {
     const set = new Set((ids || []).map(Number));
-    const value = Math.max(0, Math.min(4, Number(level) || 0));
-    const expiry = value > 0 && expiresAt && !Number.isNaN(Date.parse(expiresAt)) ? new Date(expiresAt).toISOString() : null;
     let count = 0;
     loadDocs().forEach((doc) => {
-      if (!set.has(Number(doc.id))) return;
-      doc.permissions = { ...normalizePermissions(doc.permissions), [dept]: value };
+      if (!set.has(Number(doc.id)) || dept === doc.ownerDept) return;
+      const max = doc.accessMode === "limited" ? 3 : 4;
+      const value = Math.max(0, Math.min(max, Number(level) || 0));
+      const expiry = value > 0 && expiresAt && !Number.isNaN(Date.parse(expiresAt)) ? new Date(expiresAt).toISOString() : null;
+      doc.permissions = { ...normalizePermissions(doc.permissions, doc.ownerDept, doc.accessMode), [dept]: value };
       doc.permissionExpiry = { ...normalizeExpiry(doc.permissionExpiry), [dept]: expiry };
       if (doc.publicDept) delete doc.publicDept[dept];
       count += 1;
@@ -397,16 +442,21 @@
 
   function setPersonPermissions(ids, personId, level, expiresAt = null) {
     const set = new Set((ids || []).map(Number));
-    const value = Math.max(0, Math.min(4, Number(level) || 0));
-    const expiry = value > 0 && expiresAt && !Number.isNaN(Date.parse(expiresAt)) ? new Date(expiresAt).toISOString() : null;
     const person = PEOPLE.find((item) => item.id === personId);
     const docs = loadDocs().filter((doc) => set.has(Number(doc.id)));
-    if (person && value > 0 && docs.some((doc) => value <= effectiveLevel(doc, person.dept))) {
+    const requested = Number(level) || 0;
+    if (person && requested > 0 && docs.some((doc) => requested <= effectiveLevel(doc, person.dept))) {
       throw new Error('个人权限必须高于部门基础权限');
     }
+    if (person && requested === 4 && docs.some((doc) => doc.accessMode === "limited")) {
+      throw new Error('有限公开文档的个人下载只能通过全部公开');
+    }
     docs.forEach((doc) => {
+      const max = doc.accessMode === "limited" ? 3 : 4;
+      const value = Math.max(0, Math.min(max, requested));
+      const expiry = value > 0 && expiresAt && !Number.isNaN(Date.parse(expiresAt)) ? new Date(expiresAt).toISOString() : null;
       doc.personPermissions = { ...normalizePersonMap(doc.personPermissions), [personId]: value };
-      doc.personPermissionExpiry = { ...normalizePersonMap(doc.personPermissionExpiry), [personId]: value > 0 ? expiry : null };
+      doc.personPermissionExpiry = { ...normalizePersonMap(doc.personPermissionExpiry), [personId]: expiry };
       if (doc.publicPerson) delete doc.publicPerson[personId];
     });
     persist();
@@ -416,36 +466,63 @@
   function setGrantMode(ids, kind, targetId, mode, level, expiresAt = null) {
     const set = new Set((ids || []).map(Number));
     const publicMode = mode === "public";
-    const value = Math.max(0, Math.min(4, Number(level) || 0));
-    const expiry = (publicMode || value > 0) && expiresAt && !Number.isNaN(Date.parse(expiresAt))
+    const requested = Math.max(0, Math.min(4, Number(level) || 0));
+    const expiry = (publicMode || requested > 0) && expiresAt && !Number.isNaN(Date.parse(expiresAt))
       ? new Date(expiresAt).toISOString()
       : null;
     const docs = loadDocs().filter((doc) => set.has(Number(doc.id)));
     if (kind === "person") {
       const person = PEOPLE.find((item) => item.id === targetId);
-      if (!publicMode && person && value > 0 && docs.some((doc) => value <= effectiveLevel(doc, person.dept))) {
-        throw new Error('个人权限必须高于部门基础权限');
+      if (person && !publicMode && requested > 0) {
+        if (requested === 4 && docs.some((doc) => doc.accessMode === "limited")) {
+          throw new Error('有限公开文档的个人下载只能通过全部公开');
+        }
+        if (docs.some((doc) => requested <= effectiveLevel(doc, person.dept))) {
+          throw new Error('个人权限必须高于部门基础权限');
+        }
       }
       docs.forEach((doc) => {
-        const levelValue = publicMode ? 3 : value;
-        doc.personPermissions = { ...normalizePersonMap(doc.personPermissions), [targetId]: levelValue };
-        doc.personPermissionExpiry = { ...normalizePersonMap(doc.personPermissionExpiry), [targetId]: levelValue > 0 ? expiry : null };
+        const value = publicMode ? 4 : Math.max(0, Math.min(doc.accessMode === "limited" ? 3 : 4, requested));
+        doc.personPermissions = { ...normalizePersonMap(doc.personPermissions), [targetId]: value };
+        doc.personPermissionExpiry = { ...normalizePersonMap(doc.personPermissionExpiry), [targetId]: value > 0 ? expiry : null };
         doc.publicPerson = normalizePersonMap(doc.publicPerson);
-        if (publicMode) doc.publicPerson[targetId] = true;
+        if (publicMode && doc.accessMode === "limited") doc.publicPerson[targetId] = true;
         else delete doc.publicPerson[targetId];
       });
     } else {
       docs.forEach((doc) => {
-        const levelValue = publicMode ? 3 : value;
-        doc.permissions = { ...normalizePermissions(doc.permissions), [targetId]: levelValue };
-        doc.permissionExpiry = { ...normalizeExpiry(doc.permissionExpiry), [targetId]: levelValue > 0 ? expiry : null };
+        if (targetId === doc.ownerDept) return;
+        const value = publicMode ? 4 : Math.max(0, Math.min(doc.accessMode === "limited" ? 3 : 4, requested));
+        doc.permissions = { ...normalizePermissions(doc.permissions, doc.ownerDept, doc.accessMode), [targetId]: value };
+        doc.permissionExpiry = { ...normalizeExpiry(doc.permissionExpiry), [targetId]: value > 0 ? expiry : null };
         doc.publicDept = normalizePersonMap(doc.publicDept);
-        if (publicMode) doc.publicDept[targetId] = true;
+        if (publicMode && doc.accessMode === "limited") doc.publicDept[targetId] = true;
         else delete doc.publicDept[targetId];
       });
     }
     persist();
     return docs.length;
+  }
+
+  function clearPermissions(ids, kind, targetId) {
+    const set = new Set((ids || []).map(Number));
+    let count = 0;
+    loadDocs().forEach((doc) => {
+      if (!set.has(Number(doc.id))) return;
+      if (kind === "person") {
+        if (doc.personPermissions) delete doc.personPermissions[targetId];
+        if (doc.personPermissionExpiry) delete doc.personPermissionExpiry[targetId];
+        if (doc.publicPerson) delete doc.publicPerson[targetId];
+      } else {
+        if (targetId === doc.ownerDept) return;
+        if (doc.permissions) delete doc.permissions[targetId];
+        if (doc.permissionExpiry) delete doc.permissionExpiry[targetId];
+        if (doc.publicDept) delete doc.publicDept[targetId];
+      }
+      count += 1;
+    });
+    persist();
+    return count;
   }
 
   function removeDocs(ids) {
@@ -486,6 +563,8 @@
     updateDoc,
     setPermissions,
     setPersonPermissions,
+    setGrantMode,
+    clearPermissions,
     removeDocs,
     getCurrentDept,
     setCurrentDept,
@@ -494,9 +573,9 @@
     effectiveLevel,
     effectivePersonLevel,
     effectiveAccessLevel,
+    isTrialAccess,
     isDeptPublicGrant,
     isPersonPublicGrant,
-    setGrantMode,
     purgeExpired,
     reset,
   });

@@ -88,14 +88,21 @@
   let lastFocus = null;
   const permLevel = (doc) => store.effectiveAccessLevel(doc, state.department, state.user);
   const isOwner = (doc) => doc.ownerDept === state.department;
-  const isPublic = (doc) => doc.accessMode !== "limited";
-  const canFull = (doc) => isPublic(doc) || isOwner(doc) || permLevel(doc) >= 3;
-  const canDownload = (doc) => permLevel(doc) >= 4;
+  const isPublicGrant = (doc) => store.isDeptPublicGrant(doc, state.department) || store.isPersonPublicGrant(doc, state.user);
+  const isTrial = (doc) => store.isTrialAccess(doc, state.department, state.user);
+  const canFull = (doc) => isOwner(doc) || isPublicGrant(doc) ||
+    (doc.accessMode === "public" && permLevel(doc) >= 3);
+  const canDownload = (doc) => isOwner(doc) || permLevel(doc) >= 4;
   const accessNote = (doc) => {
-    if (doc.accessMode !== "limited") return "";
-    if (isOwner(doc)) return "有限公开 · 本部门全文";
-    if (canFull(doc)) return "有限公开 · 已授权全文";
-    return "有限公开 · 试读 2 页";
+    if (isOwner(doc)) return doc.accessMode === "limited" ? "有限公开 · 本部门全文" : "全部公开 · 本部门全文";
+    if (isPublicGrant(doc)) return "有限公开 · 已授权全文+下载";
+    if (doc.accessMode === "public") {
+      if (permLevel(doc) <= 0) return "没有权限";
+      if (permLevel(doc) >= 3) return "全部公开 · 全文";
+      return permLevel(doc) === 2 ? "全部公开 · 仅可见" : "全部公开 · 仅可搜索";
+    }
+    if (isTrial(doc)) return "有限公开 · 试读 2 页";
+    return "没有权限";
   };
   const backgroundNodes = [document.querySelector(".banner"), ui.home, ui.list, ui.results].filter(Boolean);
 
@@ -442,9 +449,9 @@
   function downloadCurrent() {
     if (!state.current) return;
     if (!canDownload(state.current)) {
-      showToast(state.current.accessMode === "limited" && !canFull(state.current)
-        ? "有限公开文档仅可试读前 2 页，获得授权后才可下载"
-        : "当前部门无下载权限");
+      showToast(canFull(state.current)
+        ? "当前对象无下载权限"
+        : (state.current.accessMode === "limited" ? "有限公开文档仅可试读前 2 页，获得全部公开授权后才可下载" : "当前对象无下载权限"));
       return;
     }
     showToast(`开始下载《${state.current.t}》，已记录下载日志`);
@@ -566,7 +573,7 @@
       html += `<div class="pv-page" id="pvpage-${i + 1}"><h4>${text(chapter.h)}</h4>${chapter.paras.map((paragraph) => `<p>${text(paragraph)}</p>`).join("")}<div class="pn">- ${i + 1} -</div></div>`;
     }
     if (!full) {
-      html += `<div class="pv-page pv-paywall" id="pvpaywall"><div class="paywall-mark">有限公开 · 付费文档</div><h4>试读结束</h4><p>非本部门用户仅可试读前 2 页。文档权限由所属部门管理员管理。</p></div>`;
+      html += `<div class="pv-page pv-paywall" id="pvpaywall"><div class="paywall-mark">${doc.accessMode === "limited" ? "有限公开 · 付费文档" : "全部公开 · 权限受限"}</div><h4>试读结束</h4><p>${doc.accessMode === "limited" ? "非本部门用户仅可试读前 2 页。文档权限由所属部门管理员管理。" : "当前对象已被单独限制为部分权限，请联系文档所属部门管理员。"}</p></div>`;
     }
     ui.preview.innerHTML = html;
     ui.preview.scrollTop = 0;
