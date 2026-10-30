@@ -7,7 +7,7 @@ const project = path.join(__dirname, '..');
 const tinyImage = 'data:image/jpeg;base64,/9j/AA==';
 const script = path.join(project, 'src/pages/home-dashboard.js');
 
-function setup({stored = null, storageFails = false, granted = true, standalone = false, processImage, configStored} = {}) {
+function setup({stored = null, storageFails = false, granted = true, standalone = false, processImage, configStored, featureEntries} = {}) {
   assert.ok(fs.existsSync(script), '首页行为脚本尚未实现');
   const elements = new Map();
   class Element {
@@ -63,6 +63,12 @@ function setup({stored = null, storageFails = false, granted = true, standalone 
   };
   window.parent = standalone ? window : {};
   window.addEventListener = () => {};
+  let featureChanged;
+  if (featureEntries) window.BaigeFeatureConfig={
+    catalog:()=>featureEntries,
+    subscribe(callback){featureChanged=callback;},
+    iconMarkup:item=>`<span data-managed-icon="${item.icon}"></span>`,
+  };
   if (configStored) storage.set("baige.home-config.v2", JSON.stringify(configStored));
   const context = vm.createContext({window, document, console});
   vm.runInContext(fs.readFileSync(path.join(project, 'src/data.js'), 'utf8'), context);
@@ -88,8 +94,21 @@ function setup({stored = null, storageFails = false, granted = true, standalone 
   function editCard(id, value) { const input = cardInput(id); input.value = value; get('homepageCardSettings').emit('input', {target: input}); }
   function upload(id, file) { const input = cardInput(id, 'upload'); input.files = [file]; get('homepageCardSettings').emit('change', {target: input}); }
   function resetCard(id) { get('homepageCardSettings').emit('click', {target: cardInput(id, 'reset')}); }
-  return {get, window, document, storage, navigations, accessCalls, choose, cardInput, editCard, upload, resetCard, openSettings: () => openHomeSettings(), editSlides: fn => fn(slideDraft), slides: () => displayedSlides, slideDraft: () => slideDraft, closedMessages: () => settingsClosedMessages, setCarouselBusy(value) {carouselBusy = value; busyChanged?.();}};
+  return {get, window, document, storage, navigations, accessCalls, choose, cardInput, editCard, upload, resetCard, featureChanged:()=>featureChanged?.(), openSettings: () => openHomeSettings(), editSlides: fn => fn(slideDraft), slides: () => displayedSlides, slideDraft: () => slideDraft, closedMessages: () => settingsClosedMessages, setCarouselBusy(value) {carouselBusy = value; busyChanged?.();}};
 }
+
+test('managed icons refresh both my shortcuts and recommendations without changing destinations', () => {
+  const featureEntries=[{id:'tool:PPT生成',icon:'branch',homeCategoryLabel:'演示创作'}];
+  const app=setup({featureEntries});
+  assert.match(app.get('commonFunctions').innerHTML,/data-managed-icon="branch"/);
+  assert.equal(app.window.BaigeHomeConfig.catalog.find(item=>item.id==='tool:PPT生成').group,'演示创作');
+  featureEntries[0].icon='scan';app.featureChanged();
+  assert.match(app.get('commonFunctions').innerHTML,/data-managed-icon="scan"/);
+  const tabs=app.get('commonFunctionTabs');
+  tabs.emit('click',{target:tabs.querySelector('[data-home-tab="recommended"]')});
+  assert.match(app.get('commonFunctions').innerHTML,/data-managed-icon="scan"/);
+  assert.ok(app.get('commonFunctions').querySelectorAll('button[data-home-route]').some(item=>item.dataset.homeChild==='PPT生成'));
+});
 
 test('nonempty quick question sends trimmed text in navigation payload only', () => {
   const app = setup();

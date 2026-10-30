@@ -52,6 +52,14 @@ test('carousel images use an 8:3 crop while shortcut uploads retain their defaul
   assert.equal(app.canvas.height, 450);
 });
 
+test('feature icon uploads support a square crop while retaining the raster validation boundary', async () => {
+  const app = setup();
+  const result = await app.images.process({type: 'image/png', size: 50}, {aspectRatio: 1});
+  assert.equal(app.canvas.width, app.canvas.height);
+  assert.ok(app.images.isSafeImage(result));
+  await assert.rejects(app.images.process({type: 'image/png', size: 50}, {aspectRatio: 0}), /比例/);
+});
+
 test('read and decode failures report a usable error instead of saving empty data', async () => {
   for (const options of [{readFails: true}, {decodeFails: true}, {alwaysTooLarge: true}]) {
     const {images} = setup(options);

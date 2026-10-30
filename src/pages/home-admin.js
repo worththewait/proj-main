@@ -5,8 +5,9 @@
   const {escapeHtml: escape, icon} = window.BaigeUI;
   const get = id => document.querySelector(`#${id}`);
   const tabs = [...document.querySelectorAll('[data-admin-tab]')];
-  const catalog = config.catalog;
-  const byId = new Map(catalog.map(item => [item.id, item]));
+  let catalog = config.catalog;
+  let byId = new Map(catalog.map(item => [item.id, item]));
+  const features=window.BaigeFeatureConfig;
   const newsDestinations = config.updateDestinations();
   const destinationFor = item => item.destination && newsDestinations.find(target=>target.route===item.destination.route && target.child===item.destination.child);
   get('updateDestination').innerHTML = '<option value="">不设置跳转</option>' + newsDestinations.map(item=>`<option value="${escape(item.key)}">${escape(item.label)}</option>`).join('');
@@ -59,9 +60,14 @@
     }
   }
   function renderOptions() {
+    catalog=config.catalog;
+    byId=new Map(catalog.map(item=>[item.id,item]));
+    const categories=features?.read().categories.home || [...new Set(catalog.map(item=>item.group))].map(label=>({id:label,label}));
+    if(group!=='all' && !categories.some(item=>item.id===group))group='all';
+    get('recommendFilters').innerHTML=[{id:'all',label:'全部功能'},...categories].map(item=>`<button type="button" data-rec-group="${escape(item.id)}" aria-pressed="${item.id===group}">${escape(item.label)}${item.id==='all'?` <span>${catalog.length}</span>`:''}</button>`).join('');
     const query = get('recommendSearch').value.trim().toLowerCase();
-    const visible = catalog.filter(item => (group === 'all' || item.group === group) && `${item.name} ${item.description}`.toLowerCase().includes(query));
-    get('recommendOptions').innerHTML = visible.length ? visible.map(item => `<label class="admin-option" data-tone="${item.tone}"><input type="checkbox" data-recommend-id value="${escape(item.id)}" aria-label="推荐${escape(item.name)}"><span class="admin-option-icon" aria-hidden="true">${window.BaigeDirectoryIcons?.icon(item.icon)||icon(item.icon)}</span><span class="admin-option-copy"><strong>${escape(item.name)}</strong><small title="${escape(item.description)}">${escape(item.description)}</small></span></label>`).join('') : '<p class="admin-empty">没有匹配的功能，请更换关键词或分类。</p>';
+    const visible = catalog.filter(item => (group === 'all' || (item.homeCategory||item.group) === group) && `${item.name} ${item.description}`.toLowerCase().includes(query));
+    get('recommendOptions').innerHTML = visible.length ? visible.map(item => `<label class="admin-option" data-tone="${item.tone}"><input type="checkbox" data-recommend-id value="${escape(item.id)}" aria-label="推荐${escape(item.name)}"><span class="admin-option-icon" aria-hidden="true">${features?features.iconMarkup(item):window.BaigeDirectoryIcons?.icon(item.icon)||icon(item.icon)}</span><span class="admin-option-copy"><strong>${escape(item.name)}</strong><small title="${escape(item.description)}">${escape(item.description)}</small></span></label>`).join('') : '<p class="admin-empty">没有匹配的功能，请更换关键词或分类。</p>';
     selectionState();
   }
   get('recommendOptions').addEventListener('change', event => {
@@ -83,8 +89,8 @@
   get('recommendFilters').addEventListener('click', event => {
     const button = event.target.closest('[data-rec-group]'); if (!button) return;
     group = button.dataset.recGroup;
-    for (const filter of get('recommendFilters').querySelectorAll('button')) filter.setAttribute('aria-pressed', String(filter===button));
     renderOptions();
+    [...get('recommendFilters').querySelectorAll('button')].find(filter=>filter.dataset.recGroup===group)?.focus();
   });
   get('recommendSearch').addEventListener('input', renderOptions);
   get('saveRecommendations').addEventListener('click', () => {
@@ -240,6 +246,7 @@
     if(toastTimer){clearTimeout(toastTimer);toastTimer=null;}
     get('adminToast').classList.remove('is-visible');
   });
-  window.BaigePage.onActivate(() => {renderNews();});
+  features?.subscribe(renderOptions);
+  window.BaigePage.onActivate(() => {renderOptions();renderNews();});
   renderOptions(); renderNews();
 })();

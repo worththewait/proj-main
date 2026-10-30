@@ -5,6 +5,7 @@
   const { icon, escapeHtml } = window.BaigeUI;
   const page = window.BaigePage;
   const access = window.BaigeHomeAccess;
+  const featureConfig = window.BaigeFeatureConfig;
   const groupSwitch = document.querySelector("#featureGroups");
   const results = document.querySelector("#featureResults");
   const commonFunctions = document.querySelector("#commonFunctions");
@@ -50,14 +51,14 @@
       "专利编制": { description: "辅助梳理专利技术方案与申请材料，形成编制思路。", icon: "file" },
     },
   };
-  const groups = [
+  const defaultGroups = [
     { id: "knowledge-research", label: "知识与研究", description: "问答、知识与专业研究", ids: ["qa", "knowledge", "writing", "library", "intel", "analysis"] },
     { id: "tools-platforms", label: "工具与平台", description: "资料处理与专业平台", ids: ["smart-tools", "frontier", "digital", "datasets", "platform", "data-platform"] },
   ];
   const toolTone = { "文档处理": "blue", "写作创作": "purple", "研究辅助": "teal" };
 
   // Flatten only navigational children. Dataset resources remain one destination.
-  const entries = groups.flatMap((group) => group.ids.flatMap((route) => {
+  const defaultEntries = defaultGroups.flatMap((group) => group.ids.flatMap((route) => {
     const item = navigation.find((entry) => entry.id === route);
     const profile = profiles[route];
     const base = { route, group: group.id, tone: profile.tone, parent: item.label };
@@ -76,6 +77,22 @@
   let selectedGroup = "all";
   let beforeSearch = null;
 
+  function currentDirectory() {
+    if (!featureConfig) return {groups:defaultGroups, entries:defaultEntries};
+    const settings=featureConfig.read();
+    const configured=new Map(featureConfig.catalog(settings).map(item=>[JSON.stringify([item.route,item.child]),item]));
+    const groups=settings.categories.home.map(group=>({
+      ...group, description:defaultGroups.find(item=>item.id===group.id && item.label===group.label)?.description||"",
+    }));
+    const entries=defaultEntries.map(entry=>{
+      const managed=configured.get(JSON.stringify([entry.route,entry.child]));
+      if (!managed) return entry;
+      return {...entry, icon:managed.icon, iconImage:managed.iconImage, group:managed.homeCategory,
+        managed, keywords:[entry.parent,managed.homeCategoryLabel,managed.toolCategoryLabel,entry.route!=='smart-tools'?entry.keywords:''].filter(Boolean).join(' ')};
+    });
+    return {groups,entries};
+  }
+
   const actionLabel = (entry) => ({ granted: "进入功能", locked: "申请权限", pending: "查看申请" })[access.status(entry.route, entry.child)];
   function statusMarkup(entry) {
     const status = access.status(entry.route, entry.child);
@@ -83,7 +100,7 @@
   }
   function renderEntry(entry) {
     const action = actionLabel(entry);
-    const graphic = window.BaigeDirectoryIcons?.icon(entry.icon) || icon(entry.icon);
+    const graphic = entry.managed ? featureConfig.iconMarkup(entry.managed) : window.BaigeDirectoryIcons?.icon(entry.icon) || icon(entry.icon);
     return `<button class="home-directory-item" type="button" data-home-route="${escapeHtml(entry.route)}" data-home-child="${escapeHtml(entry.child)}" data-tone="${entry.tone}" aria-label="${escapeHtml(entry.name)}，${action}">
       <span class="home-directory-icon">${graphic}</span>
       <span class="home-directory-copy">
@@ -94,6 +111,9 @@
     </button>`;
   }
   function renderDirectory(focusGroup = null) {
+    const {groups,entries}=currentDirectory();
+    if (selectedGroup!=="all" && !groups.some(group=>group.id===selectedGroup)) selectedGroup="all";
+    if (beforeSearch!==null && beforeSearch!=="all" && !groups.some(group=>group.id===beforeSearch)) beforeSearch="all";
     const query = search.value.trim().toLowerCase();
     const active = query ? "all" : selectedGroup;
     clearSearch.hidden = !search.value;
@@ -106,7 +126,7 @@
       const items = visible.filter((entry) => entry.group === group.id);
       if (!items.length) return "";
       return `<section class="home-function-group" aria-labelledby="${group.id}Title">
-        <div class="home-category-heading"><h3 id="${group.id}Title">${escapeHtml(group.label)}</h3><span>${group.description}</span></div>
+        <div class="home-category-heading"><h3 id="${escapeHtml(group.id)}Title">${escapeHtml(group.label)}</h3><span>${escapeHtml(group.description)}</span></div>
         <div class="home-directory-grid">${items.map(renderEntry).join("")}</div>
       </section>`;
     }).join("");
@@ -158,9 +178,11 @@
   // BaigeHomeAccess resolves a detached trigger to the new route+child button
   // after this redraw, keeping permission-dialog focus restoration intact.
   access.onChange(() => renderDirectory());
+  featureConfig?.subscribe(() => renderDirectory());
   renderDirectory();
   page.onDeactivate(() => access.deactivate());
   page.onActivate(() => {
+    renderDirectory();
     window.BaigeHomeDashboard?.refresh();
     window.BaigeHomeUpdates?.refresh();
     window.BaigeHomeCarousel?.activate();

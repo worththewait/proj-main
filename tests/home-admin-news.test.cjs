@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 
-function setup() {
+function setup(featureEntries = null) {
   class Element {
     constructor(id) {
       this.id=id; this.value=''; this.dataset={}; this.listeners={}; this.attributes={}; this.hidden=false; this.isConnected=true; this.textContent=''; this.innerHTML='';
@@ -31,12 +31,25 @@ function setup() {
   const document = {querySelector: selector => get(selector.slice(1)), querySelectorAll: () => []};
   const storage = new Map();
   const window = {localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},BaigePage:{onDeactivate(){},onActivate(){}},BaigeHomeCarouselEditor:{beginDraft(){},onBusyChange(){},isBusy(){return false;},validateDraft(){return [];}}};
+  let featureChanged;
+  if(featureEntries)window.BaigeFeatureConfig={catalog:()=>featureEntries,read:()=>({categories:{home:[{id:'knowledge-research',label:'专业研究'},{id:'tools-platforms',label:'工具与平台'},{id:'added',label:'专题服务'}]}}),iconMarkup:item=>`<span data-managed-icon="${item.icon}"></span>`,subscribe(callback){featureChanged=callback;}};
   const timers = [];
   const context=vm.createContext({window,document,setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:()=>{}});
   for(const file of ['data.js','ui.js','home-card-images.js','home-carousel-model.js','home-config.js','pages/home-admin.js']) vm.runInContext(fs.readFileSync(path.join(__dirname,'../src',file),'utf8'),context);
   const trigger=(action,id)=>{const target=new Element();target.dataset[action]=id;get('updatesTable').emit('click',target);};
-  return {get,config:window.BaigeHomeConfig,trigger,timers};
+  return {get,config:window.BaigeHomeConfig,trigger,timers,featureChanged:()=>featureChanged?.()};
 }
+
+test('recommendation management follows managed home categories and icon changes',()=>{
+  const entries=[{id:'tool:PPT生成',icon:'branch',homeCategory:'added',homeCategoryLabel:'专题服务'}];
+  const app=setup(entries);
+  assert.match(app.get('recommendFilters').innerHTML,/专题服务/);
+  assert.match(app.get('recommendFilters').innerHTML,/专业研究/);
+  assert.match(app.get('recommendOptions').innerHTML,/data-managed-icon="branch"/);
+  entries[0].icon='scan';app.featureChanged();
+  assert.match(app.get('recommendOptions').innerHTML,/data-managed-icon="scan"/);
+  assert.match(app.get('recommendCount').textContent,/已选 4 \/ 4 项/);
+});
 const published={id:'published',title:'已发布标题',body:'完整正文\n第二行',date:'2026-10-27',status:'published',destination:{route:'smart-tools',child:'OCR识别'}};
 const draft={id:'draft',title:'草稿标题',body:'草稿正文',date:'2026-10-26',status:'draft',destination:null};
 const unpublished={id:'unpublished',title:'取消发布标题',body:'已取消正文',date:'2026-10-25',status:'unpublished',destination:null};

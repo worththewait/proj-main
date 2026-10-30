@@ -38,7 +38,7 @@
   }
 
   async function process(file, {aspectRatio = 2} = {}) {
-    if (![2, 8 / 3].includes(aspectRatio)) throw new Error("图片裁切比例无效，请重新选择图片。");
+    if (![1, 2, 8 / 3].includes(aspectRatio)) throw new Error("图片裁切比例无效，请重新选择图片。");
     if (!file || !rasterTypes.has(file.type)) throw new Error("请选择 PNG、JPG 或 WebP 格式的图片。");
     if (!Number.isFinite(file.size) || file.size <= 0 || file.size > maxFileBytes) throw new Error("图片大小不能超过 10MB，请更换图片。");
     const source = await readFile(file);
@@ -56,7 +56,7 @@
     if (!context) throw new Error("当前浏览器无法处理图片，请更换浏览器后重试。");
     const cropWidth = Math.min(sourceWidth, sourceHeight * aspectRatio);
     const cropHeight = cropWidth / aspectRatio;
-    const initialWidth = Math.min(1200, Math.max(2, Math.floor(cropWidth / 2) * 2));
+    const initialWidth = Math.min(aspectRatio === 1 ? 192 : 1200, Math.max(2, Math.floor(cropWidth / 2) * 2));
     try {
       for (const scale of [1, 0.8, 0.64, 0.5]) {
         canvas.width = Math.max(2, Math.floor(initialWidth * scale / 2) * 2);

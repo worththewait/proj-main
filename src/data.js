@@ -15,7 +15,7 @@ const tools = [
 ];
 const navigation = [
  {id:"home",file:"pages/home.html?v=20261028-unpublish-status",label:"首页",icon:"home"},
- {id:"qa",file:"pages/qa.html?v=20261026-xd",label:"百舸问答",icon:"chat",children:["对话","智能问数"]},
+ {id:"qa",file:"pages/qa.html?v=20261030-refined",label:"百舸问答",icon:"chat",children:["对话","智能问数"]},
  {id:"knowledge",file:"pages/knowledge.html",label:"知识库",icon:"book"},
  {id:"writing",file:"pages/writing.html",label:"百舸写作",icon:"pen"},
  {id:"library",file:"pages/library.html",label:"百舸文库",icon:"file",children:["文库首页"],subnav:false,autoChild:false},

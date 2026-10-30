@@ -119,5 +119,15 @@
     return settings;
   }
   function published() {return read().updates.filter(item=>item.status==='published').sort((a,b)=>b.date.localeCompare(a.date));}
-  window.BaigeHomeConfig=Object.freeze({storageKey,catalog:Object.freeze(catalog),defaults,read,readLegacy,saveSection,validateRecommendations,validateUpdates,published,updateDestinations:()=>clone(updateDestinations)});
+  function currentCatalog() {
+    const features=window.BaigeFeatureConfig;
+    if (!features) return catalog;
+    const managed=new Map(features.catalog().map(item=>[item.id,item]));
+    return catalog.map(item=>{
+      const feature=managed.get(item.id);
+      return feature ? {...item,icon:feature.icon,iconImage:feature.iconImage,homeCategory:feature.homeCategory,
+        toolCategory:feature.toolCategory,group:feature.homeCategoryLabel} : item;
+    });
+  }
+  window.BaigeHomeConfig=Object.freeze({storageKey,get catalog(){return Object.freeze(currentCatalog());},defaults,read,readLegacy,saveSection,validateRecommendations,validateUpdates,published,updateDestinations:()=>clone(updateDestinations)});
 })();

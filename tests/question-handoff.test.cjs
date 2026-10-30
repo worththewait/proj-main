@@ -19,11 +19,14 @@ function events(target = {}) {
   return target;
 }
 
-function element() {
+function element(ownerDocument) {
   const classes = new Set();
   const attributes = new Map();
+  const children = new Map();
   return events({
     value: "", hidden: false, disabled: false, open: false, isConnected: true,
+    innerHTML: "", textContent: "", dataset: {}, style: {},
+    scrollTop: 0, scrollHeight: 600, clientHeight: 600,
     classList: {
       contains(name) { return classes.has(name); },
       add(name) { classes.add(name); },
@@ -32,8 +35,14 @@ function element() {
     },
     setAttribute(name, value) { attributes.set(name, value); },
     getAttribute(name) { return attributes.get(name); },
+    removeAttribute(name) { attributes.delete(name); },
+    querySelector(selector) {
+      if (!children.has(selector)) children.set(selector, element(ownerDocument));
+      return children.get(selector);
+    },
     querySelectorAll() { return []; },
-    focus() {},
+    focus() { if (ownerDocument) ownerDocument.activeElement = this; },
+    scrollTo(options) { this.scrollTop = options.top; },
     showModal() { this.open = true; },
     close() { this.open = false; this.emit("close"); },
   });
@@ -43,8 +52,10 @@ function environment(pageId = "home", savedStorage = new Map()) {
   const nodes = new Map();
   const document = events({
     body: { dataset: { page: pageId } },
+    activeElement: null,
+    createElement() { return element(document); },
     querySelector(selector) {
-      if (!nodes.has(selector)) nodes.set(selector, element());
+      if (!nodes.has(selector)) nodes.set(selector, element(document));
       return nodes.get(selector);
     },
   });
@@ -52,7 +63,11 @@ function environment(pageId = "home", savedStorage = new Map()) {
   window.localStorage = { getItem: key => savedStorage.get(key) ?? null, setItem: (key, value) => savedStorage.set(key, value) };
   const location = { hash: "", href: "file:///prototype/index.html" };
   const timers = [];
-  window.setTimeout = fn => { timers.push(fn); };
+  window.setTimeout = fn => { timers.push(fn); return fn; };
+  window.clearTimeout = timer => {
+    const index = timers.indexOf(timer);
+    if (index !== -1) timers.splice(index, 1);
+  };
   const context = vm.createContext({ window, document, location });
   vm.runInContext(source("data.js"), context);
   return { window, document, location, context, nodes, timers };
@@ -248,13 +263,15 @@ test("QA consumes an incoming question in general mode and keeps previous knowle
   assert.equal(node("#knowledgeMode").getAttribute("aria-pressed"), "true");
   activate({ child: "对话", question: "  首页带入的问题  " });
   assert.equal(node("#homePrompt").value, "");
-  assert.equal(node("#sendQuestion").disabled, true);
+  assert.equal(node("#sendQuestion").disabled, false, "生成期间仍可点击停止");
+  assert.match(node("#sendQuestion").getAttribute("aria-label"), /停止/);
   assert.equal(node("#generalMode").getAttribute("aria-pressed"), "true");
   assert.match(node("#conversationMessages").innerHTML, /首页带入的问题/);
   assert.equal(node("#conversationView").classList.contains("is-chatting"), true);
   assert.doesNotMatch(node("#conversationMessages").innerHTML, /演示回复/);
   while (env.timers.length) env.timers.shift()();
-  assert.match(node("#conversationMessages").innerHTML, /演示回复/);
+  const completed = JSON.parse(env.window.localStorage.getItem("baige.qa.history.v1"));
+  assert.match(completed[0].messages.at(-1).text, /演示回复/);
   assert.equal(submissions, 1);
   activate({ child: "对话" });
   assert.equal(submissions, 1);
@@ -373,4 +390,285 @@ test('history groups by local date and keeps legacy sessions searchable', () => 
   env.document.querySelector('#historySearch').emit('input');
   assert.match(env.document.querySelector('#historyList').innerHTML, /近期问题/);
   assert.doesNotMatch(env.document.querySelector('#historyList').innerHTML, /今天问题/);
+});
+
+const qaHistoryKey = "baige.qa.history.v1";
+const completeDemoReply = "这是一条演示回复。感谢你的提问，实际智能问答能力正在接入中。";
+
+function qaConversation(storage = new Map()) {
+  const env = environment("qa", storage);
+  let deactivate = () => {};
+  let activate = () => {};
+  env.window.BaigePage = {
+    onDeactivate(callback) { deactivate = callback; },
+    onActivate(callback) { activate = callback; },
+  };
+  vm.runInContext(source("qa-session.js"), env.context);
+  vm.runInContext(source("conversation-data.js"), env.context);
+  const node = selector => env.document.querySelector(selector);
+  node("#conversationForm").requestSubmit = () => node("#conversationForm").emit("submit", { preventDefault() {} });
+  vm.runInContext(source("pages/home.js"), env.context);
+  return {
+    ...env, node, storage,
+    deactivate() { deactivate(); },
+    activate(payload) { activate(payload); },
+    saved() { return JSON.parse(storage.get(qaHistoryKey) || "[]"); },
+    submit(text) {
+      node("#homePrompt").value = text;
+      node("#homePrompt").emit("input");
+      node("#conversationForm").requestSubmit();
+    },
+    openHistory(id) {
+      node("#historyList").emit("click", { target: { closest() { return { dataset: { historyId: id } }; } } });
+    },
+    tick(count = 1) { for (let i = 0; i < count && env.timers.length; i++) env.timers.shift()(); },
+    finishTimers() {
+      let remaining = 2000;
+      while (env.timers.length && remaining-- > 0) env.timers.shift()();
+      assert.ok(remaining > 0, "定时任务应能结束");
+    },
+  };
+}
+
+test("a second form submission cannot start another reply or consume the next draft", () => {
+  const qa = qaConversation();
+  qa.submit("第一个问题");
+  qa.submit("尚未发送的第二个问题");
+  qa.finishTimers();
+  const messages = qa.saved()[0].messages;
+  assert.deepEqual(messages.filter(message => message.role === "user").map(message => message.text), ["第一个问题"]);
+  assert.equal(messages.filter(message => message.role === "assistant").length, 1);
+  assert.equal(qa.node("#homePrompt").value, "尚未发送的第二个问题");
+});
+
+test("stopping a reply preserves only generated text and prevents later timer updates", () => {
+  const qa = qaConversation();
+  qa.submit("请慢慢说明");
+  qa.tick(4);
+  qa.node("#sendQuestion").focus();
+  qa.node("#sendQuestion").emit("click", { preventDefault() {} });
+  const stopped = qa.saved()[0].messages.at(-1);
+  assert.ok(stopped.text.length > 0 && stopped.text.length < completeDemoReply.length, "停止后保存实际已生成的部分内容");
+  assert.equal(Boolean(stopped.pending), false);
+  qa.finishTimers();
+  assert.equal(qa.saved()[0].messages.at(-1).text, stopped.text);
+  assert.equal(qa.node("#sendQuestion").disabled, true, "输入为空时恢复发送按钮禁用态");
+  assert.equal(qa.document.activeElement, qa.node("#homePrompt"), "停止后可立即继续输入");
+});
+
+for (const action of ["新建", "切换历史", "离开页面"]) {
+  test(`${action} cancels generation without completing the old reply in the background`, () => {
+    const oldSession = { id: "older", title: "较早的会话", mode: "general", messages: [{ role: "user", text: "旧问题" }, { role: "assistant", text: "旧答案" }] };
+    const qa = qaConversation(new Map([[qaHistoryKey, JSON.stringify([oldSession])]]));
+    qa.submit("正在生成的问题");
+    qa.tick(3);
+    if (action === "新建") qa.node("#newConversation").emit("click");
+    if (action === "切换历史") qa.openHistory("older");
+    if (action === "离开页面") qa.deactivate();
+    qa.finishTimers();
+    const interrupted = qa.saved().find(item => item.title === "正在生成的问题").messages.at(-1);
+    assert.ok(interrupted.text.length > 0 && interrupted.text.length < completeDemoReply.length, "离开原会话后不在后台补全文");
+    assert.equal(Boolean(interrupted.pending), false);
+    if (action === "新建") assert.equal(qa.node("#conversationMessages").innerHTML, "");
+    if (action === "切换历史") assert.match(qa.node("#conversationMessages").innerHTML, /旧答案/);
+  });
+}
+
+test("reloading an unfinished reply restores its actual partial text instead of fabricating a full answer", () => {
+  const storage = new Map();
+  const first = qaConversation(storage);
+  first.submit("刷新时尚未完成");
+  first.tick(3);
+  const second = qaConversation(storage);
+  const saved = second.saved()[0];
+  second.openHistory(saved.id);
+  const reply = second.saved()[0].messages.at(-1);
+  assert.ok(reply.text.length > 0 && reply.text.length < completeDemoReply.length);
+  assert.equal(Boolean(reply.pending), false);
+  assert.match(second.node("#conversationMessages").innerHTML, /中断|停止|未完成/, "刷新后应说明回复没有正常完成");
+});
+
+test("scrolling up pauses following and returning to latest resumes it in the message pane", () => {
+  const qa = qaConversation();
+  qa.submit("生成一段便于回看历史的回复");
+  const messages = qa.node("#conversationMessages");
+  const outer = qa.node("#contentScroll");
+  Object.assign(messages, { scrollHeight: 1200, clientHeight: 300, scrollTop: 900 });
+  Object.assign(outer, { scrollHeight: 1800, clientHeight: 600, scrollTop: 222 });
+  qa.tick();
+  messages.scrollTop = 100;
+  messages.emit("scroll");
+  qa.tick();
+  assert.equal(messages.scrollTop, 100, "上翻阅读时不夺取消息区位置");
+  assert.equal(outer.scrollTop, 222, "回复更新只滚动消息区");
+  assert.equal(qa.node("#jumpToLatest").hidden, false);
+  qa.node("#jumpToLatest").focus();
+  qa.node("#jumpToLatest").emit("click");
+  assert.ok(messages.scrollTop >= 900);
+  assert.equal(qa.node("#jumpToLatest").hidden, true);
+  assert.equal(qa.document.activeElement, messages, "回到最新后焦点留在消息区继续阅读");
+  messages.scrollHeight = 1300;
+  qa.tick();
+  assert.ok(messages.scrollTop >= 1000, "点击回到最新后继续跟随新内容");
+});
+
+test("a knowledge conversation restores its selected sources and web search after reload", () => {
+  const storage = new Map();
+  const first = qaConversation(storage);
+  first.node("#knowledgeMode").emit("click");
+  for (const id of ["industry-ship", "enterprise-policy"]) {
+    first.node("#knowledgePickerResults").emit("change", { target: { value: id, checked: true, matches() { return true; } } });
+  }
+  first.node("#confirmKnowledgePicker").emit("click");
+  first.node("#webSearchMode").emit("click");
+  first.submit("按这些资料回答");
+  first.finishTimers();
+  const second = qaConversation(storage);
+  second.openHistory(second.saved()[0].id);
+  assert.equal(second.node("#knowledgeMode").getAttribute("aria-pressed"), "true");
+  assert.match(second.node("#selectedSourceTags").innerHTML, /船舶行业知识库/);
+  assert.match(second.node("#selectedSourceTags").innerHTML, /企业制度知识库/);
+  assert.equal(second.node("#webSearchMode").getAttribute("aria-pressed"), "true");
+  second.submit("继续核对");
+  second.finishTimers();
+  assert.deepEqual(second.saved()[0].knowledgeBaseIds, ["industry-ship", "enterprise-policy"]);
+});
+
+test("legacy knowledge history without source IDs requests a scope instead of silently sending in general mode", () => {
+  const legacy = { id: "legacy-knowledge", title: "旧知识会话", mode: "knowledge", messages: [{ role: "user", text: "原问题" }, { role: "assistant", text: "原答案" }] };
+  const qa = qaConversation(new Map([[qaHistoryKey, JSON.stringify([legacy])]]));
+  qa.openHistory(legacy.id);
+  assert.match(qa.node("#conversationFeedback").textContent, /知识库|范围/);
+  qa.submit("继续追问");
+  assert.equal(qa.node("#knowledgePicker").open, true);
+  assert.equal(qa.saved()[0].messages.length, 2);
+  assert.equal(qa.node("#homePrompt").value, "继续追问");
+});
+
+test("example answers and citations survive a followup and history reload", () => {
+  const storage = new Map();
+  const first = qaConversation(storage);
+  first.node("#showCitationExample").emit("click");
+  first.submit("请继续说明如何核对");
+  first.finishTimers();
+  assert.match(first.node("#conversationMessages").innerHTML, /先对齐目标，再比较差异/);
+  assert.match(first.node("#conversationMessages").innerHTML, /data-example-citation/);
+  const second = qaConversation(storage);
+  second.openHistory(second.saved()[0].id);
+  assert.match(second.node("#conversationMessages").innerHTML, /先对齐目标，再比较差异/);
+  assert.match(second.node("#conversationMessages").innerHTML, /data-example-citation/);
+  second.node("#conversationMessages").emit("click", { target: { closest() { return { dataset: { exampleCitation: "1" } }; } } });
+  assert.equal(second.node("#referencesPanel").hidden, false);
+  assert.match(second.node("#referencesContent").innerHTML, /研究资料核对清单/);
+});
+
+test("switching histories closes the previous conversation's source reader", () => {
+  const other = { id: "other", title: "无引用的会话", mode: "general", messages: [{ role: "user", text: "另一个问题" }] };
+  const qa = qaConversation(new Map([[qaHistoryKey, JSON.stringify([other])]]));
+  qa.node("#showCitationExample").emit("click");
+  qa.node("#conversationMessages").emit("click", { target: { closest() { return { dataset: { exampleCitation: "0" } }; } } });
+  qa.node("#sourceExpand").emit("click");
+  qa.openHistory(other.id);
+  assert.equal(qa.node("#referencesPanel").hidden, true);
+  assert.equal(qa.node("#referencesPanel").classList.contains("is-expanded"), false);
+});
+
+test("closing side panels returns keyboard focus to their triggers", () => {
+  const qa = qaConversation();
+  const historyToggle = qa.node("#historyToggle");
+  historyToggle.focus();
+  historyToggle.emit("click");
+  assert.equal(qa.document.activeElement, qa.node("#historySearch"));
+  qa.node("#historyClose").focus();
+  qa.node("#historyClose").emit("click");
+  assert.equal(qa.document.activeElement, historyToggle);
+  qa.node("#showCitationExample").emit("click");
+  const citation = qa.document.createElement("button");
+  citation.dataset.exampleCitation = "0";
+  citation.closest = () => citation;
+  citation.focus();
+  qa.node("#conversationMessages").emit("click", { target: citation });
+  qa.node("#referencesClose").focus();
+  qa.node("#referencesClose").emit("click");
+  assert.equal(qa.document.activeElement, citation);
+});
+
+test("IME confirmation and Shift Enter do not send while an ordinary Enter does", () => {
+  const qa = qaConversation();
+  const field = qa.node("#homePrompt");
+  field.value = "中文输入";
+  for (const properties of [{ isComposing: true }, { keyCode: 229 }, { shiftKey: true }]) {
+    field.emit("keydown", { key: "Enter", preventDefault() {}, ...properties });
+  }
+  assert.equal(qa.saved().length, 0);
+  field.emit("keydown", { key: "Enter", keyCode: 13, isComposing: false, shiftKey: false, preventDefault() {} });
+  assert.equal(qa.saved().length, 1);
+  assert.equal(qa.saved()[0].messages[0].text, "中文输入");
+});
+
+test("choosing a history conversation focuses the composer for a followup", () => {
+  const saved = { id: "continue-here", title: "继续这个会话", messages: [{role: "user", text: "原问题"}] };
+  const qa = qaConversation(new Map([[qaHistoryKey, JSON.stringify([saved])]]));
+  qa.node("#historyToggle").emit("click");
+  qa.openHistory(saved.id);
+  assert.equal(qa.node("#historyPanel").hidden, true);
+  assert.equal(qa.document.activeElement, qa.node("#homePrompt"));
+});
+
+test("composer layout changes keep the latest reply visible only while following", () => {
+  const qa = qaConversation();
+  const messages = qa.node("#conversationMessages");
+  Object.assign(messages, {scrollHeight: 1000, clientHeight: 400});
+  let top = 0;
+  Object.defineProperty(messages, "scrollTop", {
+    get() { return top; },
+    set(value) { top = Math.min(value, messages.scrollHeight - messages.clientHeight); },
+  });
+  let sourcesHidden = true;
+  Object.defineProperty(qa.node("#selectedSources"), "hidden", {
+    get() { return sourcesHidden; },
+    set(value) { sourcesHidden = value; messages.clientHeight = value ? 400 : 342; },
+  });
+  qa.node("#showCitationExample").emit("click");
+  assert.equal(messages.scrollTop, 658, "知识范围显示后应补上新增的58px滚动距离");
+
+  const field = qa.node("#homePrompt");
+  let height = "";
+  Object.defineProperty(field.style, "height", {
+    get() { return height; },
+    set(value) {
+      height = value;
+      if (value.endsWith("px")) messages.clientHeight = 220;
+    },
+  });
+  field.scrollHeight = 200;
+  field.value = "准备一段多行追问";
+  field.emit("input");
+  assert.equal(field.style.height, "144px");
+  assert.equal(messages.scrollTop, 780, "输入框变高后仍能看到最新消息");
+
+  messages.scrollTop = 20;
+  messages.emit("scroll");
+  qa.node("#generalMode").emit("click");
+  field.emit("input");
+  assert.equal(messages.scrollTop, 20, "用户上翻时模式和高度变化不应强制贴底");
+});
+
+test("opening history collapses the source panel while retaining its current document", () => {
+  const qa = qaConversation();
+  qa.node("#showCitationExample").emit("click");
+  qa.node("#conversationMessages").emit("click", {target: {closest() { return {dataset: {exampleCitation: "0"}}; }}});
+  qa.node("#sourceNext").emit("click");
+  qa.node("#sourceExpand").emit("click");
+  const paper = qa.node("#sourcePaper").innerHTML;
+  qa.node("#historyToggle").emit("click");
+  assert.equal(qa.node("#historyPanel").hidden, false);
+  assert.equal(qa.node("#referencesPanel").hidden, true);
+  assert.equal(qa.node("#referencesPanel").classList.contains("is-expanded"), false);
+  assert.equal(qa.node("#sourcePaper").innerHTML, paper);
+  qa.node("#historyClose").emit("click");
+  qa.node("#referencesToggle").emit("click");
+  assert.equal(qa.node("#referencesPanel").hidden, false);
+  assert.equal(qa.node("#sourcePaper").innerHTML, paper);
+  assert.equal(qa.node("#sourcePage").textContent, "3 / 3");
 });

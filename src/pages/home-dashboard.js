@@ -10,7 +10,7 @@
   const questionFeedback = document.querySelector('#quickQuestionFeedback');
   const commonFunctions = document.querySelector('#commonFunctions');
   const commonTabs = document.querySelector('#commonFunctionTabs');
-  const candidateById = new Map(config.catalog.map(item=>[item.id,item]));
+  let candidateById = new Map(config.catalog.map(item=>[item.id,item]));
   let settings = config.read();
   let selectedCommonTab = 'mine', composing = false;
   const maxQuestionLength = 16000;
@@ -22,6 +22,7 @@
     return {ids:[...new Set([...legacyIds,...defaultIds])].slice(0,4), cards:legacy?.cards||{}};
   }
   function renderCommonFunctions() {
+    candidateById=new Map(config.catalog.map(item=>[item.id,item]));
     for (const tab of commonTabs.querySelectorAll('[data-home-tab]')) tab.setAttribute('aria-pressed',String(tab.dataset.homeTab===selectedCommonTab));
     const mine=myFunctions();
     const visibleIds=selectedCommonTab==='mine'?mine.ids:settings.recommendedIds;
@@ -34,8 +35,8 @@
       const state=access.status(item.route,item.child);
       const action={granted:'进入功能',locked:'申请权限',pending:'查看申请'}[state];
       const status=state==='granted'?'':`<span class="home-access-tag${state==='pending'?' is-pending':''}">${state==='pending'?'待审批':'需申请'}</span>`;
-      const image=window.BaigeHomeCardImages.isSafeImage(custom.image);
-      const graphic=image?`<img src="${escapeHtml(custom.image)}" alt="" width="48" height="48">`:(window.BaigeDirectoryIcons?.icon(item.icon)||icon(item.icon));
+      const image=window.BaigeHomeCardImages.isSafeImage(custom.image) && !window.BaigeFeatureConfig;
+      const graphic=window.BaigeFeatureConfig ? window.BaigeFeatureConfig.iconMarkup(item) : image?`<img src="${escapeHtml(custom.image)}" alt="" width="48" height="48">`:(window.BaigeDirectoryIcons?.icon(item.icon)||icon(item.icon));
       return `<button class="home-common-card" type="button" data-tone="${item.tone}" data-home-route="${escapeHtml(item.route)}" data-home-child="${escapeHtml(item.child)}" aria-label="${escapeHtml(name)}，${action}"><span class="home-shortcut-icon${image?' is-custom':''}">${graphic}</span><span class="home-shortcut-name">${escapeHtml(name)}${status}</span><span class="home-shortcut-arrow" aria-hidden="true">${icon('arrow')}</span></button>`;
     }).join('') || '<p class="home-recommend-empty">暂未配置推荐功能。</p>';
   }
@@ -97,6 +98,7 @@
   });
 
   access.onChange(renderCommonFunctions);
+  window.BaigeFeatureConfig?.subscribe(refresh);
   window.addEventListener('storage',event=>{if(event.key===config.storageKey||event.key==='baige.homepage.v1'||event.key===null)refresh();});
   window.BaigeHomeDashboard=Object.freeze({refresh});
   updateQuestion();refresh();

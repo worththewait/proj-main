@@ -5,8 +5,8 @@
   // reconstructs it, preserving inputs, file selections and local listeners.
   // This is an in-memory session: refreshing/closing the browser ends it.
   class ToolWorkspace {
-    constructor({ host, bar, scroller, tools, icon, escapeHtml, renderCatalog, renderTool, onNavigate }) {
-      Object.assign(this, { host, bar, scroller, tools, icon, escapeHtml, renderCatalog, renderTool, onNavigate });
+    constructor({ host, bar, scroller, tools, icon, iconForTool, escapeHtml, renderCatalog, renderTool, onNavigate }) {
+      Object.assign(this, { host, bar, scroller, tools, icon, iconForTool, escapeHtml, renderCatalog, renderTool, onNavigate });
       this.pages = new Map();
       this.activeKey = "";
       this.serial = 0;
@@ -110,10 +110,14 @@
       const label = this.escapeHtml(page.label);
       return `<div class="workspace-tab ${active ? "is-active" : ""}" role="presentation">
         <button type="button" role="tab" id="${page.uid}-tab" aria-controls="${page.uid}" aria-selected="${active}" tabindex="${active ? "0" : "-1"}" data-workspace-tab="${key}" title="${label}${page.dirty ? "（有未保存内容）" : ""}">
-          ${this.icon(page.icon)}<span class="workspace-tab-label">${label}</span>${page.dirty ? '<span class="unsaved-dot"><span class="sr-only">有未保存内容</span></span>' : ""}
+          ${this.pageIcon(page)}<span class="workspace-tab-label">${label}</span>${page.dirty ? '<span class="unsaved-dot"><span class="sr-only">有未保存内容</span></span>' : ""}
         </button>
         ${page.key ? `<button type="button" class="workspace-tab-close" data-close-tool="${key}" aria-label="关闭${label}" title="关闭${label}">${this.icon("close")}</button>` : ""}
       </div>`;
+    }
+
+    pageIcon(page) {
+      return page.key && this.iconForTool ? this.iconForTool(page.key) : this.icon(page.icon);
     }
 
     renderTabs() {
@@ -124,7 +128,7 @@
       this.strip.innerHTML = openPages.map((page) => this.tabMarkup(page)).join("");
       this.trigger.innerHTML = `${this.icon("layers")}<span>已打开</span><span class="open-tools-count">${openPages.length}</span>${this.icon("down")}`;
       this.trigger.setAttribute("aria-label", `已打开工具，共 ${openPages.length} 个`);
-      this.list.innerHTML = `<div class="open-tools-heading">已打开的工具 · ${openPages.length}</div>${openPages.length ? openPages.map((page) => `<button type="button" class="open-tool-option" data-open-tool="${this.escapeHtml(page.key)}" ${page.key === this.activeKey ? 'aria-current="true"' : ""}>${this.icon(page.icon)}<span>${this.escapeHtml(page.label)}</span>${page.key === this.activeKey ? this.icon("check") : ""}</button>`).join("") : '<p class="open-tools-empty">从工具目录选择一个工具即可开始。</p>'}`;
+      this.list.innerHTML = `<div class="open-tools-heading">已打开的工具 · ${openPages.length}</div>${openPages.length ? openPages.map((page) => `<button type="button" class="open-tool-option" data-open-tool="${this.escapeHtml(page.key)}" ${page.key === this.activeKey ? 'aria-current="true"' : ""}>${this.pageIcon(page)}<span>${this.escapeHtml(page.label)}</span>${page.key === this.activeKey ? this.icon("check") : ""}</button>`).join("") : '<p class="open-tools-empty">从工具目录选择一个工具即可开始。</p>'}`;
       this.strip.scrollLeft = savedScroll;
       this.revealActiveTab();
     }

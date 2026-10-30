@@ -42,6 +42,17 @@ input, textarea { caret-color: var(--accent); }
 input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
 ::selection { color: var(--ink); background: #d9e4ff; }
 .icon { width: 20px; height: 20px; flex-shrink: 0; vertical-align: middle; }
+.feature-custom-icon { display: inline-block; width: 20px; height: 20px; flex-shrink: 0; object-fit: contain; vertical-align: middle; border-radius: 3px; }
+.home-directory-icon > .feature-custom-icon { width: 29px; height: 29px; }
+.home-shortcut-icon > .feature-custom-icon { object-fit: contain; }
+.tool-icon > .feature-custom-icon { width: 28px; height: 28px; }
+.tool-page-identity .tool-icon > .feature-custom-icon { width: 36px; height: 36px; }
+[data-detail-icon]:not(.tool-icon) { display: inline-flex; align-items: center; justify-content: center; }
+.workspace-tab .feature-custom-icon, .open-tool-option .feature-custom-icon { width: 16px; height: 16px; }
+.admin-option-icon > .feature-custom-icon { width: 24px; height: 24px; }
+[data-page="smart-tools"] .integration-panel .empty-state > [data-detail-icon] { width: 54px; height: 54px; padding: 12px; border-radius: 14px; background: var(--tool-tint, var(--accent-soft)); color: var(--tool-tone, var(--accent)); margin-bottom: 22px; }
+[data-page="smart-tools"] .integration-panel .empty-state > [data-detail-icon] > .icon,
+[data-page="smart-tools"] .integration-panel .empty-state > [data-detail-icon] > .feature-custom-icon { width: 30px; height: 30px; }
 h1, h2, h3, p { margin: 0; }
 h1 { font-size: 28px; line-height: 1.4; font-weight: 600; letter-spacing: -.6px; }
 h2 { font-size: 17px; line-height: 1.5; font-weight: 600; }

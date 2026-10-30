@@ -5,20 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>百舸问答 · 百舸数智平台</title>
   <link rel="stylesheet" href="../styles.css?v=20261026-xd" />
-  <link rel="stylesheet" href="../qa-visual.css?v=20261030-no-attachment" />
+  <link rel="stylesheet" href="../qa-visual.css?v=20261030-web-search-aligned" />
 </head>
 <body class="module-page qa-module" data-page="qa">
   <main class="module-main qa-workspace">
     <div class="qa-panel-actions" aria-label="对话操作"><button type="button" id="historyToggle" aria-label="历史会话" title="历史会话" aria-controls="historyPanel" aria-expanded="false"><span data-icon="history"></span></button><button type="button" id="newConversation" aria-label="新建对话" title="新建对话"><span data-icon="newchat"></span></button></div>
     <button type="button" id="referencesToggle" aria-controls="referencesPanel" aria-expanded="false" hidden></button>
-    <aside class="qa-side-panel qa-history-panel" id="historyPanel" aria-label="历史记录" hidden><div class="qa-panel-heading"><h2>历史会话</h2><button type="button" id="historyClose" aria-label="关闭历史记录"><span data-icon="panel"></span></button></div><label class="qa-history-search"><span data-icon="search" aria-hidden="true"></span><span class="sr-only">搜索历史会话</span><input type="search" id="historySearch" placeholder="搜索会话" autocomplete="off" /></label><div id="historyList"></div><button type="button" class="qa-history-example" id="historyExample"><span data-icon="book"></span>引用与原文示例 <span data-icon="chevron"></span></button><p class="qa-panel-empty">会话保存在当前浏览器</p></aside>
-    <aside class="qa-side-panel qa-references-panel" id="referencesPanel" aria-label="引用文档" hidden><div class="qa-panel-heading"><h2>原文预览</h2><button type="button" id="sourceExpand" aria-label="展开阅读" title="展开阅读"><span data-icon="expand"></span></button><button type="button" id="referencesClose" aria-label="关闭引用文档"><span data-icon="close"></span></button></div><div id="referencesContent"><p>演示对话暂无实际引用文档。可通过首页的引用示例查看原文交互。</p></div><div class="qa-source-controls" id="sourceControls" hidden><button type="button" id="sourcePrevious">上一页</button><span id="sourcePage"></span><button type="button" id="sourceNext">下一页</button><button type="button" id="sourceZoomOut" aria-label="缩小">−</button><span id="sourceZoom">100%</span><button type="button" id="sourceZoomIn" aria-label="放大">＋</button></div><div id="sourcePaper" class="qa-source-paper"></div></aside>
+    <aside class="qa-side-panel qa-history-panel" id="historyPanel" aria-label="历史记录" hidden><div class="qa-panel-heading"><h2 tabindex="-1">历史会话</h2><button type="button" id="historyClose" aria-label="关闭历史记录"><span data-icon="panel"></span></button></div><label class="qa-history-search"><span data-icon="search" aria-hidden="true"></span><span class="sr-only">搜索历史会话</span><input type="search" id="historySearch" placeholder="搜索会话" autocomplete="off" /></label><div id="historyList"></div><button type="button" class="qa-history-example" id="historyExample"><span data-icon="book"></span>引用与原文示例 <span data-icon="chevron"></span></button><p class="qa-panel-empty">会话保存在当前浏览器</p></aside>
+    <aside class="qa-side-panel qa-references-panel" id="referencesPanel" aria-label="引用文档" hidden><div class="qa-panel-heading"><h2 tabindex="-1">原文预览</h2><button type="button" id="sourceExpand" aria-label="展开阅读" title="展开阅读"><span data-icon="expand"></span></button><button type="button" id="referencesClose" aria-label="关闭引用文档"><span data-icon="close"></span></button></div><div id="referencesContent"><p>演示对话暂无实际引用文档。可通过首页的引用示例查看原文交互。</p></div><div class="qa-source-controls" id="sourceControls" hidden><button type="button" id="sourcePrevious">上一页</button><span id="sourcePage"></span><button type="button" id="sourceNext">下一页</button><button type="button" id="sourceZoomOut" aria-label="缩小">−</button><span id="sourceZoom">100%</span><button type="button" id="sourceZoomIn" aria-label="放大">＋</button></div><div id="sourcePaper" class="qa-source-paper"></div></aside>
     <div class="content-scroll" id="contentScroll">
       <div class="content-inner qa-page" id="content">
         <section class="qa-conversation" id="conversationView" aria-labelledby="conversationTitle">
           <header class="qa-welcome">
             <div class="qa-brand-visual" aria-hidden="true">
-              <span class="qa-brand-sheet"></span>
               <img class="qa-brand-mark" src="../assets/baige-logo.svg" width="62" height="70" alt="" />
             </div>
             <div class="qa-welcome-copy">
@@ -27,35 +26,9 @@
             </div>
           </header>
 
-          <div class="qa-introductions" aria-label="问答能力介绍">
-            <article class="qa-intro-card qa-general-intro">
-              <div class="qa-general-figure" aria-hidden="true">
-                <span class="qa-message-back"><span></span><span></span></span>
-                <span class="qa-message-front"><span data-icon="chat"></span><i></i><i></i><i></i></span>
-              </div>
-              <h2><span data-icon="chat" aria-hidden="true"></span>通用问答</h2>
-              <p>理解问题、梳理思路，辅助完成日常工作。</p>
-              <ul class="qa-example-list" aria-label="通用问答示例">
-                <li>如何快速梳理一份研究报告的核心观点？</li>
-                <li>船舶行业的绿色发展有哪些研究方向？</li>
-                <li>怎样为一项研究任务搭建分析框架？</li>
-              </ul>
-            </article>
-            <article class="qa-intro-card qa-knowledge-intro">
-              <div class="qa-knowledge-figure" aria-hidden="true">
-                <span class="qa-document-back"></span>
-                <span class="qa-document-middle"></span>
-                <span class="qa-knowledge-symbol"><span data-icon="book"></span><i></i><i></i></span>
-                <span class="qa-document-search"><span data-icon="search"></span></span>
-              </div>
-              <h2>知识库问答</h2>
-              <p>选择与你工作相关的知识库，围绕专业资料展开提问。</p>
-              <span class="qa-intro-note">在下方切换「知识问答」，选择知识库后开始。</span>
-            </article>
-          </div>
-
-          <div id="conversationMessages" class="qa-conversation-messages" aria-live="polite" aria-label="对话记录"></div>
+          <div id="conversationMessages" class="qa-conversation-messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="对话记录" tabindex="0"></div>
           <div class="qa-composer-area">
+            <button class="qa-jump-to-latest" type="button" id="jumpToLatest" hidden><span data-icon="arrow" aria-hidden="true"></span>回到最新</button>
             <form class="qa-composer" id="conversationForm">
               <div class="qa-selected-sources" id="selectedSources" hidden>
                 <span class="qa-sources-label">已选知识库</span>
@@ -63,7 +36,7 @@
                 <button class="qa-text-action" type="button" id="changeKnowledge">更换</button>
               </div>
               <label class="sr-only" for="homePrompt">输入你的问题</label>
-              <textarea id="homePrompt" rows="3" placeholder="请输入你的问题，Enter 发送，Shift + Enter 换行" aria-describedby="conversationFeedback"></textarea>
+              <textarea id="homePrompt" rows="1" placeholder="请输入你的问题，Enter 发送，Shift + Enter 换行" aria-describedby="conversationFeedback"></textarea>
               <div class="qa-composer-toolbar">
                 <div class="qa-modes" role="group" aria-label="问答模式">
                   <button class="qa-mode-button is-active" type="button" id="generalMode" aria-pressed="true"><span data-icon="chat" aria-hidden="true"></span>通用问答</button>
@@ -73,7 +46,7 @@
               </div>
             </form>
             <p class="qa-form-feedback" id="conversationFeedback" role="status"></p>
-            <section class="qa-suggestions" aria-label="建议问题"><div class="qa-suggestions-heading"><strong>试试这些方向</strong><button type="button" id="refreshQuestions"><span data-icon="refresh"></span>换一批</button></div><div id="suggestedQuestions"></div><button type="button" id="showCitationExample">看看知识问答如何引用资料 →</button></section>
+            <section class="qa-suggestions" aria-label="建议问题"><div class="qa-suggestions-heading"><strong>试试这些方向</strong><button type="button" id="refreshQuestions"><span data-icon="refresh" aria-hidden="true"></span>换一批</button></div><div id="suggestedQuestions"></div><button type="button" id="showCitationExample">看看知识问答如何引用资料<span data-icon="arrow" aria-hidden="true"></span></button></section>
             <p class="qa-disclaimer">AI 生成内容仅供参考，请结合专业判断核实。</p>
           </div>
         </section>
@@ -102,6 +75,6 @@
   <script src="../src/page-bridge.js?v=20261023-comments"></script>
   <script src="../src/qa-session.js"></script>
   <script src="../src/conversation-data.js"></script>
-  <script src="../src/pages/home.js?v=20261030-no-attachment"></script>
+  <script src="../src/pages/home.js?v=20261030-refined"></script>
 </body>
 </html>

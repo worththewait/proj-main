@@ -9,7 +9,7 @@ const decode = value => value.replaceAll('&quot;', '"').replaceAll('&#39;', "'")
 
 // The fake DOM supplies browser mechanics; all directory data, filtering,
 // permission decisions, application updates and navigation run production scripts.
-function setup() {
+function setup(featureConfig = null) {
   let document;
   class Element {
     constructor(tag = 'div', attributes = {}) {
@@ -72,7 +72,8 @@ function setup() {
   document.innerHTML = '<div id="featureGroups"></div><div id="featureResults"></div><input id="featureSearch"><button id="featureClear"></button><input id="availableOnly"><div id="featureSearchSummary"></div><div id="commonFunctions"></div><button id="unrelated" data-home-route="knowledge"></button><dialog id="homeAccessDialog"><h2 id="homeAccessTitle"></h2><p id="homeAccessDescription"></p><p id="homeAccessFeedback"></p><button id="applyHomeAccess"></button><button id="closeHomeAccess"></button></dialog>';
   document.getElementById = id => document.querySelector(`#${id}`);
   const navigations = [];
-  const window = {BaigePage: {navigate: (...args) => navigations.push(args), onActivate() {}, onDeactivate() {}}};
+  let activate;
+  const window = {BaigeFeatureConfig: featureConfig, BaigePage: {navigate: (...args) => navigations.push(args), onActivate(callback) {activate=callback;}, onDeactivate() {}}};
   const context = vm.createContext({window, document, HTMLElement: Element, console});
   for (const file of ['src/data.js', 'src/ui.js', 'src/home-access.js', 'src/pages/landing.js']) vm.runInContext(fs.readFileSync(path.join(project, file), 'utf8'), context, {filename: file});
   const get = id => document.getElementById(id);
@@ -81,8 +82,49 @@ function setup() {
   const query = value => {get('featureSearch').value = value; get('featureSearch').emit('input');};
   const group = id => get('featureGroups').querySelector(`[data-feature-group="${id}"]`).emit('click');
   const available = checked => {get('availableOnly').checked = checked; get('availableOnly').emit('change');};
-  return {get, document, window, navigations, items, route, query, group, available};
+  return {get, document, window, navigations, items, route, query, group, available, activate:()=>activate?.()};
 }
+
+function managedDirectory() {
+  let listener;
+  const home=[{id:'knowledge-research',label:'知识与研究'},{id:'tools-platforms',label:'工具与平台'},{id:'custom',label:'专题能力'}];
+  const entries=[{id:'tool:OCR识别',route:'smart-tools',child:'OCR识别',icon:'scan',iconImage:'data:image/png;base64,iVBORw0KGgo=',homeCategory:'custom',toolCategoryLabel:'资料解析'}];
+  const model={read:()=>({categories:{home}}),catalog:()=>entries,subscribe(callback){listener=callback;},iconMarkup:entry=>`<img src="${entry.iconImage}" class="feature-custom-icon" alt="">`};
+  return {model,home,entries,change:()=>listener?.()};
+}
+
+test('managed home categories and icons update directory while preserving exact navigation', () => {
+  const managed=managedDirectory(), app=setup(managed.model);
+  assert.ok(app.get('featureGroups').querySelector('[data-feature-group="custom"]'));
+  app.group('custom');
+  assert.equal(app.items().length,1);
+  assert.ok(app.route('smart-tools','OCR识别').querySelector('img.feature-custom-icon'));
+  app.route('smart-tools','OCR识别').emit('click');
+  assert.equal(JSON.stringify(app.navigations),JSON.stringify([['smart-tools','OCR识别']]));
+  app.query('资料解析');
+  assert.equal(app.items().length,1);
+});
+
+test('category rename and deletion refresh cached directory and recover selected filters', () => {
+  const managed=managedDirectory(), app=setup(managed.model);
+  app.group('custom');
+  managed.home[2].label='新专题';managed.change();
+  assert.match(app.get('featureGroups').textContent,/新专题/);
+  assert.equal(app.items().length,1);
+  managed.home.pop();managed.entries[0].homeCategory='tools-platforms';managed.change();
+  assert.equal(app.items().length,27,'a deleted selected category falls back to all');
+  app.group('tools-platforms');assert.equal(app.items().length,20);
+  managed.entries[0].homeCategory='knowledge-research';app.activate();
+  assert.equal(app.items().length,19,'activation rereads metadata for an already mounted page');
+});
+
+test('managed metadata preserves dataset resource keywords and cross-scope knowledge search',()=>{
+  const managed=managedDirectory();
+  managed.entries.push({id:'route:datasets',route:'datasets',child:'',icon:'database',homeCategory:'tools-platforms',homeCategoryLabel:'工具与平台'});
+  const app=setup(managed.model);app.query('船海产业数据集');
+  assert.equal(app.items().length,1);
+  assert.ok(app.route('datasets'));
+});
 
 // A collapsed parent, duplicate workspace entry, or expanded dataset resources
 // would otherwise make specific functions inaccessible or repeat them.

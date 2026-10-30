@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>功能管理 · 百舸后台系统</title>
+  <link rel="stylesheet" href="../styles.css">
+  <link rel="stylesheet" href="../feature-admin.css?v=20261030-features">
+</head>
+<body class="module-page feature-admin-page">
+<main class="module-main"><div class="content-scroll"><div class="content-inner feature-admin">
+  <header class="feature-page-heading"><div><h1>功能管理</h1><p>统一维护功能图标、热门工具配图和分类，让前台展示保持一致。</p></div><span class="feature-local-label">本地演示</span></header>
+  <div class="feature-tabs" role="tablist" aria-label="功能管理">
+    <button id="featureListTab" type="button" role="tab" aria-selected="true" aria-controls="featureListPanel" data-feature-tab="list">功能列表</button>
+    <button id="featureCategoryTab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="featureCategoryPanel" data-feature-tab="categories">分类管理</button>
+  </div>
+  <p class="feature-scope-note">保存后同步更新当前浏览器的首页与智能工具。大图仅用于智能工具的热门工具区域。</p>
+  <section id="featureListPanel" role="tabpanel" aria-labelledby="featureListTab">
+    <div class="feature-list-toolbar">
+      <label class="feature-search"><span data-icon="search" aria-hidden="true"></span><input id="featureSearch" type="search" placeholder="搜索功能名称或用途" aria-label="搜索功能"></label>
+      <label class="feature-filter"><span>首页分类</span><select id="featureHomeFilter" aria-label="按首页分类筛选"></select></label>
+      <label class="feature-filter"><span>工具分类</span><select id="featureToolFilter" aria-label="按工具分类筛选"></select></label>
+      <button class="feature-text-button" id="resetFeatureFilters" type="button">重置</button>
+    </div>
+    <div class="feature-table-panel"><table class="feature-table"><thead><tr><th scope="col">功能</th><th scope="col">首页分类</th><th scope="col">工具分类</th><th scope="col">大图</th><th scope="col">操作</th></tr></thead><tbody id="featureTable"></tbody></table>
+    <footer class="feature-list-footer"><p id="featureSummary" role="status"></p><div class="feature-pager" id="featurePager" role="group" aria-label="功能列表分页"></div></footer></div>
+  </section>
+  <section id="featureCategoryPanel" role="tabpanel" aria-labelledby="featureCategoryTab" hidden>
+    <div class="feature-category-heading"><div class="feature-category-scopes" role="group" aria-label="分类体系"><button type="button" data-category-scope="home" aria-pressed="true">首页分类</button><button type="button" data-category-scope="tools" aria-pressed="false">工具分类</button></div><button id="addFeatureCategory" class="primary-button" type="button"><span data-icon="newchat" aria-hidden="true"></span>新增分类</button></div>
+    <p class="feature-category-description" id="categoryScopeDescription"></p>
+    <div class="feature-table-panel"><table class="feature-table feature-category-table"><thead><tr><th scope="col">分类名称</th><th scope="col">功能数量</th><th scope="col">操作</th></tr></thead><tbody id="featureCategoryTable"></tbody></table><p class="feature-category-footnote">删除分类时，已有功能需要迁入其他分类；每套分类至少保留一项。</p></div>
+  </section>
+</div></div></main>
+
+<dialog class="feature-editor" id="featureEditor" aria-labelledby="featureEditorTitle">
+  <header class="feature-editor-header"><div><h2 id="featureEditorTitle">编辑功能</h2><p id="featureEditorSubtitle"></p></div><button class="feature-icon-button" id="closeFeatureEditor" type="button" aria-label="关闭功能编辑"><span data-icon="close" aria-hidden="true"></span></button></header>
+  <form id="featureEditorForm" novalidate>
+    <div class="feature-editor-body">
+      <section class="feature-field-section" aria-labelledby="featureCategoryHeading"><h3 id="featureCategoryHeading">所属分类</h3><div class="feature-form-columns"><label class="feature-field"><span>首页分类</span><select id="editFeatureHome" required></select></label><label class="feature-field" id="editFeatureToolField"><span>工具分类</span><select id="editFeatureTool"></select></label></div></section>
+      <section class="feature-field-section" aria-labelledby="featureIconHeading"><div class="feature-section-heading"><h3 id="featureIconHeading">功能图标</h3><button class="feature-text-button" id="resetFeatureIcon" type="button">恢复默认</button></div>
+        <div class="feature-icon-edit"><div class="feature-icon-preview" id="featureIconPreview" aria-label="图标预览"></div><label class="feature-field"><span>内置图标</span><select id="editFeatureIcon"></select></label><label class="secondary-button feature-upload-button">上传图标<input id="uploadFeatureIcon" type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传功能图标"></label></div>
+        <p class="feature-field-hint">支持 PNG、JPG、WebP，单张不超过 10MB；上传后居中裁切为方形，图片仅保存在本浏览器。</p><p class="feature-field-feedback" id="featureIconFeedback" role="status"></p>
+      </section>
+      <section class="feature-field-section" aria-labelledby="featureImageHeading"><div class="feature-section-heading"><h3 id="featureImageHeading">功能大图</h3><button class="feature-text-button" id="resetFeatureImage" type="button">恢复默认</button></div>
+        <div class="feature-image-preview" id="featureImagePreview" aria-label="功能大图预览"></div>
+        <div class="feature-image-actions"><label class="secondary-button feature-upload-button">上传大图<input id="uploadFeatureImage" type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传功能大图"></label><span id="featureImageUsage"></span></div>
+        <p class="feature-field-hint">支持 PNG、JPG、WebP，单张不超过 10MB，居中裁切为 2:1 横图；仅保存在本浏览器。</p><p class="feature-field-feedback" id="featureImageFeedback" role="status"></p>
+      </section>
+      <section class="feature-field-section feature-entry-preview-section" aria-labelledby="featureEntryPreviewHeading"><h3 id="featureEntryPreviewHeading">入口预览</h3><div class="feature-entry-preview" id="featureEntryPreview"></div></section>
+    </div>
+    <footer class="feature-editor-footer"><p id="featureEditorFeedback" role="status"></p><div><button class="secondary-button" id="cancelFeatureEdit" type="button">取消</button><button class="primary-button" id="saveFeatureEdit" type="submit">保存修改</button></div></footer>
+  </form>
+</dialog>
+
+<dialog class="feature-small-dialog" id="featureCategoryDialog" aria-labelledby="featureCategoryDialogTitle">
+  <form id="featureCategoryForm" novalidate><h2 id="featureCategoryDialogTitle">新增分类</h2><p id="featureCategoryDialogDescription"></p><label class="feature-field" id="categoryNameField"><span>分类名称</span><input id="featureCategoryName" type="text" maxlength="20" placeholder="输入分类名称，最多 20 字" required></label><label class="feature-field" id="categoryMigrationField" hidden><span>将已有功能迁入</span><select id="featureCategoryTarget"></select></label><p class="feature-field-feedback" id="featureCategoryFeedback" role="status"></p><footer><button class="secondary-button" id="cancelFeatureCategory" type="button">取消</button><button class="primary-button" id="saveFeatureCategory" type="submit">保存分类</button></footer></form>
+</dialog>
+<dialog class="feature-small-dialog" id="featureDiscardDialog" aria-labelledby="featureDiscardTitle"><h2 id="featureDiscardTitle">放弃未保存的修改？</h2><p>当前修改尚未保存，放弃后将恢复为上次保存的内容。</p><footer><button class="secondary-button" id="continueFeatureEdit" type="button">继续编辑</button><button class="feature-danger-button" id="discardFeatureEdit" type="button">放弃修改</button></footer></dialog>
+<div class="feature-toast" id="featureToast" role="status" aria-live="polite" aria-atomic="true"></div>
+<script src="../src/data.js?v=20261030-features"></script><script src="../src/ui.js"></script><script src="../src/home-directory-icons.js"></script><script src="../src/home-card-images.js?v=20261030-features"></script><script src="../src/feature-config.js?v=20261030-features"></script><script src="../src/pages/feature-admin.js?v=20261030-features"></script>
+</body></html>

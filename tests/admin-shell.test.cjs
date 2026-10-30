@@ -6,19 +6,21 @@ const vm = require("node:vm");
 
 const read = (file) => fs.readFileSync(path.join(__dirname, "..", file), "utf8");
 
-test("back-office shell exposes file, permission, notice and custom UI navigation", () => {
+test("back-office shell exposes file, permission, notice, feature and custom UI navigation", () => {
   const html = read("admin.html");
   assert.match(html, /id="adminNav"/);
   assert.match(html, /id="adminFrame"/);
-  assert.equal((html.match(/data-admin-view=/g) || []).length, 4);
+  assert.equal((html.match(/data-admin-view=/g) || []).length, 5);
   assert.match(html, />文件管理</);
   assert.match(html, />权限管理</);
   assert.match(html, />通知公告</);
   assert.match(html, />自定义界面</);
+  assert.match(html, />功能管理</);
   assert.doesNotMatch(html, />首页</);
   assert.match(read("admin.js"), /pages\/library-admin\.html\?embed=admin&view=perm/);
   assert.match(read("admin.js"), /pages\/notice-admin\.html\?embed=admin/);
   assert.match(read("admin.js"), /pages\/home-settings\.html\?embed=admin/);
+  assert.match(read("admin.js"), /pages\/feature-admin\.html\?embed=admin/);
 });
 
 test("client shell keeps the back-office entry in the personal center and hides admin-only routes", () => {
