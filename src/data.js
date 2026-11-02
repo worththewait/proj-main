@@ -112,11 +112,26 @@ const permissions = {
  }
 };
 const childNames = id => id === "smart-tools" ? tools.map(tool => tool.name) : (findNavItem(id)?.children || []);
-function canOpen(id, child = "") {
+function applicationGrant(route, child = "") {
+ try {
+  const raw = window.localStorage?.getItem("baige.permission.grants.v1");
+  if (!raw) return false;
+  const all = JSON.parse(raw);
+  const email = window.BaigeAccountProfile?.email || window.localStorage?.getItem("baige.account.email") || "admin@cimtec.net.cn";
+  return Boolean(all?.[email]?.[`${route}:${child || ""}`]);
+ } catch { return false; }
+}
+function baseCanOpen(id, child = "") {
  if (!findNavItem(id) || permissions.routes[id] === false) return false;
  const names = childNames(id);
  if (child) return names.includes(child) && permissions.children[id]?.[child] !== false;
- return names.length ? names.some(name => canOpen(id, name)) : true;
+ return names.length ? names.some(name => baseCanOpen(id, name)) : true;
+}
+function canOpen(id, child = "") {
+ if (!findNavItem(id) || permissions.routes[id] === false) return false;
+ const names = childNames(id);
+ if (child && !names.includes(child)) return false;
+ return applicationGrant(id, child) || baseCanOpen(id, child);
 }
 function accessSummary(id) {
  const names = childNames(id);
@@ -125,5 +140,5 @@ function accessSummary(id) {
   label: !granted ? "暂未开通" : granted === names.length ? "全部已开通" : `已开通 ${granted}/${names.length}` };
 }
 window.BaigeData = Object.freeze({navigation,tools,knowledgeScopes,knowledgeBases,knowledgeDirectory,findNavItem});
-window.BaigePermissions = Object.freeze({canOpen, childNames, summary: accessSummary});
+window.BaigePermissions = Object.freeze({canOpen, baseCanOpen, childNames, summary: accessSummary});
 })();
