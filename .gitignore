@@ -1,5 +1,8 @@
 
 ._*
 .DS_Store
+
+# 仅供本地使用的提交工具及其流程测试
 .workbuddy/
 /提交代码.command
+/tests/submit-local-main.test.cjs
