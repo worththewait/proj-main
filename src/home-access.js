@@ -10,6 +10,7 @@
   const closeButton = document.querySelector("#closeHomeAccess");
 
   const policy = window.BaigePermissions;
+  const permissionStore = window.BaigePermissionStore;
   const pendingApplications = new Set();
   const listeners = new Set();
   let currentRequest = null;
@@ -35,11 +36,22 @@
     };
   }
 
+  function isPending(destination) {
+    if (pendingApplications.has(destination.key)) return true;
+    try {
+      return Boolean(permissionStore?.hasPending(
+        permissionStore.currentApplicant().email,
+        destination.route,
+        destination.scopeChild,
+      ));
+    } catch { return false; }
+  }
+
   function status(route, child = "") {
     const destination = target(route, child);
     if (!destination) return "locked";
     if (!destination.locked) return "granted";
-    return pendingApplications.has(destination.key) ? "pending" : "locked";
+    return isPending(destination) ? "pending" : "locked";
   }
 
   function canOpen(route, child = "") {
@@ -90,7 +102,7 @@
 
   function updateDialog() {
     if (!currentRequest) return;
-    const pending = pendingApplications.has(currentRequest.key);
+    const pending = isPending(currentRequest);
     document.querySelector("#homeAccessTitle").textContent = pending ? "申请待审批" : "暂无该功能权限";
     description.textContent = `你尚未获得「${currentRequest.name}」的使用权限，可申请开通后使用。`;
     applyButton.disabled = pending || busy;
@@ -139,9 +151,15 @@
 
   async function apply() {
     const destination = currentRequest;
-    if (!destination || busy || pendingApplications.has(destination.key)) return;
+    if (!destination || busy || isPending(destination)) return;
     const integration = window.BaigeRequestAccess;
     if (typeof integration !== "function") {
+      if (window.parent && window.parent !== window) {
+        const application = { route: destination.route, child: destination.scopeChild, name: destination.name };
+        window.parent.postMessage({ type: "baige:permission-apply", application }, "*");
+        feedback.textContent = "已打开个人中心权限申请，请继续填写并提交。";
+        return;
+      }
       pendingApplications.add(destination.key);
       updateDialog();
       notifyChange(destination);
@@ -190,6 +208,13 @@
     currentRequest = null;
   });
   applyButton.addEventListener("click", apply);
+
+  window.addEventListener?.("storage", (event) => {
+    if (event.key !== "baige.permission.requests.v1" && event.key !== "baige.permission.grants.v1") return;
+    listeners.forEach((callback) => {
+      try { callback({ route: "", child: "", status: "changed" }); } catch { /* noop */ }
+    });
+  });
 
   window.BaigeHomeAccess = Object.freeze({
     canOpen,

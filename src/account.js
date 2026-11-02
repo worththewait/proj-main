@@ -3,7 +3,16 @@
   const root = document.querySelector("#accountRoot");
   if (!root) return;
   const { icon, escapeHtml } = window.BaigeUI;
-  const account = { email: "admin@cimtec.net.cn", role: "超级管理员", organization: "中船综合院" };
+  const account = {
+    name: "系统管理员",
+    email: "admin@cimtec.net.cn",
+    role: "超级管理员",
+    organization: "中船综合院",
+    dept: "中船综合院",
+    phone: "",
+  };
+  try { window.localStorage.setItem("baige.account.email", account.email); } catch { /* file:// */ }
+  window.BaigeAccountProfile = Object.freeze({ ...account });
   const feedback = { content: "" };
   const paths = {
     person: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-3a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v3Z"/>',
@@ -13,14 +22,15 @@
     feedback: '<path d="M5 3h14v18H5Z M8 7h8 M8 11h5"/>',
     admin: '<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8 M12 16v5 M7 12V9 M12 12V6 M17 12V8"/>',
     quick: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    shield: '<path d="M12 3 20 6v6c0 5-3.4 8.3-8 9-4.6-.7-8-4-8-9V6z"/><path d="m9 12 2 2 4-4"/>',
     logout: '<path d="M10 3H4v18h6 M9 12h12 M16 7l5 5-5 5"/>',
   };
   const accountIcon = (name) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]}</svg>`;
   const avatar = '<span class="account-avatar" aria-hidden="true"><img src="./assets/baige-logo.svg" width="28" height="30" alt="" /></span>';
   const items = [
-    ["profile", "person", "个人中心"], ["notifications", "bell", "通知提醒"],
-    ["about", "info", "关于我们"], ["feedback", "feedback", "系统反馈"],
-    ["quick", "quick", "快捷入口设置"], ["admin", "admin", "后台系统"], ["logout", "logout", "退出登录"],
+    ["profile", "person", "个人中心"], ["permission", "shield", "权限申请"],
+    ["about", "info", "关于我们"], ["quick", "quick", "快捷入口设置"],
+    ["admin", "admin", "后台系统"], ["logout", "logout", "退出登录"],
   ];
   root.innerHTML = `<button class="account-trigger" type="button" id="accountTrigger" aria-label="个人中心菜单" aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenu" title="个人中心"><span class="account-trigger-copy"><strong>${escapeHtml(account.organization)}</strong><small>演示账号</small></span><span class="account-trigger-avatar" aria-hidden="true">${accountIcon("person")}</span></button>
     <div class="account-menu" id="accountPopover" hidden>
@@ -148,6 +158,10 @@
   function openDialog(action, source = trigger) {
     dialogTrigger = source;
     closeMenu();
+    if (action === "permission") {
+      window.BaigePermissionCenter?.open();
+      return;
+    }
     if (action === "quick") {
       window.BaigeAiBall?.openSettings();
       return;

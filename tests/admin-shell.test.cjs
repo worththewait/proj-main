@@ -10,11 +10,12 @@ test("back-office shell exposes file, permission, notice and interface navigatio
   const html = read("admin.html");
   assert.match(html, /id="adminNav"/);
   assert.match(html, /id="adminFrame"/);
-  assert.equal((html.match(/data-admin-view=/g) || []).length, 4);
+  assert.equal((html.match(/data-admin-view=/g) || []).length, 5);
   assert.match(html, />文件管理</);
   assert.match(html, />权限管理</);
   assert.match(html, />通知公告</);
   assert.match(html, />界面管理</);
+  assert.match(html, />权限审核</);
   assert.doesNotMatch(html, />功能管理</);
   assert.doesNotMatch(html, />自定义界面</);
   assert.doesNotMatch(html, />首页</);
@@ -22,6 +23,7 @@ test("back-office shell exposes file, permission, notice and interface navigatio
   assert.match(js, /pages\/library-admin\.html\?embed=admin&view=perm/);
   assert.match(js, /pages\/notice-admin\.html\?embed=admin/);
   assert.match(js, /pages\/interface-admin\.html\?embed=admin/);
+  assert.match(js, /pages\/permission-review\.html\?embed=admin/);
   assert.match(js, /features: \{ src: `\$\{INTERFACE_SRC\}&view=features`/);
   assert.match(js, /settings: \{ src: `\$\{INTERFACE_SRC\}&view=settings`/);
 });

@@ -12,7 +12,7 @@ test("global AI ball is wired into the shell with current routes", () => {
 
   assert.match(html, /ai-ball\.css\?v=20261030-home-directory/);
   assert.match(html, /ai-ball\.js\?v=20261030-home-directory/);
-  assert.match(html, /account\.js\?v=20261030-quick-ball/);
+  assert.match(html, /account\.js\?v=20261102-permission/);
   assert.match(html, /home-directory-icons\.js\?v=20261024-directory/);
 
   assert.match(script, /qb-entries/);
