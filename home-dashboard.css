@@ -160,6 +160,7 @@
 .home-directory-item[data-tone="teal"], .home-directory-item[data-tone="research"] { --entry-color: #188e99; --entry-tint: #e9f7f6; }
 .home-directory-icon { display: grid; place-items: center; flex: 0 0 52px; width: 52px; height: 52px; border-radius: 11px; background: var(--entry-tint); color: var(--entry-color); }
 .home-directory-icon > svg { display: block; width: 29px; height: 29px; overflow: visible; }
+.home-directory-icon > .feature-custom-icon { display: block; width: 29px; height: 29px; object-fit: contain; }
 .home-directory-copy { display: grid; flex: 1; min-width: 0; gap: 5px; padding-top: 1px; }
 .home-directory-name { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 25px; }
 .home-directory-name strong { font-size: 18px; line-height: 1.4; font-weight: 600; transition: color 160ms var(--ease); }

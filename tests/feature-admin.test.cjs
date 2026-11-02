@@ -92,3 +92,13 @@ test('late image processing cannot overwrite the next feature after discarding',
   finish('data:image/jpeg;base64,/9j/AAAA');await Promise.resolve();await Promise.resolve();
   assert.match(app.get('featureEditorTitle').textContent,/对话/);assert.doesNotMatch(app.get('featureImagePreview').innerHTML,/\/9j\/AAAA/);assert.equal(app.get('saveFeatureEdit').disabled,false);
 });
+
+test('feature admin uses the same homepage icon tones and sizing',()=>{
+  const js=source('src/pages/feature-admin.js'),css=source('feature-admin.css');
+  assert.match(js,/feature-row-icon" data-tone="\$\{escape\(entry\.tone\)\}"/);
+  assert.match(js,/iconPreview\.dataset\.tone = entry\.tone/);
+  assert.match(css,/\.feature-row-icon\[data-tone="purple"\]/);
+  assert.match(css,/\.feature-icon-preview\[data-tone="teal"\]/);
+  assert.match(css,/\.feature-row-icon > svg \{ display:block; width:20px; height:20px/);
+  assert.match(source('home-dashboard.css'),/\.home-directory-icon > \.feature-custom-icon/);
+});
