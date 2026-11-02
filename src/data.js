@@ -9,9 +9,7 @@ const tools = [
  {name:"公文写作",group:"写作创作",icon:"file",description:"规范公文结构与措辞，辅助起草日常材料。"},
  {name:"PPT生成",group:"写作创作",icon:"slides",description:"将主题与提纲整理为逻辑清晰的演示文稿。"},
  {name:"文献伴读",group:"研究辅助",icon:"book",description:"梳理文献重点，理解研究方法与核心结论。"},
- {name:"思维导图生成",group:"研究辅助",icon:"branch",description:"展开主题与关联，让研究思路形成清晰结构。"},
- {name:"标准编制",group:"研究辅助",icon:"standard",description:"辅助整理标准结构、编制内容与条款。"},
- {name:"专利编制",group:"研究辅助",icon:"file",description:"辅助梳理专利技术方案与申请材料，形成编制思路。"}
+ {name:"思维导图生成",group:"研究辅助",icon:"branch",description:"展开主题与关联，让研究思路形成清晰结构。"}
 ];
 const navigation = [
  {id:"home",file:"pages/home.html?v=20261028-unpublish-status",label:"首页",icon:"home"},
@@ -110,8 +108,7 @@ const permissions = {
  routes: {},
  children: {
   qa: {"智能问数": false},
-  frontier: {"智研通": false},
-  "smart-tools": {"标准编制": false}
+  frontier: {"智研通": false}
  }
 };
 const childNames = id => id === "smart-tools" ? tools.map(tool => tool.name) : (findNavItem(id)?.children || []);

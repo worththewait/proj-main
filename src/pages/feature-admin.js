@@ -39,7 +39,7 @@
     const pages = Math.max(1, Math.ceil(matches.length / pageSize));
     page = Math.min(page, pages);
     get('featureTable').innerHTML = matches.length ? matches.slice((page-1)*pageSize, page*pageSize).map(entry => `<tr>
-      <td><div class="feature-identity"><span class="feature-row-icon" aria-hidden="true">${config.iconMarkup(entry)}</span><span class="feature-identity-copy"><strong title="${escape(entry.name)}">${escape(entry.name)}</strong><small>${escape(entry.isTool ? '智能工具' : window.BaigeData.findNavItem(entry.route)?.label || '')}</small></span></div></td>
+      <td><div class="feature-identity"><span class="feature-row-icon" data-tone="${escape(entry.tone)}" aria-hidden="true">${config.iconMarkup(entry)}</span><span class="feature-identity-copy"><strong title="${escape(entry.name)}">${escape(entry.name)}</strong><small>${escape(entry.isTool ? '智能工具' : window.BaigeData.findNavItem(entry.route)?.label || '')}</small></span></div></td>
       <td class="feature-cell-label">${escape(entry.homeCategoryLabel)}</td><td class="feature-cell-label${entry.isTool ? '' : ' feature-cell-muted'}">${escape(entry.toolCategoryLabel || '—')}</td>
       <td><div class="feature-thumb-cell">${entry.image ? `<img class="feature-thumb" src="${escape(imageSource(entry))}" alt="${escape(entry.name)}大图" />` : `<span class="feature-thumb-empty" aria-hidden="true">${icon('file')}</span>`}<small>${entry.usesImage ? '用于热门工具' : entry.image ? '已配置 · 暂未使用' : '未配置'}</small></div></td>
       <td><button class="feature-text-button" type="button" data-edit-feature="${escape(entry.id)}" aria-label="编辑${escape(entry.name)}${entry.isTool ? '' : `（${escape(window.BaigeData.findNavItem(entry.route)?.label || '')}）`}">编辑</button></td></tr>`).join('') : '<tr><td colspan="5" class="feature-empty">没有找到匹配的功能<br>请尝试其他关键词或重置筛选。</td></tr>';
@@ -86,9 +86,11 @@
   function preview() {
     if (!draft) return;
     const entry = {...editing,...draft};
-    get('featureIconPreview').innerHTML = config.iconMarkup(entry);
+    const iconPreview = get('featureIconPreview');
+    iconPreview.dataset.tone = entry.tone;
+    iconPreview.innerHTML = config.iconMarkup(entry);
     get('featureImagePreview').innerHTML = entry.image ? `<img src="${escape(imageSource(entry))}" alt="${escape(entry.name)}大图预览" />` : `<div class="feature-image-placeholder">${icon('file')}<span>尚未配置大图</span></div>`;
-    get('featureEntryPreview').innerHTML = `<span class="feature-row-icon" aria-hidden="true">${config.iconMarkup(entry)}</span><div><strong>${escape(entry.name)}</strong><p>${escape(entry.description)}</p></div>`;
+    get('featureEntryPreview').innerHTML = `<span class="feature-row-icon" data-tone="${escape(entry.tone)}" aria-hidden="true">${config.iconMarkup(entry)}</span><div><strong>${escape(entry.name)}</strong><p>${escape(entry.description)}</p></div>`;
     get('featureEditorFeedback').textContent = '';
   }
   function editorCategories() {

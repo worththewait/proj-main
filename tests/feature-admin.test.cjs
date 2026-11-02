@@ -36,8 +36,8 @@ function setup() {
 
 test('feature management paginates all existing functions and searching resets the page',()=>{
   const app=setup();const rows=()=>(app.get('featureTable').innerHTML.match(/<tr>/g)||[]).length;
-  assert.equal(rows(),10);assert.match(app.get('featureSummary').textContent,/27/);
-  app.action('featurePager','featurePage','3');assert.equal(rows(),7);
+  assert.equal(rows(),10);assert.match(app.get('featureSummary').textContent,/25/);
+  app.action('featurePager','featurePage','3');assert.equal(rows(),5);
   app.get('featureSearch').value='OCR';app.get('featureSearch').emit('input');
   assert.equal(rows(),1);assert.match(app.get('featureTable').innerHTML,/OCR识别/);assert.equal(app.get('featurePager').hidden,true);
 });
@@ -45,7 +45,7 @@ test('feature management paginates all existing functions and searching resets t
 test('tool-category filter excludes non-tools and keeps the full catalog intact',()=>{
   const app=setup();app.get('featureToolFilter').value='documents';app.get('featureToolFilter').emit('change');
   assert.equal((app.get('featureTable').innerHTML.match(/<tr>/g)||[]).length,4);
-  assert.doesNotMatch(app.get('featureTable').innerHTML,/百舸写作/);assert.equal(app.config.catalog().length,27);
+  assert.doesNotMatch(app.get('featureTable').innerHTML,/百舸写作/);assert.equal(app.config.catalog().length,25);
 });
 
 test('editing a feature saves its selected icon and category through the shared model',()=>{
@@ -102,4 +102,14 @@ test('late image processing cannot overwrite the next feature after discarding',
   app.get('cancelFeatureEdit').emit('click');app.get('discardFeatureEdit').emit('click');app.action('featureTable','editFeature','route:qa');
   finish('data:image/jpeg;base64,/9j/AAAA');await Promise.resolve();await Promise.resolve();
   assert.match(app.get('featureEditorTitle').textContent,/对话/);assert.doesNotMatch(app.get('featureImagePreview').innerHTML,/\/9j\/AAAA/);assert.equal(app.get('saveFeatureEdit').disabled,false);
+});
+
+test('feature admin uses the same homepage icon tones and sizing',()=>{
+  const js=source('src/pages/feature-admin.js'),css=source('feature-admin.css');
+  assert.match(js,/feature-row-icon" data-tone="\$\{escape\(entry\.tone\)\}"/);
+  assert.match(js,/iconPreview\.dataset\.tone = entry\.tone/);
+  assert.match(css,/\.feature-row-icon\[data-tone="purple"\]/);
+  assert.match(css,/\.feature-icon-preview\[data-tone="teal"\]/);
+  assert.match(css,/\.feature-row-icon > svg \{ display:block; width:20px; height:20px/);
+  assert.match(source('home-dashboard.css'),/\.home-directory-icon > \.feature-custom-icon/);
 });

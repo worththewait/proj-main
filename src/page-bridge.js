@@ -32,7 +32,9 @@
     question = validQuestion(pageId, child, question);
     const sources = validSources(knowledgeBaseIds);
     if (sources === null) question = "";
-    document.title = `${child || findNavItem(pageId).label} · 百舸数智平台`;
+    // 后台页面可以没有对应的客户端导航项，标题回落到页面自身的 <title>。
+    const label = child || findNavItem(pageId)?.label || document.title.split(" · ")[0];
+    document.title = `${label} · 百舸数智平台`;
     activate({ child, focusSearch, ...(question ? { question, ...(sources.length ? { knowledgeBaseIds: sources } : {}) } : {}) });
     if (pageId === "home" && openHomeSettings === true) homeSettings();
   }

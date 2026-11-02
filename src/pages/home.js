@@ -74,10 +74,12 @@
       if (!groups.has(label)) groups.set(label, []);
       groups.get(label).push(item);
     });
+    const deleteIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6l1 2h4v2H4V5h4l1-2zM6 9h12l-1 12H7L6 9zm3 3v7h2v-7H9zm4 0v7h2v-7h-2z"/></svg>';
     document.querySelector("#historyList").innerHTML = groups.size ? [...groups].map(([label, items]) => `<section class="qa-history-group"><h3>${label}</h3>${items.map(item => {
       const date = timestamp(item);
       const time = date && Number.isFinite(new Date(date).getTime()) ? new Date(date).toLocaleTimeString("zh-CN", {hour:"2-digit", minute:"2-digit", hour12:false}) : "";
-      return `<button type="button" class="qa-history-item" data-history-id="${escapeHtml(item.id)}" ${current?.id === item.id ? 'aria-current="true"' : ""}>${icon("chat")}<span class="qa-history-copy"><strong>${escapeHtml(item.title)}</strong><span class="qa-history-meta"><small>${item.mode === "knowledge" ? "知识问答" : "通用问答"}</small><time>${escapeHtml(time)}</time></span></span></button>`;
+      const isCurrent = current?.id === item.id;
+      return `<div class="qa-history-entry${isCurrent ? " is-active" : ""}"><button type="button" class="qa-history-item" data-history-id="${escapeHtml(item.id)}" ${isCurrent ? 'aria-current="true"' : ""}>${icon("chat")}<span class="qa-history-copy"><strong>${escapeHtml(item.title)}</strong><span class="qa-history-meta"><small>${item.mode === "knowledge" ? "知识问答" : "通用问答"}</small><time>${escapeHtml(time)}</time></span></span></button><button type="button" class="qa-history-delete" data-history-delete="${escapeHtml(item.id)}" aria-label="删除会话：${escapeHtml(item.title)}" title="删除会话">${deleteIcon}</button></div>`;
     }).join("")}</section>`).join("") : `<p class="qa-panel-empty">${query ? "没有找到相关会话" : "暂无历史对话"}</p>`;
   }
   setPanel(historyPanel, historyToggle, false, historyToggle, false);
@@ -97,6 +99,24 @@
     followLatest = true; jumpToLatest.hidden = true; saveHistory(); field.focus();
   });
   document.querySelector("#historyList").addEventListener("click", event => {
+    const deleteButton = event.target.closest("[data-history-delete]");
+    if (deleteButton && deleteButton.dataset.historyDelete) {
+      const id = deleteButton.dataset.historyDelete;
+      const item = conversations.find(entry => entry.id === id);
+      if (!item) return;
+      if (!window.confirm(`删除历史会话「${item.title}」？删除后不可恢复。`)) return;
+      conversations = conversations.filter(entry => entry.id !== id);
+      if (current?.id === id) {
+        current = null;
+        chat = [];
+        conversation.classList.remove("is-chatting");
+        messages.innerHTML = "";
+        field.value = "";
+        send.disabled = true;
+      }
+      saveHistory();
+      return;
+    }
     const button = event.target.closest("[data-history-id]");
     const selected = button && conversations.find(item => item.id === button.dataset.historyId);
     if (!selected) return;

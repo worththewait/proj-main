@@ -28,10 +28,10 @@ function setup(values = {}, {readFails = false, writeFails = false} = {}) {
 test('defaults keep all distinct destinations, both taxonomy scopes, and only existing popular illustrations', () => {
   const {model} = setup();
   const entries = model.catalog();
-  assert.equal(entries.length, 27);
-  assert.equal(new Set(entries.map(item => `${item.route}:${item.child}`)).size, 27);
+  assert.equal(entries.length, 25);
+  assert.equal(new Set(entries.map(item => `${item.route}:${item.child}`)).size, 25);
   assert.equal(entries.filter(item => item.homeCategory === 'knowledge-research').length, 7);
-  assert.equal(entries.filter(item => item.isTool).length, 11);
+  assert.equal(entries.filter(item => item.isTool).length, 9);
   assert.equal(entries.filter(item => item.usesImage).length, 3);
   assert.equal(entries.filter(item => item.image).length, 3);
   assert.equal(model.get('tool:提示词生成').icon, 'bulb');
@@ -43,17 +43,29 @@ test('defaults keep all distinct destinations, both taxonomy scopes, and only ex
   assert.equal(model.get('missing'), null);
 });
 
-test('saving one feature merges current configuration and same-name destinations remain independent', () => {
+test('same-name entries are removed: 标准编制 and 专利编制 stay only under 数智系统', () => {
   const {model} = setup();
-  model.saveFeature('tool:标准编制', {icon: 'book', iconImage: raster, image: raster, homeCategory: 'knowledge-research'});
+  const entries = model.catalog().filter(item => ['标准编制', '专利编制'].includes(item.name));
+  assert.equal(entries.length, 2);
+  assert.deepEqual(new Set(entries.map(item => item.id)), new Set(['route:digital:标准编制', 'route:digital:专利编制']));
+  assert.ok(entries.every(item => item.route === 'digital' && !item.isTool));
+  assert.equal(model.get('tool:标准编制'), null);
+  assert.equal(model.get('tool:专利编制'), null);
+  assert.equal(model.idFor('smart-tools', '标准编制'), null);
+  assert.equal(model.idFor('digital', '标准编制'), 'route:digital:标准编制');
+});
+
+test('saving one feature merges current configuration without touching other destinations', () => {
+  const {model} = setup();
+  model.saveFeature('tool:OCR识别', {icon: 'book', iconImage: raster, image: raster, homeCategory: 'knowledge-research'});
   model.saveFeature('route:digital:标准编制', {icon: 'chart'});
-  assert.equal(model.get('tool:标准编制').icon, 'book');
-  assert.equal(model.get('tool:标准编制').iconImage, raster);
-  assert.equal(model.get('tool:标准编制').image, raster);
-  assert.equal(model.get('tool:标准编制').homeCategoryLabel, '知识与研究');
+  assert.equal(model.get('tool:OCR识别').icon, 'book');
+  assert.equal(model.get('tool:OCR识别').iconImage, raster);
+  assert.equal(model.get('tool:OCR识别').image, raster);
+  assert.equal(model.get('tool:OCR识别').homeCategoryLabel, '知识与研究');
   assert.equal(model.get('route:digital:标准编制').icon, 'chart');
   assert.equal(model.get('route:digital:标准编制').iconImage, '');
-  assert.equal(model.get('tool:标准编制').route, 'smart-tools');
+  assert.equal(model.get('tool:OCR识别').route, 'smart-tools');
   assert.equal(model.get('route:digital:标准编制').route, 'digital');
 });
 
@@ -77,7 +89,7 @@ test('new categories can be assigned and occupied deletion migrates every member
   model.deleteCategory('tools', 'documents', created.id);
   assert.equal(model.catalog().filter(item => item.toolCategory === created.id).length, 4);
   assert.ok(!model.read().categories.tools.some(item => item.id === 'documents'));
-  assert.equal(model.catalog().length, 27);
+  assert.equal(model.catalog().length, 25);
   assert.equal(model.get('tool:OCR识别').route, 'smart-tools');
 });
 
@@ -85,7 +97,7 @@ test('home-category migration never changes tool-category membership', () => {
   const {model} = setup();
   model.deleteCategory('home', 'tools-platforms', 'knowledge-research');
   assert.equal(model.read().categories.home.length, 1);
-  assert.equal(model.catalog().filter(item => item.homeCategory === 'knowledge-research').length, 27);
+  assert.equal(model.catalog().filter(item => item.homeCategory === 'knowledge-research').length, 25);
   assert.equal(model.get('tool:文档翻译').toolCategory, 'documents');
   assert.throws(() => model.deleteCategory('home', 'knowledge-research'), /至少|最后/);
 });
@@ -127,7 +139,7 @@ test('only whitelisted icons, local raster images and approved default assets ca
 test('malformed saved configuration falls back safely and reads return detached values', () => {
   for (const stored of ['{bad', JSON.stringify({version: 99}), JSON.stringify({version:1,categories:{home:[],tools:[]},features:{}})]) {
     const {model, storage} = setup({[key]: stored});
-    assert.equal(model.catalog().length, 27);
+    assert.equal(model.catalog().length, 25);
     assert.equal(model.read().categories.home.length, 2);
     assert.equal(storage.get(key), stored, 'reading must not rewrite corrupt user data');
     const copy = model.read();
@@ -141,7 +153,7 @@ test('malformed saved configuration falls back safely and reads return detached 
 test('write and read storage failures report failure rather than pretending changes were saved', () => {
   for (const options of [{writeFails: true}, {readFails: true}]) {
     const {model, storage} = setup({}, options);
-    assert.equal(model.catalog().length, 27);
+    assert.equal(model.catalog().length, 25);
     assert.throws(() => model.saveFeature('route:qa', {icon: 'book'}), /未能|存储|保存/);
     assert.equal(storage.size, 0);
   }

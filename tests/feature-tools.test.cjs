@@ -47,7 +47,7 @@ test('tool categories include managed names and empty categories; deleted filter
   const empty=app.get('toolCategories').querySelector('[data-category="empty"]');assert.ok(empty);empty.emit('click');
   assert.match(app.get('resultCount').textContent,/显示 0 个工具/);
   app.categories.pop();app.change();
-  assert.match(app.get('resultCount').textContent,/显示 11 个工具/);
+  assert.match(app.get('resultCount').textContent,/显示 9 个工具/);
   app.categories[0].label='资料 <script>';app.change();
   assert.match(app.get('toolCategories').textContent,/资料 <script>/);
   assert.equal(app.get('toolCategories').querySelector('script'),null);
