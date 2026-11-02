@@ -56,6 +56,17 @@ test('editing a feature saves its selected icon and category through the shared 
   assert.equal(app.config.get('tool:OCR识别').homeCategory,category.id);assert.equal(app.config.get('tool:OCR识别').icon,'file');assert.equal(app.get('featureEditor').open,false);
 });
 
+test('opening another feature starts at the top of its form and focuses the first classification',()=>{
+  const app=setup();
+  app.action('featureTable','editFeature','tool:OCR识别');
+  app.get('featureEditorBody').scrollTop=277;
+  app.get('cancelFeatureEdit').emit('click');
+  app.action('featureTable','editFeature','route:qa');
+  assert.equal(app.get('featureEditorBody').scrollTop,0);
+  assert.equal(app.window.document.activeElement,app.get('editFeatureHome'));
+  assert.match(app.get('featureEditorTitle').textContent,/对话/);
+});
+
 test('cancelling a dirty edit offers continue or discard without saving',()=>{
   const app=setup();app.action('featureTable','editFeature','tool:OCR识别');app.get('editFeatureIcon').value='book';app.get('editFeatureIcon').emit('change');
   app.get('cancelFeatureEdit').emit('click');assert.equal(app.get('featureDiscardDialog').open,true);assert.equal(app.get('featureEditor').open,true);

@@ -34,7 +34,7 @@
 <dialog class="feature-editor" id="featureEditor" aria-labelledby="featureEditorTitle">
   <header class="feature-editor-header"><div><h2 id="featureEditorTitle">编辑功能</h2><p id="featureEditorSubtitle"></p></div><button class="feature-icon-button" id="closeFeatureEditor" type="button" aria-label="关闭功能编辑"><span data-icon="close" aria-hidden="true"></span></button></header>
   <form id="featureEditorForm" novalidate>
-    <div class="feature-editor-body">
+    <div class="feature-editor-body" id="featureEditorBody">
       <section class="feature-field-section" aria-labelledby="featureCategoryHeading"><h3 id="featureCategoryHeading">所属分类</h3><div class="feature-form-columns"><label class="feature-field"><span>首页分类</span><select id="editFeatureHome" required></select></label><label class="feature-field" id="editFeatureToolField"><span>工具分类</span><select id="editFeatureTool"></select></label></div></section>
       <section class="feature-field-section" aria-labelledby="featureIconHeading"><div class="feature-section-heading"><h3 id="featureIconHeading">功能图标</h3><button class="feature-text-button" id="resetFeatureIcon" type="button">恢复默认</button></div>
         <div class="feature-icon-edit"><div class="feature-icon-preview" id="featureIconPreview" aria-label="图标预览"></div><label class="feature-field"><span>内置图标</span><select id="editFeatureIcon"></select></label><label class="secondary-button feature-upload-button">上传图标<input id="uploadFeatureIcon" type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传功能图标"></label></div>
@@ -56,5 +56,5 @@
 </dialog>
 <dialog class="feature-small-dialog" id="featureDiscardDialog" aria-labelledby="featureDiscardTitle"><h2 id="featureDiscardTitle">放弃未保存的修改？</h2><p>当前修改尚未保存，放弃后将恢复为上次保存的内容。</p><footer><button class="secondary-button" id="continueFeatureEdit" type="button">继续编辑</button><button class="feature-danger-button" id="discardFeatureEdit" type="button">放弃修改</button></footer></dialog>
 <div class="feature-toast" id="featureToast" role="status" aria-live="polite" aria-atomic="true"></div>
-<script src="../src/data.js?v=20261030-features"></script><script src="../src/ui.js"></script><script src="../src/home-directory-icons.js"></script><script src="../src/home-card-images.js?v=20261030-features"></script><script src="../src/feature-config.js?v=20261030-features"></script><script src="../src/pages/feature-admin.js?v=20261030-features"></script>
+<script src="../src/data.js?v=20261030-features"></script><script src="../src/ui.js"></script><script src="../src/home-directory-icons.js"></script><script src="../src/home-card-images.js?v=20261030-features"></script><script src="../src/feature-config.js?v=20261030-features"></script><script src="../src/pages/feature-admin.js?v=20261030-editor-position"></script>
 </body></html>

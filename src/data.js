@@ -16,7 +16,7 @@ const tools = [
 const navigation = [
  {id:"home",file:"pages/home.html?v=20261028-unpublish-status",label:"首页",icon:"home"},
  {id:"qa",file:"pages/qa.html?v=20261030-refined",label:"百舸问答",icon:"chat",children:["对话","智能问数"]},
- {id:"knowledge",file:"pages/knowledge.html",label:"知识库",icon:"book"},
+ {id:"knowledge",file:"pages/knowledge.html?v=20261102-index",label:"知识库",icon:"book"},
  {id:"writing",file:"pages/writing.html",label:"百舸写作",icon:"pen"},
  {id:"library",file:"pages/library.html",label:"百舸文库",icon:"file",children:["文库首页"],subnav:false,autoChild:false},
  {id:"intel",file:"pages/intel.html?v=20261030-early-date",label:"百舸情报",icon:"globe"},
@@ -41,6 +41,69 @@ const knowledgeBases = [
  {id:"department-research",name:"部门研究资料库",scope:"部门",description:"部门研究成果与专题资料"},
  {id:"department-project",name:"项目资料知识库",scope:"部门",description:"项目文档、阶段成果与工作记录"}
 ];
+const knowledgeDirectory = (() => {
+  const industryBases = [
+    { id: "industry-qa", name: "知识问答参考文档", owner: "系统管理员", time: "2026-10-28 13:32:05" },
+    { id: "industry-doc", name: "船舶行业文献库", owner: "yym", time: "2026-10-21 16:03:03" },
+    { id: "industry-report", name: "船舶行业研报库", owner: "系统管理员", time: "2026-10-21 16:02:36" },
+    { id: "industry-standard", name: "船舶行业规范库", owner: "企行上传", time: "2026-10-21 16:02:06" },
+  ];
+  const enterpriseGroups = [
+    {
+      id: "enterprise-714",
+      name: "714所",
+      bases: [
+        { id: "enterprise-714-0928", name: "714所0928", owner: "系统管理员", time: "2026-10-09 10:36:28" },
+        { id: "enterprise-714-main", name: "714企业知识库", owner: "系统管理员", time: "2026-09-23 18:24:15" },
+      ],
+    },
+    {
+      id: "enterprise-cimtec",
+      name: "中国船舶综合经济技术研究院",
+      bases: [
+        { id: "enterprise-cimtec-qa", name: "问答知识库", owner: "系统管理员", time: "2026-09-29 16:41:47", tone: "violet" },
+        { id: "enterprise-cimtec-writing", name: "写作素材", owner: "系统管理员", time: "2026-09-24 17:34:56", tone: "violet" },
+        { id: "enterprise-cimtec-main", name: "企业知识库", owner: "吴昊", time: "2026-09-23 17:23:23" },
+      ],
+    },
+  ];
+  const departmentGroups = [
+    {
+      id: "department-after",
+      name: "售后部",
+      bases: [
+        { id: "department-after-main", name: "售后", owner: "售后2", time: "2026-10-23 10:24:29", tone: "gradient" },
+      ],
+    },
+    {
+      id: "department-hr",
+      name: "HR部",
+      bases: [
+        { id: "department-hr-ces", name: "ces", owner: "系统管理员", time: "2026-10-22 18:47:11" },
+        { id: "department-hr-test", name: "测试权限", owner: "系统管理员", time: "2026-09-30 09:48:52" },
+        { id: "department-hr-0930", name: "测试0930", owner: "文库上传", time: "2026-09-30 09:48:04" },
+        { id: "department-hr-0929", name: "测试0929", owner: "文库上传", time: "2026-09-29 14:14:23" },
+      ],
+    },
+    {
+      id: "department-714",
+      name: "714部门2",
+      bases: [
+        { id: "department-714-main", name: "测试1020", owner: "系统管理员", time: "2026-10-20 13:52:25" },
+      ],
+    },
+    {
+      id: "department-news",
+      name: "新闻部",
+      bases: [
+        { id: "department-news-create", name: "新闻部知识库创建", owner: "yym", time: "2026-09-24 10:11:22" },
+        { id: "department-news-test", name: "新闻部test", owner: "系统管理员", time: "2026-09-23 11:38:25" },
+      ],
+    },
+  ];
+
+  return {industryBases,enterpriseGroups,departmentGroups};
+})();
 const findNavItem = id => navigation.find(item=>item.id===id);
 // Prototype permissions only. A denied parent also denies its children.
 const permissions = {
@@ -64,6 +127,6 @@ function accessSummary(id) {
  return { total: names.length, granted,
   label: !granted ? "暂未开通" : granted === names.length ? "全部已开通" : `已开通 ${granted}/${names.length}` };
 }
-window.BaigeData = Object.freeze({navigation,tools,knowledgeScopes,knowledgeBases,findNavItem});
+window.BaigeData = Object.freeze({navigation,tools,knowledgeScopes,knowledgeBases,knowledgeDirectory,findNavItem});
 window.BaigePermissions = Object.freeze({canOpen, childNames, summary: accessSummary});
 })();

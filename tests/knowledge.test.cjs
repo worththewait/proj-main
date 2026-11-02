@@ -7,7 +7,7 @@ const read = (file) => fs.readFileSync(path.join(__dirname, "..", file), "utf8")
 
 test("knowledge page implements the four-scope knowledge hub", () => {
   const html = read("pages/knowledge.html");
-  assert.match(html, /企业知识文档/);
+  assert.match(html, />知识库</);
   assert.match(html, /id="kbSearchForm"/);
   assert.match(html, /id="kbSections"/);
   assert.match(html, /id="kbTabs"/);
@@ -19,8 +19,9 @@ test("knowledge page implements the four-scope knowledge hub", () => {
   assert.doesNotMatch(html, /knowledgeScopes|category-tabs/);
 
   const js = read("src/pages/knowledge.js");
+  const catalog = read("src/data.js");
   for (const name of ["知识问答参考文档", "714所", "中国船舶综合经济技术研究院", "HR部", "新闻部", "敏感词导入模板"]) {
-    assert.match(js, new RegExp(name));
+    assert.match(catalog + js, new RegExp(name));
   }
   assert.match(js, /data-kb-collapse/);
   assert.match(js, /data-kb-filter/);

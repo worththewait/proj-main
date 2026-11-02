@@ -10,67 +10,11 @@
   const workbar = document.querySelector("#kbWorkbar");
   const searchForm = document.querySelector("#kbSearchForm");
   const searchInput = document.querySelector("#kbSearchInput");
+  const searchScope = document.querySelector("#kbSearchScope");
+  const typeFilterField = document.querySelector("#kbTypeFilterField");
   const typeFilter = document.querySelector("#kbTypeFilter");
 
-  const industryBases = [
-    { id: "industry-qa", name: "知识问答参考文档", owner: "系统管理员", time: "2026-10-28 13:32:05" },
-    { id: "industry-doc", name: "船舶行业文献库", owner: "yym", time: "2026-10-21 16:03:03" },
-    { id: "industry-report", name: "船舶行业研报库", owner: "系统管理员", time: "2026-10-21 16:02:36" },
-    { id: "industry-standard", name: "船舶行业规范库", owner: "企行上传", time: "2026-10-21 16:02:06" },
-  ];
-  const enterpriseGroups = [
-    {
-      id: "enterprise-714",
-      name: "714所",
-      bases: [
-        { id: "enterprise-714-0928", name: "714所0928", owner: "系统管理员", time: "2026-10-09 10:36:28" },
-        { id: "enterprise-714-main", name: "714企业知识库", owner: "系统管理员", time: "2026-09-23 18:24:15" },
-      ],
-    },
-    {
-      id: "enterprise-cimtec",
-      name: "中国船舶综合经济技术研究院",
-      bases: [
-        { id: "enterprise-cimtec-qa", name: "问答知识库", owner: "系统管理员", time: "2026-09-29 16:41:47", tone: "violet" },
-        { id: "enterprise-cimtec-writing", name: "写作素材", owner: "系统管理员", time: "2026-09-24 17:34:56", tone: "violet" },
-        { id: "enterprise-cimtec-main", name: "企业知识库", owner: "吴昊", time: "2026-09-23 17:23:23" },
-      ],
-    },
-  ];
-  const departmentGroups = [
-    {
-      id: "department-after",
-      name: "售后部",
-      bases: [
-        { id: "department-after-main", name: "售后", owner: "售后2", time: "2026-10-23 10:24:29", tone: "gradient" },
-      ],
-    },
-    {
-      id: "department-hr",
-      name: "HR部",
-      bases: [
-        { id: "department-hr-ces", name: "ces", owner: "系统管理员", time: "2026-10-22 18:47:11" },
-        { id: "department-hr-test", name: "测试权限", owner: "系统管理员", time: "2026-09-30 09:48:52" },
-        { id: "department-hr-0930", name: "测试0930", owner: "文库上传", time: "2026-09-30 09:48:04" },
-        { id: "department-hr-0929", name: "测试0929", owner: "文库上传", time: "2026-09-29 14:14:23" },
-      ],
-    },
-    {
-      id: "department-714",
-      name: "714部门2",
-      bases: [
-        { id: "department-714-main", name: "测试1020", owner: "系统管理员", time: "2026-10-20 13:52:25" },
-      ],
-    },
-    {
-      id: "department-news",
-      name: "新闻部",
-      bases: [
-        { id: "department-news-create", name: "新闻部知识库创建", owner: "yym", time: "2026-09-24 10:11:22" },
-        { id: "department-news-test", name: "新闻部test", owner: "系统管理员", time: "2026-09-23 11:38:25" },
-      ],
-    },
-  ];
+  const {industryBases,enterpriseGroups,departmentGroups} = window.BaigeData.knowledgeDirectory;
   let personalDocs = [
     { id: "personal-writing", name: "专业写作专用", type: "文档", tone: "yellow", created: "2026-09-24 18:03:04", updated: "2026-09-24 18:03:04", status: "" },
     { id: "personal-sensitive", name: "敏感词导入模板", type: "文档", tone: "gray", created: "2026-10-15 10:05:30", updated: "2026-10-15 10:05:44", status: "涉密可疑" },
@@ -81,12 +25,13 @@
     { key: "industry", label: "行业知识库" },
     { key: "enterprise", label: "企业知识库" },
     { key: "department", label: "部门知识库" },
-    { key: "personal", label: "个人知识库" },
+    { key: "personal", label: "个人文档" },
   ];
 
   const state = {
     tab: "industry",
     query: "",
+    searchScope: "current",
     type: "all",
     enterprise: "all",
     department: "all",
@@ -104,6 +49,14 @@
   const chevronIcon = '<svg class="kb-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>';
 
   let toastTimer = null;
+  let actionDocumentId = null;
+  function restoreActionFocus() {
+    const more = actionDocumentId && root.querySelector(`[data-kb-more="${actionDocumentId}"]`);
+    (more?.querySelector("summary") || searchInput).focus({preventScroll:true});
+  }
+  function closeMenus(except) {
+    root.querySelectorAll("details.kb-more").forEach(menu=>{if(menu!==except)menu.removeAttribute("open");});
+  }
   function toast(message) {
     const node = document.querySelector("#kbToast");
     node.textContent = message;
@@ -116,9 +69,9 @@
   const dateOnly = (value) => String(value ?? "").slice(0, 10);
   const groupSize = (groups) => groups.reduce((total, group) => total + group.bases.length, 0);
 
-  function matchesBase(base) {
+  function matchesBase(base, organization = "") {
     if (!state.query) return true;
-    return `${base.name} ${base.owner}`.toLowerCase().includes(state.query);
+    return `${base.name} ${base.owner} ${base.description || descriptionFor(base)} ${organization}`.toLowerCase().includes(state.query);
   }
 
   function matchesDoc(doc) {
@@ -130,41 +83,25 @@
   function visibleGroups(groups, kind) {
     return groups
       .filter((group) => state[kind] === "all" || state[kind] === group.id)
-      .map((group) => ({ ...group, bases: group.bases.filter(matchesBase) }))
+      .map((group) => ({ ...group, bases: group.bases.filter(base => matchesBase(base, group.name)) }))
       .filter((group) => group.bases.length);
   }
 
   // ---- cards -------------------------------------------------------------
 
-  function baseCard(base, scopeLabel) {
-    const tone = base.tone ? ` is-${base.tone}` : "";
-    return `<button class="kb-card" type="button" data-kb-open="${text(base.id)}" data-kb-name="${text(base.name)}" data-kb-scope="${text(scopeLabel)}" aria-label="打开知识库${text(base.name)}">
-      <span class="kb-folder${tone}">${icon("folder")}</span>
-      <span class="kb-card-copy">
-        <strong title="${text(base.name)}">${text(base.name)}</strong>
-        <span class="kb-card-meta">${text(base.owner)}<i>·</i>${text(dateOnly(base.time))}</span>
-      </span>
-      <span class="kb-card-go" aria-hidden="true">${chevronIcon}</span>
-    </button>`;
+  function descriptionFor(base) {
+    const descriptions={"知识问答参考文档":"常见研究问题与知识问答参考资料","船舶行业文献库":"船舶行业专业文献与研究资料","船舶行业研报库":"行业研究、市场观察与分析资料","船舶行业规范库":"船舶领域规范与标准相关资料","写作素材":"写作素材与日常材料参考","问答知识库":"业务知识与常见问题参考"};
+    return descriptions[base.name] || "共享知识资料，可在独立问答页中使用";
   }
-
-  // Enterprise and department knowledge bases read as an index: aligned columns,
-  // the whole row is the hit area, metadata lines up across every group.
-  function baseRow(base, scopeLabel) {
-    const tone = base.tone ? ` is-${base.tone}` : "";
-    return `<button class="kb-row" type="button" data-kb-open="${text(base.id)}" data-kb-name="${text(base.name)}" data-kb-scope="${text(scopeLabel)}" aria-label="打开知识库${text(base.name)}">
-      <span class="kb-folder${tone}">${icon("folder")}</span>
-      <span class="kb-row-name" title="${text(base.name)}">${text(base.name)}</span>
-      <span class="kb-row-owner">${text(base.owner)}</span>
-      <span class="kb-row-time">${text(dateOnly(base.time))}</span>
-      <span class="kb-row-go" aria-hidden="true">${chevronIcon}</span>
-    </button>`;
+  function baseRow(base, scopeLabel, showScope=false) {
+    return `<button class="kb-index-row" type="button" data-kb-open="${text(base.id)}" data-kb-name="${text(base.name)}" data-kb-scope="${text(scopeLabel)}" aria-label="进入${text(base.name)}问答">
+      <span class="kb-index-icon">${icon("book")}</span>
+      <span class="kb-index-copy"><strong>${text(base.name)}</strong><span class="kb-index-description">${text(descriptionFor(base))}</span></span>
+      <span class="kb-index-meta">${showScope?text(scopeLabel):text(base.owner)}<small>${showScope?"知识库":`创建于 ${text(dateOnly(base.time))}`}</small></span>
+      <span class="kb-index-action">进入问答${chevronIcon}</span></button>`;
   }
-
-  function industryGrid(rows) {
-    return `<div class="kb-grid kb-grid-lg">${rows.map((base) => baseCard(base, "行业")).join("")}</div>`;
-  }
-
+  function industryGrid(rows) {return `<div class="kb-index-list">${rows.map(base=>baseRow(base,"行业")).join("")}</div>`;}
+  function docMenu(doc) {return `<details class="kb-more" data-kb-more="${text(doc.id)}"><summary aria-label="更多${text(doc.name)}操作">更多</summary><div class="kb-more-menu"><button type="button" data-kb-edit="${text(doc.id)}" aria-label="编辑${text(doc.name)}">${editIcon}编辑</button><button type="button" data-kb-delete="${text(doc.id)}" aria-label="删除${text(doc.name)}">${trashIcon}删除</button></div></details>`;}
   function groupRows(groups, kind) {
     const scopeLabel = kind === "enterprise" ? "企业" : "部门";
     return groups.map((group) => {
@@ -186,14 +123,14 @@
 
   function searchResults() {
     const rows = [];
-    industryBases.filter(matchesBase).forEach((base) => rows.push({ kind: "base", scope: "行业", base }));
-    enterpriseGroups.forEach((group) => group.bases.filter(matchesBase).forEach((base) => {
+    if (state.searchScope === "all" || state.tab === "industry") industryBases.filter(base=>matchesBase(base)).forEach((base) => rows.push({ kind: "base", scope: "行业", base }));
+    if (state.searchScope === "all" || state.tab === "enterprise") enterpriseGroups.filter(group=>state.searchScope === "all" || state.enterprise === "all" || state.enterprise===group.id).forEach((group) => group.bases.filter(base=>matchesBase(base,group.name)).forEach((base) => {
       rows.push({ kind: "base", scope: `企业 · ${group.name}`, base });
     }));
-    departmentGroups.forEach((group) => group.bases.filter(matchesBase).forEach((base) => {
+    if (state.searchScope === "all" || state.tab === "department") departmentGroups.filter(group=>state.searchScope === "all" || state.department === "all" || state.department===group.id).forEach((group) => group.bases.filter(base=>matchesBase(base,group.name)).forEach((base) => {
       rows.push({ kind: "base", scope: `部门 · ${group.name}`, base });
     }));
-    personalDocs.filter(matchesDoc).forEach((doc) => rows.push({ kind: "doc", scope: "个人", doc }));
+    if (state.searchScope === "all" || state.tab === "personal") personalDocs.filter(matchesDoc).forEach((doc) => rows.push({ kind: "doc", scope: "个人", doc }));
     return rows;
   }
 
@@ -208,20 +145,10 @@
             <small>${text(doc.type)} · 更新于 ${text(doc.updated)}</small>
           </span>
           <span class="kb-result-scope">${text(row.scope)}</span>
-          <span class="kb-result-actions"><button class="kb-icon-button" type="button" data-kb-edit="${text(doc.id)}" aria-label="编辑${text(doc.name)}">${editIcon}</button></span>
+          <span class="kb-result-actions">${docMenu(doc)}</span>
         </div>`;
       }
-      const base = row.base;
-      const tone = base.tone ? ` is-${base.tone}` : "";
-      return `<div class="kb-result">
-        <span class="kb-folder${tone}">${icon("folder")}</span>
-        <span class="kb-result-main">
-          <strong>${text(base.name)}</strong>
-          <small>${text(base.owner)} · 创建于 ${text(base.time)}</small>
-        </span>
-        <span class="kb-result-scope">${text(row.scope)}</span>
-        <span class="kb-result-actions"><button class="kb-result-open" type="button" data-kb-open="${text(base.id)}" data-kb-name="${text(base.name)}" data-kb-scope="${text(row.scope)}">打开${chevronIcon}</button></span>
-      </div>`;
+      return baseRow(row.base,row.scope,true);
     }).join("")}</div>`;
   }
 
@@ -233,11 +160,11 @@
     const start = (state.page - 1) * state.pageSize;
     const visible = rows.slice(start, start + state.pageSize);
     const body = visible.length ? visible.map((doc) => `<tr>
-      <td><div class="kb-doc-title"><span class="kb-doc-icon is-${text(doc.tone)}">${icon("file")}</span><span class="kb-doc-name" title="${text(doc.name)}">${text(doc.name)}</span></div></td>
-      <td>${text(doc.created)}</td>
-      <td>${text(doc.updated)}</td>
-      <td>${doc.status ? `<span class="kb-status">${text(doc.status)}${eyeIcon}</span>` : ""}</td>
-      <td><div class="kb-actions"><button class="kb-icon-button" type="button" data-kb-edit="${text(doc.id)}" aria-label="编辑${text(doc.name)}">${editIcon}</button><button class="kb-icon-button is-danger" type="button" data-kb-delete="${text(doc.id)}" aria-label="删除${text(doc.name)}">${trashIcon}</button></div></td>
+      <td><div class="kb-doc-title"><span class="kb-doc-icon is-${text(doc.tone)}">${icon("file")}</span><span class="kb-doc-copy"><span class="kb-doc-name" title="${text(doc.name)}">${text(doc.name)}</span><small>${text(doc.type)}</small></span></div></td>
+      <td title="${text(doc.created)}">${text(dateOnly(doc.created))}</td>
+      <td title="${text(doc.updated)}">${text(dateOnly(doc.updated))}</td>
+      <td>${doc.status ? `<span class="kb-status">${text(doc.status)}${eyeIcon}</span>` : `<span class="kb-state-empty">未标记</span>`}</td>
+      <td><div class="kb-actions">${docMenu(doc)}</div></td>
     </tr>`).join("") : '<tr><td class="kb-empty-cell" colspan="5">没有匹配的知识文档</td></tr>';
     let pageButtons = `<button class="kb-page-button" type="button" data-kb-page="${state.page - 1}" ${state.page === 1 ? "disabled" : ""} aria-label="上一页">‹</button>`;
     for (let page = 1; page <= pages; page += 1) pageButtons += `<button class="kb-page-button${page === state.page ? " is-current" : ""}" type="button" data-kb-page="${page}" ${page === state.page ? 'aria-current="page"' : ""}>${page}</button>`;
@@ -254,23 +181,13 @@
   // ---- chrome ------------------------------------------------------------
 
   function tabCount(key) {
-    if (!state.query) {
-      if (key === "industry") return industryBases.length;
-      if (key === "enterprise") return groupSize(enterpriseGroups);
-      if (key === "department") return groupSize(departmentGroups);
-      return personalDocs.length;
-    }
-    return searchResults().filter((row) => {
-      if (key === "personal") return row.kind === "doc";
-      if (key === "industry") return row.kind === "base" && row.scope === "行业";
-      return row.kind === "base" && row.scope.startsWith(key === "enterprise" ? "企业" : "部门");
-    }).length;
+    return key === "industry" ? industryBases.length : key === "enterprise" ? groupSize(enterpriseGroups) : key === "department" ? groupSize(departmentGroups) : personalDocs.length;
   }
 
   function renderTabs() {
     tabsRoot.innerHTML = SCOPES.map((scope) => {
-      const active = !state.query && state.tab === scope.key;
-      return `<button class="kb-tab${active ? " is-active" : ""}" type="button" role="tab" id="kb-tab-${scope.key}" aria-selected="${active}" aria-controls="kbSections" tabindex="${active || (state.query && scope.key === SCOPES[0].key) ? 0 : -1}" data-kb-tab="${scope.key}">${scope.label}<span class="kb-tab-count">${tabCount(scope.key)}</span></button>`;
+      const active = state.tab === scope.key;
+      return `<button class="kb-tab${active ? " is-active" : ""}" type="button" role="tab" id="kb-tab-${scope.key}" aria-selected="${active}" aria-controls="kbSections" tabindex="${active ? 0 : -1}" data-kb-tab="${scope.key}">${scope.label}<span class="kb-tab-count">${tabCount(scope.key)}</span></button>`;
     }).join("");
     if (state.query) {
       root.setAttribute("aria-label", "搜索结果");
@@ -284,7 +201,7 @@
   function renderWorkbar() {
     workbar.hidden = false;
     if (state.query) {
-      workbar.innerHTML = `<p class="kb-workbar-text">搜索「${text(state.query)}」· ${searchResults().length} 个结果</p><button class="kb-text-button" type="button" data-kb-clear-search>清除搜索</button>`;
+      workbar.innerHTML = `<p class="kb-workbar-text">${state.searchScope === "all" ? "全部分类" : SCOPES.find(scope=>scope.key===state.tab).label} · 搜索「${text(state.query)}」· ${searchResults().length} 个结果</p><button class="kb-text-button" type="button" data-kb-clear-search>清除搜索</button>`;
       return;
     }
     if (state.tab === "enterprise" || state.tab === "department") {
@@ -298,7 +215,7 @@
       return;
     }
     if (state.tab === "personal") {
-      workbar.innerHTML = `<p class="kb-workbar-text">${personalDocs.length} 个文档</p><button class="kb-primary-button" type="button" data-kb-space>${plusIcon}我的知识库空间</button>`;
+      workbar.innerHTML = `<p class="kb-workbar-text">显示 ${personalDocs.filter(matchesDoc).length} 个文档 · 共 ${personalDocs.length} 个</p>`;
       return;
     }
     // The tab already shows the count, so the industry view needs no toolbar.
@@ -312,6 +229,9 @@
   }
 
   function render() {
+    typeFilterField.hidden = state.tab !== "personal";
+    searchInput.placeholder = state.tab === "personal" ? "搜索个人文档名称" : "搜索知识库名称、简介或所属组织";
+    searchInput.setAttribute("aria-label",searchInput.placeholder);
     renderTabs();
     renderWorkbar();
     let html = "";
@@ -328,7 +248,7 @@
       html = hasItems ? personalPanel(rows) : "";
       setEmpty("没有匹配的知识文档", "试试其他关键词，或调整文件类型筛选。");
     } else if (state.tab === "industry") {
-      const rows = industryBases.filter(matchesBase);
+      const rows = industryBases.filter(base=>matchesBase(base));
       hasItems = rows.length > 0;
       html = hasItems ? industryGrid(rows) : "";
       setEmpty("没有匹配的行业知识库", "试试其他关键词。");
@@ -352,6 +272,8 @@
   function resetFilters() {
     state.query = "";
     state.type = "all";
+    state.searchScope = "current";
+    searchScope.value = "current";
     state.enterprise = "all";
     state.department = "all";
     state.page = 1;
@@ -383,7 +305,7 @@
   function openEdit(id) {
     const doc = personalDocs.find((item) => item.id === id);
     if (!doc) return;
-    state.editId = id;
+    state.editId = id;actionDocumentId=id;closeMenus();
     document.querySelector("#kbEditName").value = doc.name;
     document.querySelector("#kbEditType").value = doc.type;
     document.querySelector("#kbEditFeedback").textContent = "";
@@ -394,7 +316,7 @@
   function openDelete(id) {
     const doc = personalDocs.find((item) => item.id === id);
     if (!doc) return;
-    state.deleteId = id;
+    state.deleteId = id;actionDocumentId=id;closeMenus();
     document.querySelector("#kbDeleteName").textContent = `「${doc.name}」`;
     document.querySelector("#kbDeleteDialog").showModal();
     document.querySelector("#kbDeleteCancel").focus({ preventScroll: true });
@@ -408,6 +330,7 @@
     state.page = 1;
     render();
   });
+  searchScope.addEventListener("change",()=>{state.searchScope=searchScope.value === "all" ? "all" : "current";state.query=searchInput.value.trim().toLowerCase();state.page=1;render();});
   typeFilter.addEventListener("change", () => {
     state.type = typeFilter.value;
     state.page = 1;
@@ -449,7 +372,7 @@
     const open = event.target.closest("[data-kb-open]");
     if (open) {
       const scope = open.dataset.kbScope || "";
-      toast(scope ? `已打开${scope}知识库「${open.dataset.kbName}」` : `已打开知识库「${open.dataset.kbName}」`);
+      toast(`已选择「${open.dataset.kbName || "知识库"}」，独立知识问答页面待接入。`);
       return;
     }
     const collapse = event.target.closest("[data-kb-collapse]");
@@ -496,6 +419,7 @@
     }
     document.querySelector("#kbEditDialog").close();
     render();
+    restoreActionFocus();
     toast("知识文档已保存");
   });
   document.querySelector("#kbDeleteClose").addEventListener("click", () => document.querySelector("#kbDeleteDialog").close());
@@ -504,8 +428,16 @@
     personalDocs = personalDocs.filter((doc) => doc.id !== state.deleteId);
     document.querySelector("#kbDeleteDialog").close();
     render();
+    restoreActionFocus();
     toast("知识文档已删除");
   });
+
+  document.addEventListener("click",event=>closeMenus(event.target.closest("details.kb-more")));
+  document.addEventListener("keydown",event=>{
+    if(event.key!=="Escape")return;
+    for(const menu of root.querySelectorAll("details.kb-more[open]")){menu.removeAttribute("open");menu.querySelector("summary")?.focus();}
+  });
+  for(const id of ["kbEditDialog","kbDeleteDialog"])document.querySelector(`#${id}`).addEventListener("close",restoreActionFocus);
 
   const initialTab = decodeURIComponent(location.hash.slice(1));
   if (SCOPES.some((scope) => scope.key === initialTab)) state.tab = initialTab;

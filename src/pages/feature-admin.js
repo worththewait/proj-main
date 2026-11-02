@@ -112,7 +112,9 @@
     for (const id of ['featureIconFeedback','featureImageFeedback']) get(id).textContent='';
     for (const id of ['uploadFeatureIcon','uploadFeatureImage']) get(id).value='';
     preview();updateBusy();
-    get('featureEditor').showModal();get('editFeatureHome').focus();
+    get('featureEditor').showModal();
+    get('editFeatureHome').focus({preventScroll:true});
+    get('featureEditorBody').scrollTop=0;
   }
   function closeEditor() {
     generation++;editing=null;draft=null;baseline=null;busy={icon:false,image:false};pendingLeave=null;

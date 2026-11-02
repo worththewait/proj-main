@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>知识库 · 百舸数智平台</title>
   <link rel="stylesheet" href="../styles.css" />
-  <link rel="stylesheet" href="../knowledge.css?v=20261030-tabs" />
+  <link rel="stylesheet" href="../knowledge.css?v=20261102-index" />
 </head>
 <body class="module-page" data-page="knowledge">
   <main class="module-main">
@@ -13,22 +13,23 @@
       <div class="content-inner knowledge-hub" id="content">
         <header class="kb-hero">
           <div class="kb-hero-copy">
-            <h1>企业知识文档 <span>智能应用</span></h1>
-            <p>统一管理行业、企业、部门与个人知识资源</p>
+            <h1>知识库</h1>
+            <p>选择知识库开展问答，或管理个人上传文档</p>
           </div>
           <form class="kb-search" id="kbSearchForm" role="search">
             <label class="kb-search-field">
               <span data-icon="search" aria-hidden="true"></span>
-              <input id="kbSearchInput" type="search" autocomplete="off" placeholder="输入文档名称或内容搜索" aria-label="输入文档名称或内容搜索" />
+              <input id="kbSearchInput" type="search" autocomplete="off" placeholder="搜索知识库名称、简介或所属组织" aria-label="搜索知识库" />
             </label>
-            <select id="kbTypeFilter" aria-label="选择文件类型">
+            <select id="kbSearchScope" aria-label="搜索范围"><option value="current">当前分类</option><option value="all">全部分类</option></select>
+            <span id="kbTypeFilterField" hidden><select id="kbTypeFilter" aria-label="选择文件类型">
               <option value="all">选择文件类型</option>
               <option value="文档">文档</option>
               <option value="表格">表格</option>
               <option value="演示">演示</option>
               <option value="图片">图片</option>
               <option value="其他">其他</option>
-            </select>
+            </select></span>
             <button class="kb-search-button" type="submit">搜索</button>
           </form>
         </header>
@@ -67,9 +68,9 @@
 
   <div class="kb-toast" id="kbToast" role="status" aria-live="polite"></div>
 
-  <script src="../src/data.js"></script>
+  <script src="../src/data.js?v=20261102-knowledge-index"></script>
   <script src="../src/ui.js"></script>
   <script src="../src/page-bridge.js"></script>
-  <script src="../src/pages/knowledge.js?v=20261030-tabs"></script>
+  <script src="../src/pages/knowledge.js?v=20261102-index"></script>
 </body>
 </html>

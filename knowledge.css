@@ -210,3 +210,65 @@
   .kb-workbar .kb-primary-button { margin-left: 0; width: 100%; }
   .kb-table { min-width: 640px; }
 }
+
+/* 资料索引：内容信息优先，公共库与个人文档分别组织。 */
+.knowledge-hub { max-width:none; padding:30px 32px 48px; }
+.kb-hero { gap:20px; align-items:center; }
+.kb-hero-copy h1 { font-size:24px; line-height:1.4; letter-spacing:0; }
+.kb-hero-copy p { font-size:12px; margin-top:6px; }
+.kb-search { flex-basis:550px; border-radius:8px; box-shadow:none; }
+.kb-search:focus-within { box-shadow:none; outline:2px solid var(--accent-soft); outline-offset:1px; }
+.kb-search select { flex-basis:100px; width:100px; }
+#kbTypeFilterField { flex:0 0 110px; }
+#kbTypeFilterField select { width:110px; }
+.kb-search-button { flex-basis:58px; }
+.kb-tabs { margin-top:24px; gap:28px; }
+.kb-tab { font-size:14px; }
+.kb-index-list,.kb-sheet { background:var(--surface); border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+.kb-sheet { padding:0; }
+.kb-index-row { display:flex; align-items:center; gap:14px; width:100%; min-height:84px; padding:16px 20px; border:0; border-bottom:1px solid #edf0f5; background:var(--surface); color:var(--ink); text-align:left; }
+.kb-index-row:last-child { border-bottom:0; }
+.kb-index-row:hover { background:#f7f9fd; }
+.kb-index-row:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
+.kb-index-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 24px; color:var(--accent); }
+.kb-index-icon .icon { width:23px; height:23px; }
+.kb-index-copy { flex:1; min-width:0; }
+.kb-index-copy strong { display:block; font-size:14px; font-weight:500; overflow-wrap:anywhere; }
+.kb-index-description { display:block; color:var(--muted); font-size:12px; margin-top:4px; line-height:1.6; }
+.kb-index-meta { flex:0 0 134px; font-size:12px; color:var(--muted); text-align:right; }
+.kb-index-meta small { display:block; font-size:12px; margin-top:4px; font-variant-numeric:tabular-nums; }
+.kb-index-action { flex:none; display:inline-flex; align-items:center; gap:4px; font-size:12px; color:var(--accent-hover); margin-left:8px; }
+.kb-group + .kb-group { margin:0; }
+.kb-group-head { margin:0; padding:10px 20px; border-radius:0; border-bottom:1px solid var(--line); background:#f8f9fc; }
+.kb-group-name { font-size:12px; font-weight:500; }
+.kb-group-count { font-size:12px; }
+.kb-group-head:hover { background:#f0f3f8; }
+.kb-group:not(.is-collapsed) .kb-index-action .kb-chevron { transform:none; }
+.kb-result { border-radius:0; border:0; border-bottom:1px solid var(--line); box-shadow:none; }
+.kb-result:hover { box-shadow:none; background:#f7f9fd; }
+.kb-results { gap:0; background:var(--surface); border:1px solid var(--line); border-radius:9px; overflow:hidden; }
+.kb-result:last-child { border-bottom:0; }
+.kb-personal-panel { overflow:visible; }
+.kb-table-wrap { overflow:visible; }
+.kb-table { min-width:0; }
+.kb-table th { font-size:12px; padding:13px 16px; }
+.kb-table td { height:76px; font-size:12px; }
+.kb-doc-name { font-size:14px; }
+.kb-more { position:relative; display:inline-block; text-align:left; }
+.kb-more summary { list-style:none; color:var(--accent-hover); font-size:12px; padding:6px 8px; border-radius:5px; cursor:pointer; }
+.kb-more summary::-webkit-details-marker { display:none; }
+.kb-more summary:hover,.kb-more[open] summary { background:var(--accent-soft); }
+.kb-more summary:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.kb-more-menu { position:absolute; z-index:20; right:0; top:100%; min-width:136px; padding:5px; background:var(--surface); border:1px solid var(--line); border-radius:8px; box-shadow:0 8px 24px rgba(29,36,51,.12); }
+.kb-more-menu button { display:flex; align-items:center; gap:8px; width:100%; min-height:34px; border:0; background:transparent; border-radius:4px; padding:6px 10px; color:var(--ink); font-size:13px; text-align:left; }
+.kb-more-menu button:hover { background:var(--surface-subtle); }
+.kb-more-menu button svg { width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:1.7; }
+.kb-more-menu button.is-danger { color:#b23b3b; }
+@media (max-width:1180px) { .kb-hero { align-items:flex-start; } .kb-search { flex-basis:100%; } .kb-index-meta { flex-basis:110px; } }
+@media (max-width:700px) { .knowledge-hub { padding:24px 18px; } .kb-index-row { padding:14px; gap:10px; } .kb-index-meta { display:none; } .kb-tabs { gap:16px; } .kb-search { flex-wrap:wrap; } .kb-search-field { flex-basis:100%; } }
+.kb-index-meta { min-width:138px; white-space:nowrap; }
+.kb-doc-copy { min-width:0; display:flex; flex-direction:column; }
+.kb-doc-copy small { font-size:12px; color:var(--muted); margin-top:4px; }
+/* 搜索结果中的个人文档也有浮动菜单，不能裁切其操作。 */
+.kb-results { overflow:visible; }
+.kb-more-menu button[data-kb-delete] { color:#b23b3b; }
