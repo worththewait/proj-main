@@ -6,21 +6,24 @@ const vm = require("node:vm");
 
 const read = (file) => fs.readFileSync(path.join(__dirname, "..", file), "utf8");
 
-test("back-office shell exposes file, permission, notice, feature and custom UI navigation", () => {
+test("back-office shell exposes file, permission, notice and interface navigation", () => {
   const html = read("admin.html");
   assert.match(html, /id="adminNav"/);
   assert.match(html, /id="adminFrame"/);
-  assert.equal((html.match(/data-admin-view=/g) || []).length, 5);
+  assert.equal((html.match(/data-admin-view=/g) || []).length, 4);
   assert.match(html, />文件管理</);
   assert.match(html, />权限管理</);
   assert.match(html, />通知公告</);
-  assert.match(html, />自定义界面</);
-  assert.match(html, />功能管理</);
+  assert.match(html, />界面管理</);
+  assert.doesNotMatch(html, />功能管理</);
+  assert.doesNotMatch(html, />自定义界面</);
   assert.doesNotMatch(html, />首页</);
-  assert.match(read("admin.js"), /pages\/library-admin\.html\?embed=admin&view=perm/);
-  assert.match(read("admin.js"), /pages\/notice-admin\.html\?embed=admin/);
-  assert.match(read("admin.js"), /pages\/home-settings\.html\?embed=admin/);
-  assert.match(read("admin.js"), /pages\/feature-admin\.html\?embed=admin/);
+  const js = read("admin.js");
+  assert.match(js, /pages\/library-admin\.html\?embed=admin&view=perm/);
+  assert.match(js, /pages\/notice-admin\.html\?embed=admin/);
+  assert.match(js, /pages\/interface-admin\.html\?embed=admin/);
+  assert.match(js, /features: \{ src: `\$\{INTERFACE_SRC\}&view=features`/);
+  assert.match(js, /settings: \{ src: `\$\{INTERFACE_SRC\}&view=settings`/);
 });
 
 test("client shell keeps the back-office entry in the personal center and hides admin-only routes", () => {

@@ -50,7 +50,7 @@
   const toolCategoryIds = {'文档处理': 'documents', '写作创作': 'writing', '研究辅助': 'research'};
   const toolTones = {'文档处理': 'blue', '写作创作': 'purple', '研究辅助': 'teal'};
 
-  // Stable IDs identify destinations, not labels: same-name tools and systems stay distinct.
+  // Stable IDs identify destinations, not labels: saved configuration survives label edits.
   const registry = window.BaigeData.navigation.filter(item => !['home', 'home-settings'].includes(item.id) && !item.adminOnly).flatMap(item => {
     const homeCategory = researchRoutes.has(item.id) ? 'knowledge-research' : 'tools-platforms';
     const base = {route: item.id, homeCategory, tone: routeMeta[item.id]?.[1] || 'blue'};

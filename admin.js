@@ -1,12 +1,17 @@
 (() => {
   "use strict";
 
+  const INTERFACE_SRC = "pages/interface-admin.html?embed=admin&v=20261102-interface";
   const views = {
     files: { src: "pages/library-admin.html?embed=admin&view=files&v=20261029-person-addon", title: "文件管理" },
     perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261029-person-addon", title: "权限管理" },
     notices: { src: "pages/notice-admin.html?embed=admin&v=20261029-notice", title: "通知公告" },
-    features: { src: "pages/feature-admin.html?embed=admin&v=20261030-features", title: "功能管理" },
-    settings: { src: "pages/home-settings.html?embed=admin&v=20261029-news-pagination", title: "自定义界面" },
+    interface: { src: INTERFACE_SRC, title: "界面管理" },
+  };
+  // 旧的 #features / #settings 仍可用，落到界面管理的对应页签。
+  const legacyViews = {
+    features: { src: `${INTERFACE_SRC}&view=features`, title: "界面管理" },
+    settings: { src: `${INTERFACE_SRC}&view=settings`, title: "界面管理" },
   };
   if (window.BaigeUI) window.BaigeUI.hydrate();
   const nav = document.querySelector("#adminNav");
@@ -14,20 +19,24 @@
   const buttons = [...nav.querySelectorAll("[data-admin-view]")];
   let current = "";
 
+  const known = (value) => Object.hasOwn(views, value) || Object.hasOwn(legacyViews, value);
+
   function viewFromHash() {
     const value = decodeURIComponent(location.hash.replace(/^#/, ""));
-    return Object.hasOwn(views, value) ? value : "files";
+    return known(value) ? value : "files";
   }
 
   function render(view, updateHistory) {
-    const next = Object.hasOwn(views, view) ? view : "files";
-    if (!views[next]) return;
+    const next = known(view) ? view : "files";
+    const entry = views[next] || legacyViews[next];
+    const navKey = Object.hasOwn(views, next) ? next : "interface";
+    if (!entry) return;
     current = next;
-    document.title = `${views[next].title} · 后台系统 · 百舸数智平台`;
-    frame.title = views[next].title;
-    frame.src = views[next].src;
+    document.title = `${entry.title} · 后台系统 · 百舸数智平台`;
+    frame.title = entry.title;
+    frame.src = entry.src;
     buttons.forEach((button) => {
-      const active = button.dataset.adminView === next;
+      const active = button.dataset.adminView === navKey;
       button.classList.toggle("is-active", active);
       if (active) button.setAttribute("aria-current", "page");
       else button.removeAttribute("aria-current");

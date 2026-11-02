@@ -42,8 +42,8 @@ test('destinations expose each real parent and child exactly once without filter
     assert.equal(destination.key, JSON.stringify([route, child]));
     assert.ok(destination.label.length);
   }
-  assert.equal(policy.canOpen('smart-tools', '标准编制'), false);
-  const locked = {...model.defaults()[0], route: 'smart-tools', child: '标准编制'};
+  assert.equal(policy.canOpen('qa', '智能问数'), false);
+  const locked = {...model.defaults()[0], route: 'qa', child: '智能问数'};
   assert.ok(model.validate([locked]), 'configuration must leave access checks to the navigation layer');
   destinations[0].label = '改动';
   assert.notEqual(model.destinations()[0].label, '改动');
