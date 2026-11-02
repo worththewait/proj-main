@@ -48,12 +48,11 @@ test('tool-category filter excludes non-tools and keeps the full catalog intact'
   assert.doesNotMatch(app.get('featureTable').innerHTML,/百舸写作/);assert.equal(app.config.catalog().length,25);
 });
 
-test('editing a feature saves its selected icon and category through the shared model',()=>{
+test('editing a feature saves its selected category through the shared model',()=>{
   const app=setup();app.config.addCategory('home','综合服务');const category=app.config.read().categories.home.find(c=>c.label==='综合服务');
   app.action('featureTable','editFeature','tool:OCR识别');assert.equal(app.get('featureEditor').open,true);
-  app.get('editFeatureHome').value=category.id;app.get('editFeatureHome').emit('change');
-  app.get('editFeatureIcon').value='file';app.get('editFeatureIcon').emit('change');app.get('featureEditorForm').emit('submit');
-  assert.equal(app.config.get('tool:OCR识别').homeCategory,category.id);assert.equal(app.config.get('tool:OCR识别').icon,'file');assert.equal(app.get('featureEditor').open,false);
+  app.get('editFeatureHome').value=category.id;app.get('editFeatureHome').emit('change');app.get('featureEditorForm').emit('submit');
+  assert.equal(app.config.get('tool:OCR识别').homeCategory,category.id);assert.equal(app.config.get('tool:OCR识别').icon,'scan');assert.equal(app.get('featureEditor').open,false);
 });
 
 test('opening another feature starts at the top of its form and focuses the first classification',()=>{
@@ -68,16 +67,16 @@ test('opening another feature starts at the top of its form and focuses the firs
 });
 
 test('cancelling a dirty edit offers continue or discard without saving',()=>{
-  const app=setup();app.action('featureTable','editFeature','tool:OCR识别');app.get('editFeatureIcon').value='book';app.get('editFeatureIcon').emit('change');
+  const app=setup();app.action('featureTable','editFeature','tool:OCR识别');app.get('editFeatureHome').value='knowledge-research';app.get('editFeatureHome').emit('change');
   app.get('cancelFeatureEdit').emit('click');assert.equal(app.get('featureDiscardDialog').open,true);assert.equal(app.get('featureEditor').open,true);
   app.get('continueFeatureEdit').emit('click');assert.equal(app.get('featureDiscardDialog').open,false);assert.equal(app.get('featureEditor').open,true);
   app.get('cancelFeatureEdit').emit('click');app.get('discardFeatureEdit').emit('click');
-  assert.equal(app.get('featureEditor').open,false);assert.equal(app.config.get('tool:OCR识别').icon,'scan');
+  assert.equal(app.get('featureEditor').open,false);assert.equal(app.config.get('tool:OCR识别').homeCategory,'tools-platforms');
 });
 
 test('failed storage retains the edited values and shows an error instead of success',()=>{
-  const app=setup();app.action('featureTable','editFeature','tool:OCR识别');app.get('editFeatureIcon').value='book';app.get('editFeatureIcon').emit('change');app.failStorage();app.get('featureEditorForm').emit('submit');
-  assert.equal(app.get('featureEditor').open,true);assert.equal(app.get('editFeatureIcon').value,'book');assert.match(app.get('featureEditorFeedback').textContent,/保存|存储/);assert.equal(app.config.get('tool:OCR识别').icon,'scan');
+  const app=setup();app.action('featureTable','editFeature','tool:OCR识别');app.get('editFeatureHome').value='knowledge-research';app.get('editFeatureHome').emit('change');app.failStorage();app.get('featureEditorForm').emit('submit');
+  assert.equal(app.get('featureEditor').open,true);assert.equal(app.get('editFeatureHome').value,'knowledge-research');assert.match(app.get('featureEditorFeedback').textContent,/保存|存储/);assert.equal(app.config.get('tool:OCR识别').homeCategory,'tools-platforms');
 });
 
 test('category management adds, renames and migrates populated categories',()=>{
@@ -107,9 +106,8 @@ test('late image processing cannot overwrite the next feature after discarding',
 test('feature admin uses the same homepage icon tones and sizing',()=>{
   const js=source('src/pages/feature-admin.js'),css=source('feature-admin.css');
   assert.match(js,/feature-row-icon" data-tone="\$\{escape\(entry\.tone\)\}"/);
-  assert.match(js,/iconPreview\.dataset\.tone = entry\.tone/);
   assert.match(css,/\.feature-row-icon\[data-tone="purple"\]/);
-  assert.match(css,/\.feature-icon-preview\[data-tone="teal"\]/);
+  assert.match(css,/\.feature-row-icon\[data-tone="teal"\]/);
   assert.match(css,/\.feature-row-icon > svg \{ display:block; width:20px; height:20px/);
   assert.match(source('home-dashboard.css'),/\.home-directory-icon > \.feature-custom-icon/);
 });

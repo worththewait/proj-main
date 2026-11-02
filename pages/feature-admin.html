@@ -8,7 +8,7 @@
 </head>
 <body class="module-page feature-admin-page">
 <main class="module-main"><div class="content-scroll"><div class="content-inner feature-admin">
-  <header class="feature-page-heading"><div><h1>功能管理</h1><p>统一维护功能图标、热门工具配图和分类，让前台展示保持一致。</p></div><span class="feature-local-label">本地演示</span></header>
+  <header class="feature-page-heading"><div><h1>功能管理</h1><p>统一维护热门工具配图和分类，让前台展示保持一致。</p></div><span class="feature-local-label">本地演示</span></header>
   <div class="feature-tabs" role="tablist" aria-label="功能管理">
     <button id="featureListTab" type="button" role="tab" aria-selected="true" aria-controls="featureListPanel" data-feature-tab="list">功能列表</button>
     <button id="featureCategoryTab" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="featureCategoryPanel" data-feature-tab="categories">分类管理</button>
@@ -36,10 +36,6 @@
   <form id="featureEditorForm" novalidate>
     <div class="feature-editor-body" id="featureEditorBody">
       <section class="feature-field-section" aria-labelledby="featureCategoryHeading"><h3 id="featureCategoryHeading">所属分类</h3><div class="feature-form-columns"><label class="feature-field"><span>首页分类</span><select id="editFeatureHome" required></select></label><label class="feature-field" id="editFeatureToolField"><span>工具分类</span><select id="editFeatureTool"></select></label></div></section>
-      <section class="feature-field-section" aria-labelledby="featureIconHeading"><div class="feature-section-heading"><h3 id="featureIconHeading">功能图标</h3><button class="feature-text-button" id="resetFeatureIcon" type="button">恢复默认</button></div>
-        <div class="feature-icon-edit"><div class="feature-icon-preview" id="featureIconPreview" aria-label="图标预览"></div><label class="feature-field"><span>内置图标</span><select id="editFeatureIcon"></select></label><label class="secondary-button feature-upload-button">上传图标<input id="uploadFeatureIcon" type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传功能图标"></label></div>
-        <p class="feature-field-hint">支持 PNG、JPG、WebP，单张不超过 10MB；上传后居中裁切为方形，图片仅保存在本浏览器。</p><p class="feature-field-feedback" id="featureIconFeedback" role="status"></p>
-      </section>
       <section class="feature-field-section" aria-labelledby="featureImageHeading"><div class="feature-section-heading"><h3 id="featureImageHeading">功能大图</h3><button class="feature-text-button" id="resetFeatureImage" type="button">恢复默认</button></div>
         <div class="feature-image-preview" id="featureImagePreview" aria-label="功能大图预览"></div>
         <div class="feature-image-actions"><label class="secondary-button feature-upload-button">上传大图<input id="uploadFeatureImage" type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传功能大图"></label><span id="featureImageUsage"></span></div>

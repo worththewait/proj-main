@@ -22,8 +22,14 @@ test("interface management merges home settings and feature management into one 
   assert.match(html, /src\/pages\/feature-admin\.js/);
   assert.match(html, /src\/pages\/interface-admin\.js/);
   assert.match(html, /interface-admin\.css/);
-  // 图标一致性在编辑弹窗里有明确说明。
-  assert.match(html, /图标会同时用于首页目录、推荐入口与智能工具/);
+  // 功能图标不再可编辑：编辑弹窗只保留分类与大图。
+  for (const file of ["pages/interface-admin.html", "pages/feature-admin.html"]) {
+    const page = read(file);
+    assert.doesNotMatch(page, /featureIconHeading|editFeatureIcon|featureIconPreview|resetFeatureIcon/);
+    assert.doesNotMatch(page, /上传图标|图标会同时用于/);
+  }
+  assert.doesNotMatch(read("src/pages/feature-admin.js"), /editFeatureIcon|featureIconPreview|resetFeatureIcon|uploadFeatureIcon|busy\.icon/);
+  assert.doesNotMatch(read("feature-admin.css"), /feature-icon-(edit|preview)/);
 });
 
 test("interface tabs drive panels and keep the legacy deep links working", () => {
