@@ -94,11 +94,11 @@
     return descriptions[base.name] || "共享知识资料，可在独立问答页中使用";
   }
   function baseRow(base, scopeLabel, showScope=false) {
-    return `<button class="kb-index-row" type="button" data-kb-open="${text(base.id)}" data-kb-name="${text(base.name)}" data-kb-scope="${text(scopeLabel)}" aria-label="进入${text(base.name)}问答">
-      <span class="kb-index-icon">${icon("book")}</span>
-      <span class="kb-index-copy"><strong>${text(base.name)}</strong><span class="kb-index-description">${text(descriptionFor(base))}</span></span>
-      <span class="kb-index-meta">${showScope?text(scopeLabel):text(base.owner)}<small>${showScope?"知识库":`创建于 ${text(dateOnly(base.time))}`}</small></span>
-      <span class="kb-index-action">进入问答${chevronIcon}</span></button>`;
+    return `<button class="kb-index-row kb-resource-card" type="button" data-kb-open="${text(base.id)}" data-kb-name="${text(base.name)}" data-kb-scope="${text(scopeLabel)}" aria-label="进入${text(base.name)}问答">
+      <span class="kb-resource-top"><span class="kb-resource-icon"><img src="../assets/knowledge-folder.svg" alt="" width="40" height="40"></span>
+      <span class="kb-resource-copy"><strong>${text(base.name)}</strong><span class="kb-resource-owner">${text(base.owner)}</span></span></span>
+      ${showScope?`<span class="kb-resource-scope">${text(scopeLabel)}</span>`:""}
+      <span class="kb-resource-footer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/></svg><time datetime="${text(base.time.replace(" ","T"))}">${text(base.time)}</time></span></button>`;
   }
   function industryGrid(rows) {return `<div class="kb-index-list">${rows.map(base=>baseRow(base,"行业")).join("")}</div>`;}
   function docMenu(doc) {return `<details class="kb-more" data-kb-more="${text(doc.id)}"><summary aria-label="更多${text(doc.name)}操作">更多</summary><div class="kb-more-menu"><button type="button" data-kb-edit="${text(doc.id)}" aria-label="编辑${text(doc.name)}">${editIcon}编辑</button><button type="button" data-kb-delete="${text(doc.id)}" aria-label="删除${text(doc.name)}">${trashIcon}删除</button></div></details>`;}

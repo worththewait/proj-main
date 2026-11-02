@@ -36,9 +36,9 @@ test('all scope search is explicit and personal type filters cannot remove publi
  assert.match(a.get('kbSections').innerHTML,/714企业知识库/);
  assert.match(a.get('kbWorkbar').innerHTML,/全部分类/);
 });
-test('file type control is personal-only and bases use a consistent list entry',()=>{
+test('file type control is personal-only and bases retain consistent clickable destinations',()=>{
  const a=setup();assert.equal(a.get('kbTypeFilterField').hidden,true);
- assert.equal((a.get('kbSections').innerHTML.match(/class="kb-index-row"/g)||[]).length,4);
+ assert.equal((a.get('kbSections').innerHTML.match(/data-kb-open=/g)||[]).length,4);
  a.tab('personal');assert.equal(a.get('kbTypeFilterField').hidden,false);
  assert.match(a.get('kbSections').innerHTML,/未标记/);assert.match(a.get('kbSections').innerHTML,/更多/);
 });
@@ -69,5 +69,5 @@ test('type filtering stays scoped to personal documents and clearing restores th
  a.tab('industry');assert.equal(a.get('kbEmpty').hidden,true);assert.equal(a.get('kbTypeFilterField').hidden,true);
  a.search('不存在');assert.equal(a.get('kbEmpty').hidden,false);
  a.action('kbWorkbar','kbClearSearch','');assert.equal(a.get('kbEmpty').hidden,true);
- assert.equal((a.get('kbSections').innerHTML.match(/class="kb-index-row"/g)||[]).length,4);
+ assert.equal((a.get('kbSections').innerHTML.match(/data-kb-open=/g)||[]).length,4);
 });
