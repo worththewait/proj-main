@@ -31,6 +31,7 @@ test("writing templates seed personal and public templates", () => {
   const templates = store.templates();
   assert.ok(templates.some((item) => item.scope === "personal" && item.name === "宣贯会工作方案"));
   assert.ok(templates.some((item) => item.scope === "public"));
+  assert.ok(templates.some((item) => item.id === "tpl-tech-report" && item.name === "科技报告模板"));
   assert.ok(store.template("tpl-propaganda").outline.length > 0);
 });
 
@@ -69,4 +70,10 @@ test("writing page exposes the complete template-to-upload flow", () => {
   assert.match(js, /item\.status === "passed" \? "" : "is-disabled"/);
   assert.match(css, /\.wr-workspace/);
   assert.match(css, /\.wr-upload-row\.is-disabled/);
+  assert.match(js, /function openPublicWizard/);
+  assert.match(js, /function renderWizard/);
+  assert.match(js, /function wizardUploadsHtml/);
+  assert.match(js, /data-wr-wizard-next/);
+  assert.match(js, /data-wr-wizard-finish/);
+  assert.match(css, /\.wr-wizard/);
 });
