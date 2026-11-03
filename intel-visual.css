@@ -109,7 +109,7 @@ body { background:#f5f7fb; }
 .intel-title-tabs .intel-tab { height:44px; padding:0 0 10px; border:0; border-radius:0; background:transparent; color:#6c778a; font-family:inherit; font-size:21px; font-weight:400; line-height:1.4; cursor:pointer; }
 .intel-title-tabs .intel-tab::after { display:none; }
 .intel-title-tabs .intel-tab.active { color:#1d2433; font-weight:600; box-shadow:none; }
-.intel-title-tabs .intel-tab.active::after { display:block; right:auto; bottom:0; width:24px; height:2px; border-radius:0; background:#1d2433; }
+.intel-title-tabs .intel-tab.active::after { display:block; right:auto; bottom:0; width:24px; height:2px; border-radius:0; background:var(--accent); }
 .intel-title-tabs .intel-tab:not(.active):hover { color:#1d2433; }
 .intel-title-tabs .intel-tab:focus-visible { outline:2px solid #7898ee; outline-offset:4px; border-radius:2px; }
 .intel-header-tools { margin-left:auto; display:flex; align-items:center; gap:24px; padding-bottom:8px; }
@@ -225,3 +225,8 @@ button.pl-tt:focus-visible { outline:2px solid #7898ee; outline-offset:3px; }
 @media (prefers-reduced-motion:reduce) {
  .intel-page-btn.pg-refresh.spinning .r-ic { animation:none; }
 }
+
+/* 抽屉必须盖住页头操作区（页头 z-index 200、栏目栏 300），否则「收藏 / 刷新」会浮在抽屉之上。 */
+.dr-mask { z-index: 900; }
+.thread-drawer { z-index: 910; }
+.toast { z-index: 1000; }

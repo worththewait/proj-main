@@ -16,6 +16,8 @@
   let outline = [];
   let currentDoc = null;
   let composeState = { scenario: "", sources: { personal: true, enterprise: true, web: true }, extras: { conclusion: false, summary: false, references: false }, uploads: new Set() };
+  let wizardStep = 1;
+  let wizardState = { title: "", source: "", uploads: new Set(), extras: { conclusion: false, summary: false, references: false } };
   let uploadPending = [];
   let chapterEdit = null;
   let toastTimer = null;
@@ -45,13 +47,24 @@
       <div class="wr-template-grid">${templates.length ? templates.map((template) => `<article class="wr-template-card"><h3>${html(template.name)}</h3><span class="wr-template-mode">${html(template.mode)}</span><p>${html(template.description)}</p><div class="wr-template-actions"><button class="wr-btn" type="button" data-template-outline="${html(template.id)}">大纲预览</button><button class="wr-btn is-primary" type="button" data-template-use="${html(template.id)}">使用模板</button></div></article>`).join("") : '<div class="wr-template-empty">暂无模板</div>'}</div></section>`;
   }
 
-  function setOutlineFromTemplate(template) {
-    activeTemplate = template;
-    outline = template.outline.map(function cloneNode(node) {
+  function cloneOutline(source) {
+    return source.map(function cloneNode(node) {
       return { ...node, id: `${node.id}-${Math.random().toString(36).slice(2, 6)}`, children: (node.children || []).map(cloneNode) };
     });
+  }
+  function setOutlineFromTemplate(template) {
+    activeTemplate = template;
+    outline = cloneOutline(template.outline);
     view = "outline";
     rightTab = "thought";
+    render();
+  }
+  function openPublicWizard(template) {
+    activeTemplate = template;
+    outline = cloneOutline(template.outline);
+    wizardStep = 1;
+    wizardState = { title: "", source: "", uploads: new Set(), extras: { conclusion: false, summary: false, references: false } };
+    view = "wizard";
     render();
   }
 
@@ -78,8 +91,10 @@
     return null;
   }
   function outlineHtml(nodes, prefix = "", depth = 0) {
-    return nodes.map((node, index) => {
-      const label = node.type === "nonchapter" ? "" : (prefix ? `${prefix}.${index + 1}` : String(index + 1));
+    let chapterIndex = 0;
+    return nodes.map((node) => {
+      if (node.type !== "nonchapter") chapterIndex += 1;
+      const label = node.type === "nonchapter" ? "" : (prefix ? `${prefix}.${chapterIndex}` : String(chapterIndex));
       const childPrefix = label || prefix;
       return `<div class="wr-outline-node" data-depth="${depth + 1}"><div class="wr-outline-row"><span class="wr-outline-grip" aria-hidden="true">⋮⋮</span><div class="wr-outline-copy"><strong>${label ? `${html(label)}. ` : ""}${html(node.title)}</strong><small>${html(node.requirements || "暂未填写写作要求")}</small></div><div class="wr-outline-actions"><button class="wr-icon-btn" type="button" data-outline-add="${html(node.id)}" title="新增子章节" aria-label="在${html(node.title)}下新增子章节">＋</button><button class="wr-icon-btn" type="button" data-outline-edit="${html(node.id)}" title="编辑章节信息" aria-label="编辑${html(node.title)}">⚙</button><button class="wr-icon-btn is-danger" type="button" data-outline-delete="${html(node.id)}" title="删除章节" aria-label="删除${html(node.title)}">🗑</button></div></div>${node.children?.length ? `<div class="wr-outline-children">${outlineHtml(node.children, childPrefix, depth + 1)}</div>` : ""}</div>`;
     }).join("");
@@ -169,6 +184,10 @@
     uploadDialog.querySelector("#wrUploadConfirm").addEventListener("click", () => {
       uploadDialog.close();
       if (composeDialog.open) renderComposeUploads();
+      if (view === "wizard") {
+        if (wizardStep === 2 && store.uploads().length) wizardState.source = "upload";
+        renderWizard();
+      }
     });
   }
   function renderPending() {
@@ -214,7 +233,7 @@
     }));
   }
 
-  function docBlocks() {
+  function docBlocks(extras = composeState.extras) {
     const blocks = [];
     const numbered = numberNodes(outline);
     function visit(nodes, depth = 0) {
@@ -224,9 +243,28 @@
       });
     }
     visit(numbered);
-    if (composeState.extras.conclusion) blocks.push({ type: "heading", level: 2, label: "结论", title: "结论", requirements: "归纳全文核心判断，形成明确结论。" });
-    if (composeState.extras.summary) blocks.push({ type: "heading", level: 2, label: "总结", title: "全文总结", requirements: "概括全文主要内容、方法与价值。" });
+    if (extras.conclusion) blocks.push({ type: "heading", level: 2, label: "结论", title: "结论", requirements: "归纳全文核心判断，形成明确结论。" });
+    if (extras.summary) blocks.push({ type: "heading", level: 2, label: "总结", title: "全文总结", requirements: "概括全文主要内容、方法与价值。" });
     return blocks;
+  }
+  function createDocument({ title, scenario, sources, extras, uploadNames }) {
+    const blocks = docBlocks(extras);
+    const document = {
+      title,
+      template: activeTemplate?.name || "",
+      scenario,
+      sources,
+      extras,
+      uploads: uploadNames,
+      blocks,
+      outline: outline.map((node) => ({ ...node })),
+    };
+    currentDoc = document;
+    store.saveDocument(document);
+    view = "workspace";
+    rightTab = "thought";
+    render();
+    toast("写作文档已生成（原型演示）");
   }
   function generateDocument() {
     const scenario = composeState.scenario.trim();
@@ -235,25 +273,14 @@
       return;
     }
     const selectedUploads = store.uploads().filter((item) => composeState.uploads.has(item.id) && item.status === "passed");
-    const blocks = docBlocks();
-    const title = scenario;
-    const document = {
-      title,
-      template: activeTemplate?.name || "",
+    composeDialog.close();
+    createDocument({
+      title: scenario,
       scenario,
       sources: composeState.sources,
       extras: composeState.extras,
-      uploads: selectedUploads.map((item) => item.name),
-      blocks,
-      outline: outline.map((node) => ({ ...node })),
-    };
-    currentDoc = document;
-    store.saveDocument(document);
-    composeDialog.close();
-    view = "workspace";
-    rightTab = "thought";
-    render();
-    toast("写作文档已生成（原型演示）");
+      uploadNames: selectedUploads.map((item) => item.name),
+    });
   }
 
   function workspaceHtml() {
@@ -261,6 +288,7 @@
     if (currentDoc.sources.personal) sources.push("个人知识库");
     if (currentDoc.sources.enterprise) sources.push("企业知识库");
     if (currentDoc.sources.web) sources.push("联网搜索");
+    if (currentDoc.sources.knowledge) sources.push("知识库");
     currentDoc.uploads.forEach((name) => sources.push(name));
     const numbered = numberNodes(currentDoc.outline || []);
     const mini = [];
@@ -277,9 +305,55 @@
       <div class="wr-workspace"><aside class="wr-side wr-side--left"><div class="wr-side-title">文档大纲 <small>${flatten(currentDoc.outline || []).length} 节</small></div><div class="wr-mini-outline">${mini.join("")}</div></aside><article class="wr-doc"><h1>${html(currentDoc.title)}</h1><div class="wr-doc-meta">${html(currentDoc.scenario)} · ${new Date().toLocaleDateString("zh-CN")}</div>${blocks}${refs}</article><aside class="wr-side wr-side--right"><div class="wr-tool-tabs"><button class="wr-tool-tab ${rightTab === "thought" ? "is-active" : ""}" type="button" data-wr-right="thought">写作思路</button><button class="wr-tool-tab ${rightTab === "ai" ? "is-active" : ""}" type="button" data-wr-right="ai">AI工具</button></div>${rightTab === "thought" ? `<div class="wr-thought"><div class="wr-thought-card"><b>写作场景</b><p>${html(currentDoc.scenario)}</p></div><div class="wr-thought-card"><b>参考来源</b><p>${html(sources.join("、") || "未选择参考资料")}</p></div><div class="wr-thought-card"><b>结构提示</b><p>${html(currentDoc.extras.conclusion ? "包含结论；" : "")}${html(currentDoc.extras.summary ? "包含全文总结；" : "")}${html(currentDoc.extras.references ? "包含参考文献。" : "按大纲逐章展开。")}</p></div></div>` : `<div class="wr-tool-empty">AI 工具暂未接入<br><br><div class="wr-ai-actions"><button type="button" data-wr-ai>AI 优化</button><button type="button" data-wr-ai>扩展本节</button><button type="button" data-wr-ai>润色全文</button></div></div>`}</aside></div>`;
   }
 
+
+  function wizardOutlineHtml(nodes, prefix = "", depth = 0) {
+    let chapterIndex = 0;
+    return nodes.map((node) => {
+      if (node.type !== "nonchapter") chapterIndex += 1;
+      const label = node.type === "nonchapter" ? "" : (prefix ? `${prefix}.${chapterIndex}` : String(chapterIndex));
+      return `<div class="wr-wizard-outline-node" data-depth="${depth}"><div class="wr-wizard-outline-row"><strong>${label ? `${html(label)}. ` : ""}${html(node.title)}</strong><span>默认分类 <button type="button" class="wr-link">展开更多</button></span></div><p>${html(node.requirements || "")}</p>${node.children?.length ? wizardOutlineHtml(node.children, label || prefix, depth + 1) : ""}</div>`;
+    }).join("");
+  }
+  function wizardUploadsHtml() {
+    const uploads = store.uploads();
+    return uploads.length ? uploads.map((item) => `<label class="wr-upload-row ${item.status === "passed" ? "" : "is-disabled"}"><input type="checkbox" data-wr-wizard-upload="${html(item.id)}" ${wizardState.uploads.has(item.id) && item.status === "passed" ? "checked" : ""} ${item.status === "passed" ? "" : "disabled"} /><span class="wr-upload-name">${html(item.name)}</span>${statusHtml(item.status)}<span class="wr-upload-meta">${html(item.message || "")}</span></label>`).join("") : '<div class="wr-upload-empty">尚未上传文档，点击「上传」添加素材</div>';
+  }
+  function stepMarkup() {
+    const steps = [[1, "输入文章标题"], [2, "上传素材"], [3, "选择工具"]];
+    return steps.map(([number, label], index) => `<div class="wr-step ${wizardStep === number ? "is-current" : ""} ${wizardStep > number ? "is-done" : ""}"><span class="wr-step-index">${wizardStep > number ? "✓" : number}</span><strong>${label}</strong>${index < steps.length - 1 ? '<i class="wr-step-arrow" aria-hidden="true"></i>' : ""}</div>`).join("");
+  }
+  function wizardStepContent() {
+    if (wizardStep === 1) {
+      return `<div class="wr-wizard-content"><label class="wr-field"><span>文章标题 <em>*</em></span><input class="wr-input" id="wrWizardTitle" maxlength="100" placeholder="请输入文章标题" value="${html(wizardState.title)}" /></label><p class="wr-field-feedback" id="wrWizardFeedback" role="status"></p></div><div class="wr-wizard-actions"><button class="wr-btn is-primary" type="button" data-wr-wizard-next>下一步</button></div>`;
+    }
+    if (wizardStep === 2) {
+      return `<div class="wr-wizard-content"><div class="wr-category-row"><span>默认分类 <em>*</em></span><div class="wr-source-choice-group"><button class="wr-source-choice ${wizardState.source === "knowledge" ? "is-active" : ""}" type="button" data-wr-wizard-source="knowledge">知识库</button><button class="wr-source-choice ${wizardState.source === "upload" ? "is-active" : ""}" type="button" data-wr-wizard-upload-open>上传</button></div></div><div class="wr-section-title" style="margin-top:22px"><span>上传素材</span></div><p class="wr-hint">上传文档会先进行涉密检测；只有「已通过」的文档可以勾选，涉密可疑文档显示但不可选。</p><div class="wr-upload-list">${wizardUploadsHtml()}</div><p class="wr-field-feedback" id="wrWizardFeedback" role="status"></p></div><div class="wr-wizard-actions"><button class="wr-btn" type="button" data-wr-wizard-prev>上一步</button><button class="wr-btn is-primary" type="button" data-wr-wizard-next>下一步</button></div>`;
+    }
+    return `<div class="wr-wizard-content"><div class="wr-section-title"><span>选择工具</span></div><div class="wr-toggle-row"><span>生成绪论</span><label class="wr-switch"><input type="checkbox" data-wr-wizard-extra="conclusion" ${wizardState.extras.conclusion ? "checked" : ""} /><i></i></label></div><div class="wr-toggle-row"><span>全文总结</span><label class="wr-switch"><input type="checkbox" data-wr-wizard-extra="summary" ${wizardState.extras.summary ? "checked" : ""} /><i></i></label></div><div class="wr-toggle-row"><span>参考文献</span><label class="wr-switch"><input type="checkbox" data-wr-wizard-extra="references" ${wizardState.extras.references ? "checked" : ""} /><i></i></label></div><p class="wr-field-feedback" id="wrWizardFeedback" role="status"></p></div><div class="wr-wizard-actions"><button class="wr-btn" type="button" data-wr-wizard-prev>上一步</button><button class="wr-btn is-primary" type="button" data-wr-wizard-finish>开始写作</button></div>`;
+  }
+  function renderWizard() {
+    view = "wizard";
+    const template = activeTemplate;
+    root.innerHTML = `<div class="wr-wizard"><aside class="wr-wizard-side"><div class="wr-wizard-side-head"><span>文档大纲</span><button class="wr-link" type="button" data-wr-history>历史记录</button></div><div class="wr-wizard-outline">${wizardOutlineHtml(outline)}</div><button class="wr-outline-add" type="button" data-wr-edit-outline>编辑大纲</button></aside><section class="wr-wizard-main"><header class="wr-wizard-head"><div><h1>【${html(template?.name || "写作模板")}】</h1><p>${html(template?.description || "按模板引导完成写作配置")}</p></div><button class="wr-btn" type="button" data-writing-back>返回模板</button></header><div class="wr-steps">${stepMarkup()}</div>${wizardStepContent()}</section></div>`;
+  }
+  function openHistoryDialog() {
+    let dialog = document.querySelector("#writingHistoryDialog");
+    if (!dialog) {
+      dialog = document.createElement("dialog");
+      dialog.id = "writingHistoryDialog";
+      dialog.className = "writing-dialog";
+      document.body.append(dialog);
+      dialog.addEventListener("click", (event) => { if (event.target.closest("[data-wr-close]")) dialog.close(); });
+    }
+    const docs = store.read().documents || [];
+    dialog.innerHTML = `<header class="wr-dialog-head"><h2>写作历史</h2><button class="wr-dialog-close" type="button" data-wr-close>×</button></header><div class="wr-dialog-body"><div class="wr-history-list">${docs.length ? docs.map((doc) => `<div class="wr-history-row"><div><strong>${html(doc.title)}</strong><small>${html(doc.createdAt)} · ${html(doc.template || "写作")}</small></div><span>${(doc.blocks || []).length} 节</span></div>`).join("") : '<div class="wr-upload-empty">暂无历史写作文档</div>'}</div></div><footer class="wr-dialog-foot"><button class="wr-btn" type="button" data-wr-close>关闭</button></footer>`;
+    dialog.showModal();
+  }
+
   function render() {
     if (view === "templates") renderTemplates();
     else if (view === "outline") renderOutline();
+    else if (view === "wizard") renderWizard();
     else if (view === "workspace") root.innerHTML = workspaceHtml();
   }
 
@@ -299,8 +373,46 @@
   root.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-template-tab]");
     if (tab) { templateTab = tab.dataset.templateTab; renderTemplates(); return; }
+    if (event.target.closest("[data-wr-wizard-upload-open]")) {
+      if (wizardStep === 2) wizardState.source = "upload";
+      openUploadDialog();
+      return;
+    }
+    if (event.target.closest("[data-wr-wizard-source]")) { wizardState.source = wizardState.source === "knowledge" ? "" : "knowledge"; renderWizard(); return; }
+    if (event.target.closest("[data-wr-wizard-next]")) {
+      if (wizardStep === 1) {
+        const title = root.querySelector("#wrWizardTitle")?.value.trim() || "";
+        if (!title) { const feedback = root.querySelector("#wrWizardFeedback"); if (feedback) feedback.textContent = "请输入文章标题。"; return; }
+        wizardState.title = title;
+      }
+      if (wizardStep === 2 && !wizardState.source) {
+        const feedback = root.querySelector("#wrWizardFeedback");
+        if (feedback) feedback.textContent = "请选择知识库或上传文件作为素材来源。";
+        return;
+      }
+      wizardStep = Math.min(3, wizardStep + 1);
+      renderWizard();
+      return;
+    }
+    if (event.target.closest("[data-wr-wizard-prev]")) { wizardStep = Math.max(1, wizardStep - 1); renderWizard(); return; }
+    if (event.target.closest("[data-wr-wizard-finish]")) {
+      const title = (root.querySelector("#wrWizardTitle")?.value || wizardState.title).trim();
+      if (!title) { wizardStep = 1; renderWizard(); const feedback = root.querySelector("#wrWizardFeedback"); if (feedback) feedback.textContent = "请输入文章标题。"; return; }
+      const selectedUploads = store.uploads().filter((item) => wizardState.uploads.has(item.id) && item.status === "passed");
+      createDocument({ title, scenario: title, sources: { knowledge: wizardState.source === "knowledge" }, extras: wizardState.extras, uploadNames: selectedUploads.map((item) => item.name) });
+      return;
+    }
+    if (event.target.closest("[data-wr-history]")) { openHistoryDialog(); return; }
+    if (event.target.closest("[data-wr-edit-outline]")) { view = "outline"; render(); return; }
     const use = event.target.closest("[data-template-use]");
-    if (use) { const template = store.template(use.dataset.templateUse); if (template) setOutlineFromTemplate(template); return; }
+    if (use) {
+      const template = store.template(use.dataset.templateUse);
+      if (template) {
+        if (template.scope === "public") openPublicWizard(template);
+        else setOutlineFromTemplate(template);
+      }
+      return;
+    }
     const preview = event.target.closest("[data-template-outline]");
     if (preview) { const template = store.template(preview.dataset.templateOutline); if (template) setOutlineFromTemplate(template); return; }
     const back = event.target.closest("[data-writing-back]");
@@ -346,6 +458,19 @@
       if (next && feedback) next.textContent = feedback;
     }
     if (composeDialog.open) renderComposeUploads();
+    if (view === "wizard" && !uploadDialog.open) renderWizard();
+  });
+
+  root.addEventListener("input", (event) => {
+    if (event.target.id === "wrWizardTitle") wizardState.title = event.target.value;
+  });
+  root.addEventListener("change", (event) => {
+    const upload = event.target.closest("[data-wr-wizard-upload]");
+    if (upload) {
+      if (upload.checked) wizardState.uploads.add(upload.dataset.wrWizardUpload); else wizardState.uploads.delete(upload.dataset.wrWizardUpload);
+    }
+    const extra = event.target.closest("[data-wr-wizard-extra]");
+    if (extra) wizardState.extras[extra.dataset.wrWizardExtra] = extra.checked;
   });
 
   render();

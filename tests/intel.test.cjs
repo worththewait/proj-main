@@ -25,3 +25,13 @@ test("intel page reproduces the intel board inside the platform shell", () => {
   assert.doesNotMatch(html, /id="sidebarNav"/);
   assert.doesNotMatch(html, /正在集成/);
 });
+
+test("favorite drawer covers the page header and both tab underlines use the brand accent", () => {
+  const css = fs.readFileSync(path.join(__dirname, "..", "intel-visual.css"), "utf8");
+  // 页头 z-index 200、栏目栏 300：抽屉必须高于两者，否则「收藏 / 刷新」会浮在抽屉上。
+  assert.match(css, /\.dr-mask \{ z-index: 900; \}/);
+  assert.match(css, /\.thread-drawer \{ z-index: 910; \}/);
+  // 今日情报与情报跟踪共用同一条激活下划线，颜色统一为品牌蓝。
+  assert.match(css, /\.intel-title-tabs \.intel-tab\.active::after \{[^}]*background:var\(--accent\)/);
+  assert.doesNotMatch(css, /\.intel-tab\.active::after \{[^}]*background:#1d2433/);
+});
