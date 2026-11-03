@@ -7,7 +7,7 @@
     perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261029-person-addon", title: "权限管理" },
     notices: { src: "pages/notice-admin.html?embed=admin&v=20261029-notice", title: "通知公告" },
     interface: { src: INTERFACE_SRC, title: "界面管理" },
-    access: { src: "pages/permission-review.html?embed=admin&v=20261103-no-type-badges", title: "权限审核" },
+    access: { src: "pages/permission-review.html?embed=admin&v=20261103-visual-baseline-no-badges", title: "权限审核" },
   };
   // 旧的 #features / #settings 仍可用，落到界面管理的对应页签。
   const legacyViews = {
