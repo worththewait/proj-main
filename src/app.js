@@ -11,6 +11,13 @@
   // Keep each document mounted so its inputs and tool tabs survive menu changes.
   const pages = new Map();
   const discoverableGroups = new Set(["qa", "frontier"]);
+  const sidebarIcons = { qa: "question", intel: "newspaper" };
+  const childIcons = new Map([
+    ["对话", "chat"], ["智能问数", "chart"],
+    ["全球鹰", "globe"], ["智研通", "search"],
+    ["标准编制", "standard"], ["专利编制", "award"],
+    ["数据标注平台", "pen"], ["爬虫平台", "branch"], ["数据中台", "database"],
+  ]);
 
   function renderNavigation() {
     const sections = new Set();
@@ -24,10 +31,10 @@
       sections.add(section);
       return `${sectionLabel ? `<div class="nav-section-label">${sectionLabel}</div>` : ""}<div class="nav-group">
         <button class="nav-item ${active ? "is-active" : ""}" data-nav="${item.id}" title="${item.label}" ${hasSubnav ? `aria-expanded="${expanded}" aria-controls="sub-${item.id}"` : ""} ${active && (!state.activeChild || !hasSubnav) ? 'aria-current="page"' : ""}>
-        ${icon(item.icon)}<span class="nav-label">${item.label}</span>${hasSubnav ? `<span class="nav-chevron ${expanded ? "is-open" : ""}">${icon("chevron")}</span>` : ""}</button>
+        ${icon(sidebarIcons[item.id] || item.icon)}<span class="nav-label">${item.label}</span>${hasSubnav ? `<span class="nav-chevron ${expanded ? "is-open" : ""}">${icon("chevron")}</span>` : ""}</button>
         ${hasSubnav ? `<div class="subnav" id="sub-${item.id}" ${expanded ? "" : "hidden"}>${item.children.filter((child) => discoverableGroups.has(item.id) || policy.canOpen(item.id, child)).map((child) => {
           const locked = !policy.canOpen(item.id, child);
-          return `<button class="subnav-item ${active && state.activeChild === child ? "is-active" : ""}" ${active && state.activeChild === child ? 'aria-current="page"' : ""} data-parent="${item.id}" data-child="${escapeHtml(child)}"><span>${escapeHtml(child)}</span>${locked ? '<span class="subnav-access">需申请</span>' : ""}</button>`;
+          return `<button class="subnav-item ${active && state.activeChild === child ? "is-active" : ""}" ${active && state.activeChild === child ? 'aria-current="page"' : ""} data-parent="${item.id}" data-child="${escapeHtml(child)}">${icon(childIcons.get(child) || item.icon)}<span class="nav-label">${escapeHtml(child)}</span>${locked ? '<span class="subnav-access">需申请</span>' : ""}</button>`;
         }).join("")}</div>` : ""}</div>`;
     }).join("");
   }

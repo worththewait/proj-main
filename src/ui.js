@@ -9,6 +9,8 @@
     newchat: '<path d="M12 4H5a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h13a2 2 0 0 0 2-2v-7 M16 3l5 5 M10 14l1-4L19 2l4 4-8 8-5 1Z"/>',
     refresh: '<path d="M20 8a8 8 0 0 0-14-2L3 9 M3 3v6h6 M4 16a8 8 0 0 0 14 2l3-3 M21 21v-6h-6"/>',
     chat: '<path d="M20 4H4v13h4v4l5-4h7Z M8 9h8 M8 12h5"/>',
+    question: '<path d="M20 4H4v13h4v4l5-4h7Z M9.5 8.5a2.5 2.5 0 1 1 4 2c-1 .6-1.5 1-1.5 2 M12 15h.01"/>',
+    newspaper: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10 M7 12h4v4H7Z M14 12h3 M14 16h3"/>',
     book: '<path d="M12 5v15 M3 4c4-1 6 0 9 1 3-1 5-2 9-1v15c-4-1-6 0-9 1-3-1-5-2-9-1Z"/>',
     folder: '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z M3 8h18"/>',
     send: '<path d="m21 3-7 18-4-7-7-4Z M10 14 21 3"/>',
