@@ -61,10 +61,17 @@
       for (const scale of [1, 0.8, 0.64, 0.5]) {
         canvas.width = Math.max(2, Math.floor(initialWidth * scale / 2) * 2);
         canvas.height = Math.max(1, Math.round(canvas.width / aspectRatio));
-        context.fillStyle = "#ffffff";
-        context.fillRect(0, 0, canvas.width, canvas.height);
+        if (aspectRatio !== 1) {
+          context.fillStyle = "#ffffff";
+          context.fillRect(0, 0, canvas.width, canvas.height);
+        }
         context.drawImage(image, (sourceWidth - cropWidth) / 2, (sourceHeight - cropHeight) / 2,
           cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
+        if (aspectRatio === 1) {
+          const encoded = canvas.toDataURL("image/png");
+          if (isSafeImage(encoded)) return encoded;
+          continue;
+        }
         for (const quality of [0.88, 0.76, 0.64, 0.52, 0.4]) {
           const encoded = canvas.toDataURL("image/jpeg", quality);
           if (isSafeImage(encoded)) return encoded;

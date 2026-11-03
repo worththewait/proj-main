@@ -16,6 +16,7 @@
       const managed=featureConfig?.get(`tool:${tool.name}`,settings);
       Object.assign(tool,baseTools[index]);
       tool.feature=managed;
+      tool.description=managed?.description ?? tool.description;
       tool.categoryId=managed?.toolCategory || tool.group;
       tool.group=categoryById.get(tool.categoryId)||tool.group;
       tool.icon=managed?.icon || tool.icon;

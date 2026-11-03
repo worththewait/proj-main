@@ -3,15 +3,15 @@
   const config = window.BaigeFeatureConfig;
   const {escapeHtml: escape, icon, hydrate} = window.BaigeUI;
   const get = id => document.querySelector(`#${id}`);
-  const fields = ['image', 'homeCategory', 'toolCategory'];
+  const fields = ['image', 'iconImage', 'description', 'homeCategory', 'toolCategory'];
   const tabs = [...document.querySelectorAll('[data-feature-tab]')];
   const scopes = [...document.querySelectorAll('[data-category-scope]')];
   const pageSize = 10;
   let page = 1, categoryScope = 'home', editing = null, draft = null, baseline = null;
   let editTrigger = null, categoryTrigger = null, categoryAction = null, pendingLeave = null, leaveFocus = null;
-  let generation = 0, tokens = {image:0}, busy = {image:false}, toastTimer;
+  let generation = 0, tokens = {image:0,iconImage:0}, busy = {image:false,iconImage:false}, toastTimer;
   const imageSource = entry => config.imageSource ? config.imageSource(entry, '../') : entry.image?.startsWith('assets/') ? `../${entry.image}` : entry.image || '';
-  const dirty = () => Boolean(draft && (busy.image || fields.some(field => draft[field] !== baseline[field])));
+  const dirty = () => Boolean(draft && (busy.image || busy.iconImage || fields.some(field => draft[field] !== baseline[field])));
   const categoryDirty = () => Boolean(categoryAction && categoryAction.action !== 'delete' && get('featureCategoryName').value !== categoryAction.initialName);
   const option = (id, label) => `<option value="${escape(id)}">${escape(label)}</option>`;
 
@@ -82,7 +82,7 @@
     if (Number.isInteger(next) && next>=1) {page=next;renderList();get('featureSearch').focus();}
   });
 
-  function updateBusy() {get('saveFeatureEdit').disabled = busy.image;get('saveFeatureEdit').textContent = busy.image ? '正在处理图片…' : '保存修改';}
+  function updateBusy() {const processing = busy.image || busy.iconImage;get('saveFeatureEdit').disabled = processing;get('saveFeatureEdit').textContent = processing ? '正在处理图片…' : '保存修改';}
   function preview() {
     if (!draft) return;
     const entry = {...editing,...draft};
@@ -100,21 +100,24 @@
     if (!entry) return;
     editing=entry; editTrigger=trigger; generation++;
     draft=Object.fromEntries(fields.map(field=>[field,entry[field]]));baseline={...draft};
-    busy={image:false};tokens={image:0};
+    busy={image:false,iconImage:false};tokens={image:0,iconImage:0};
     get('featureEditorTitle').textContent = `编辑 · ${entry.name}`;
-    get('featureEditorSubtitle').textContent = `${entry.isTool?'智能工具':window.BaigeData.findNavItem(entry.route)?.label || '平台功能'} · 分类与大图同步前台`;
+    get('featureEditorSubtitle').textContent = `${entry.isTool?'智能工具':window.BaigeData.findNavItem(entry.route)?.label || '平台功能'} · 描述、图标、分类与大图同步前台`;
     get('editFeatureToolField').hidden = !entry.isTool;
     editorCategories();
+    get('editFeatureDescription').value = draft.description;
     get('featureImageUsage').textContent = entry.usesImage ? '当前用于智能工具 · 热门工具' : '当前未用于热门工具，可预先配置';
     get('featureImageFeedback').textContent='';
     get('uploadFeatureImage').value='';
+    get('uploadFeatureIcon').value='';
+    get('featureIconFeedback').textContent='';
     preview();updateBusy();
     get('featureEditor').showModal();
     get('editFeatureHome').focus({preventScroll:true});
     get('featureEditorBody').scrollTop=0;
   }
   function closeEditor() {
-    generation++;editing=null;draft=null;baseline=null;busy={image:false};pendingLeave=null;
+    generation++;editing=null;draft=null;baseline=null;busy={image:false,iconImage:false};pendingLeave=null;
     if (get('featureEditor').open) get('featureEditor').close();
     updateBusy();
     // Rows redraw on save; resolve the matching new trigger rather than a detached one.
@@ -133,21 +136,36 @@
   get('featureDiscardDialog').addEventListener('cancel', () => {pendingLeave=null;});
   get('discardFeatureEdit').addEventListener('click', () => {const action=pendingLeave;pendingLeave=null;get('featureDiscardDialog').close();if(action)action();});
   for (const [id,field] of [['editFeatureHome','homeCategory'],['editFeatureTool','toolCategory']]) get(id).addEventListener('change', () => {if(draft){draft[field]=get(id).value;preview();}});
+  get('editFeatureDescription').addEventListener('input', () => {
+    if (!draft) return;
+    draft.description = get('editFeatureDescription').value;
+    preview();
+  });
   get('resetFeatureImage').addEventListener('click', () => {if(!draft)return;tokens.image++;busy.image=false;draft.image=config.defaults().features[editing.id].image;get('featureImageFeedback').textContent='';updateBusy();preview();});
-  async function upload(input) {
+  async function upload(input, field, aspectRatio, feedback) {
     const file=input.files?.[0];input.value='';if(!file || !draft)return;
-    const currentGeneration=generation, token=++tokens.image, feedback=get('featureImageFeedback');
-    busy.image=true;feedback.textContent='正在处理图片…';updateBusy();
+    const currentGeneration=generation, token=++tokens[field];
+    busy[field]=true;feedback.textContent='正在处理图片…';updateBusy();
     try {
-      const image=await window.BaigeHomeCardImages.process(file,{aspectRatio:2});
-      if (currentGeneration!==generation || token!==tokens.image || !draft)return;
-      draft.image=image;feedback.textContent='';preview();
-    } catch(error) {if(currentGeneration===generation && token===tokens.image)feedback.textContent=error.message;}
-    finally {if(currentGeneration===generation && token===tokens.image){busy.image=false;updateBusy();}}
+      const image=await window.BaigeHomeCardImages.process(file,{aspectRatio});
+      if (currentGeneration!==generation || token!==tokens[field] || !draft)return;
+      draft[field]=image;feedback.textContent='';preview();
+    } catch(error) {if(currentGeneration===generation && token===tokens[field])feedback.textContent=error.message;}
+    finally {if(currentGeneration===generation && token===tokens[field]){busy[field]=false;updateBusy();}}
   }
-  get('uploadFeatureImage').addEventListener('change', () => upload(get('uploadFeatureImage')));
+  get('uploadFeatureImage').addEventListener('change', () => upload(get('uploadFeatureImage'), 'image', 2, get('featureImageFeedback')));
+  get('uploadFeatureIcon').addEventListener('change', () => upload(get('uploadFeatureIcon'), 'iconImage', 1, get('featureIconFeedback')));
+  get('resetFeatureIcon').addEventListener('click', () => {
+    if (!draft) return;
+    tokens.iconImage++;
+    busy.iconImage = false;
+    draft.iconImage = '';
+    get('featureIconFeedback').textContent = '';
+    updateBusy();
+    preview();
+  });
   get('featureEditorForm').addEventListener('submit', event => {
-    event.preventDefault();if(!draft || busy.image)return;
+    event.preventDefault();if(!draft || busy.image || busy.iconImage)return;
     try {
       const patch=Object.fromEntries(fields.filter(field=>draft[field]!==baseline[field]).map(field=>[field,draft[field]]));
       config.saveFeature(editing.id,patch);closeEditor();renderAll();toast('功能已保存，前台展示已同步更新。');

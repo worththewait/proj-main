@@ -2,7 +2,7 @@
 .knowledge-hub {
   width: 100%;
   max-width: 1280px;
-  padding: 30px 40px 56px;
+  padding: 30px 32px 56px;
 }
 
 /* ---- 页头：标题与搜索同轴，左对齐 ------------------------------------- */
@@ -226,9 +226,9 @@
 .kb-tab { font-size:14px; }
 .kb-index-list,.kb-sheet { background:var(--surface); border:1px solid var(--line); border-radius:9px; overflow:hidden; }
 .kb-sheet { padding:0; }
-.kb-index-row { display:flex; align-items:center; gap:14px; width:100%; min-height:84px; padding:16px 20px; border:0; border-bottom:1px solid #edf0f5; background:var(--surface); color:var(--ink); text-align:left; }
+.kb-index-row { display:flex; align-items:center; gap:14px; width:100%; min-height:84px; padding:16px 20px; border:0; border-bottom:1px solid var(--line); background:var(--surface); color:var(--ink); text-align:left; }
 .kb-index-row:last-child { border-bottom:0; }
-.kb-index-row:hover { background:#f7f9fd; }
+.kb-index-row:hover { background:var(--surface-subtle); }
 .kb-index-row:focus-visible { outline:2px solid var(--accent); outline-offset:-3px; }
 .kb-index-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 24px; color:var(--accent); }
 .kb-index-icon .icon { width:23px; height:23px; }
@@ -245,7 +245,7 @@
 .kb-group-head:hover { background:#f0f3f8; }
 .kb-group:not(.is-collapsed) .kb-index-action .kb-chevron { transform:none; }
 .kb-result { border-radius:0; border:0; border-bottom:1px solid var(--line); box-shadow:none; }
-.kb-result:hover { box-shadow:none; background:#f7f9fd; }
+.kb-result:hover { box-shadow:none; background:var(--surface-subtle); }
 .kb-results { gap:0; background:var(--surface); border:1px solid var(--line); border-radius:9px; overflow:hidden; }
 .kb-result:last-child { border-bottom:0; }
 .kb-personal-panel { overflow:visible; }
@@ -277,15 +277,15 @@
 .kb-index-list,.kb-rows { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; background:transparent; border:0; border-radius:0; overflow:visible; }
 .kb-resource-card { display:flex; flex-direction:column; align-items:stretch; justify-content:space-between; gap:0; min-height:164px; padding:20px; border:1px solid var(--line); border-radius:12px; background:var(--surface); transition:border-color .16s var(--ease),background .16s var(--ease); }
 .kb-resource-card:last-child { border-bottom:1px solid var(--line); }
-.kb-resource-card:hover { border-color:#b7c9ef; background:#fcfdff; }
+.kb-resource-card:hover { border-color:var(--line-strong); background:var(--accent-soft); }
 .kb-resource-card:focus-visible { outline-offset:3px; }
 .kb-resource-top { display:flex; align-items:center; gap:14px; min-width:0; }
-.kb-resource-icon { display:flex; align-items:center; justify-content:center; flex:0 0 52px; width:52px; height:52px; border-radius:10px; background:#f3f4f7; }
+.kb-resource-icon { display:flex; align-items:center; justify-content:center; flex:0 0 52px; width:52px; height:52px; border-radius:10px; background:var(--surface-subtle); }
 .kb-resource-icon img { display:block; width:40px; height:40px; }
 .kb-resource-copy { flex:1; min-width:0; }
 .kb-resource-copy strong { display:block; font-size:15px; line-height:1.55; font-weight:600; overflow-wrap:anywhere; }
 .kb-resource-owner { display:block; margin-top:5px; color:var(--muted); font-size:13px; line-height:1.5; overflow-wrap:anywhere; }
-.kb-resource-footer { display:flex; align-items:center; gap:9px; margin-top:20px; padding-top:14px; border-top:1px solid #edf0f5; color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.kb-resource-footer { display:flex; align-items:center; gap:9px; margin-top:20px; padding-top:14px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .kb-resource-footer svg { width:17px; height:17px; flex:none; color:#7c879b; }
 .kb-resource-scope { display:block; margin-top:12px; font-size:12px; color:var(--muted); overflow-wrap:anywhere; }
 .kb-sheet { background:transparent; border:0; overflow:visible; }
