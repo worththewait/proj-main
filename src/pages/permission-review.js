@@ -81,8 +81,7 @@
   function itemHtml(item, index) {
     const approved = decisions[item.key] === "approved";
     const rejected = decisions[item.key] === "rejected";
-    const name = item.type === "data" ? "数据权限" : "功能权限";
-    return `<div class="pr-review-item"><span class="pr-item-name"><em>${name}</em>${escape(item.name)}${item.scope ? `<small>${escape(item.scope)}</small>` : ""}</span><div class="pr-choices"><label class="pr-choice"><input type="radio" name="prItem${index}" value="approved" data-pr-radio="${escape(item.key)}" ${approved ? "checked" : ""} /><span class="pr-radio"></span><span>通过</span></label><label class="pr-choice is-reject"><input type="radio" name="prItem${index}" value="rejected" data-pr-radio="${escape(item.key)}" ${rejected ? "checked" : ""} /><span class="pr-radio"></span><span>驳回</span></label></div></div>`;
+    return `<div class="pr-review-item"><span class="pr-item-name">${escape(item.name)}${item.scope ? `<small>${escape(item.scope)}</small>` : ""}</span><div class="pr-choices"><label class="pr-choice"><input type="radio" name="prItem${index}" value="approved" data-pr-radio="${escape(item.key)}" ${approved ? "checked" : ""} /><span class="pr-radio"></span><span>通过</span></label><label class="pr-choice is-reject"><input type="radio" name="prItem${index}" value="rejected" data-pr-radio="${escape(item.key)}" ${rejected ? "checked" : ""} /><span class="pr-radio"></span><span>驳回</span></label></div></div>`;
   }
   function approvedCount(items) {
     return items.filter((item) => decisions[item.key] === "approved").length;

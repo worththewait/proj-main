@@ -65,19 +65,6 @@
 .qb-item[data-tone="teal"] .qb-ic { background: #e9f7f6; color: #188e99; }
 .qb-item .qb-ic svg { width: 19px; height: 19px; fill: currentColor; }
 .qb-item span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.qb-manage {
-  width: 100%;
-  margin-top: 8px;
-  padding: 9px 4px 2px;
-  border: 0;
-  border-top: 1px solid #eef1f6;
-  background: transparent;
-  color: #6b7a90;
-  font: inherit;
-  font-size: 12px;
-  cursor: pointer;
-}
-.qb-manage:hover { color: #1a56db; }
 .qb-empty { padding: 18px 8px; color: #7a869c; font-size: 12px; text-align: center; }
 
 .qb-qa {

@@ -10,8 +10,8 @@ test("global AI ball is wired into the shell with current routes", () => {
   const script = read("src/ai-ball.js");
   const account = read("src/account.js");
 
-  assert.match(html, /ai-ball\.css\?v=20261030-home-directory/);
-  assert.match(html, /ai-ball\.js\?v=20261030-home-directory/);
+  assert.match(html, /ai-ball\.css\?v=20261103-quick-center/);
+  assert.match(html, /ai-ball\.js\?v=20261103-quick-center/);
   assert.match(html, /account\.js\?v=20261102-permission/);
   assert.match(html, /home-directory-icons\.js\?v=20261024-directory/);
 
@@ -36,6 +36,8 @@ test("global AI ball is wired into the shell with current routes", () => {
   assert.match(script, /data-tone/);
   assert.match(read("ai-ball.css"), /\[data-tone="purple"\]/);
   assert.match(read("ai-ball.css"), /\[data-tone="teal"\]/);
+  assert.doesNotMatch(script, /qbManage|qb-manage/);
+  assert.doesNotMatch(read("ai-ball.css"), /qb-manage/);
 
   assert.match(account, /快捷入口设置/);
   assert.match(account, /window\.BaigeAiBall\?\.openSettings\(\)/);
