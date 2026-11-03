@@ -9,3 +9,7 @@
 - 提交脚本 `提交代码.command` 及其专用测试仅本地保留，不纳入后续版本快照。
 - 了解变更先 `git log --oneline`、`git diff --stat`，再按文件看 diff；不要全库通读。
 - 不要执行 `git reset --hard`、`git clean -fd`、`git worktree remove`。
+
+
+## 界面设计
+- 新增或修改界面前先读 [DESIGN.md](DESIGN.md) 的「全站视觉基线」。以首页为基准，复用共享颜色、字体、图标与交互样式。业务色的调整遵循该规范的适用范围。
