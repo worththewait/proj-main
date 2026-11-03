@@ -87,7 +87,7 @@
     const entries=defaultEntries.map(entry=>{
       const managed=configured.get(JSON.stringify([entry.route,entry.child]));
       if (!managed) return entry;
-      return {...entry, icon:managed.icon, iconImage:managed.iconImage, group:managed.homeCategory,
+      return {...entry, description:managed.description ?? entry.description, icon:managed.icon, iconImage:managed.iconImage, group:managed.homeCategory,
         managed, keywords:[entry.parent,managed.homeCategoryLabel,managed.toolCategoryLabel,entry.route!=='smart-tools'?entry.keywords:''].filter(Boolean).join(' ')};
     });
     return {groups,entries};

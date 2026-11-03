@@ -117,8 +117,19 @@
   <dialog class="feature-editor" id="featureEditor" aria-labelledby="featureEditorTitle">
     <header class="feature-editor-header"><div><h2 id="featureEditorTitle">编辑功能</h2><p id="featureEditorSubtitle"></p></div><button class="feature-icon-button" id="closeFeatureEditor" type="button" aria-label="关闭功能编辑"><span data-icon="close" aria-hidden="true"></span></button></header>
     <form id="featureEditorForm" novalidate>
-      <div class="feature-editor-body">
+      <div class="feature-editor-body" id="featureEditorBody">
         <section class="feature-field-section" aria-labelledby="featureCategoryHeading"><h3 id="featureCategoryHeading">所属分类</h3><div class="feature-form-columns"><label class="feature-field"><span>首页分类</span><select id="editFeatureHome" required></select></label><label class="feature-field" id="editFeatureToolField"><span>工具分类</span><select id="editFeatureTool"></select></label></div></section>
+        <section class="feature-field-section" aria-labelledby="featureDescriptionHeading">
+          <h3 id="featureDescriptionHeading">功能描述</h3>
+          <label class="feature-field"><input class="feature-description-input" id="editFeatureDescription" type="text" maxlength="160" aria-labelledby="featureDescriptionHeading" aria-describedby="featureDescriptionHint" /></label>
+          <p class="feature-field-hint" id="featureDescriptionHint">最多 160 字。保存后同步到首页和智能工具中展示此功能描述的位置。</p>
+        </section>
+        <section class="feature-field-section" aria-labelledby="featureIconHeading">
+          <div class="feature-section-heading"><h3 id="featureIconHeading">功能图标</h3><button class="feature-text-button" id="resetFeatureIcon" type="button">恢复默认</button></div>
+          <div class="feature-image-actions"><label class="secondary-button feature-upload-button">上传图标<input id="uploadFeatureIcon" type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传功能图标"></label></div>
+          <p class="feature-field-hint">支持 PNG、JPG、WebP，单张不超过 10MB，居中裁切为正方形。上传后可在下方预览。</p>
+          <p class="feature-field-feedback" id="featureIconFeedback" role="status"></p>
+        </section>
         <section class="feature-field-section" aria-labelledby="featureImageHeading"><div class="feature-section-heading"><h3 id="featureImageHeading">功能大图</h3><button class="feature-text-button" id="resetFeatureImage" type="button">恢复默认</button></div>
           <div class="feature-image-preview" id="featureImagePreview" aria-label="功能大图预览"></div>
           <div class="feature-image-actions"><label class="secondary-button feature-upload-button">上传大图<input id="uploadFeatureImage" type="file" accept="image/png,image/jpeg,image/webp" aria-label="上传功能大图"></label><span id="featureImageUsage"></span></div>
@@ -144,15 +155,15 @@
   <script src="../src/data.js?v=20261102-interface"></script>
   <script src="../src/ui.js"></script>
   <script src="../src/page-bridge.js?v=20261026-lifecycle"></script>
-  <script src="../src/home-card-images.js?v=20261102-interface"></script>
+  <script src="../src/home-card-images.js?v=20261103-icon-upload"></script>
   <script src="../src/home-directory-icons.js?v=20261024-directory"></script>
-  <script src="../src/feature-config.js?v=20261102-interface"></script>
+  <script src="../src/feature-config.js?v=20261103-feature-description"></script>
   <script src="../src/home-carousel-model.js?v=20261027-management"></script>
-  <script src="../src/home-config.js?v=20261102-interface"></script>
+  <script src="../src/home-config.js?v=20261103-feature-description"></script>
   <script src="../src/pages/home-carousel.js?v=20261027-management"></script>
   <script src="../src/pages/home-carousel-editor.js?v=20261026-carousel"></script>
   <script src="../src/pages/home-admin.js?v=20261102-interface"></script>
-  <script src="../src/pages/feature-admin.js?v=20261102-interface"></script>
+  <script src="../src/pages/feature-admin.js?v=20261103-feature-description"></script>
   <script src="../src/pages/interface-admin.js?v=20261102-interface"></script>
 </body>
 </html>

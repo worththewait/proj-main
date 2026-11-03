@@ -125,7 +125,7 @@
     const managed=new Map(features.catalog().map(item=>[item.id,item]));
     return catalog.map(item=>{
       const feature=managed.get(item.id);
-      return feature ? {...item,icon:feature.icon,iconImage:feature.iconImage,homeCategory:feature.homeCategory,
+      return feature ? {...item,description:feature.description ?? item.description,icon:feature.icon,iconImage:feature.iconImage,homeCategory:feature.homeCategory,
         toolCategory:feature.toolCategory,group:feature.homeCategoryLabel} : item;
     });
   }

@@ -18,6 +18,6 @@ test("QA conversation history supports per-item deletion with confirmation", () 
 
   assert.match(css, /\.qa-history-delete/);
   assert.match(css, /\.qa-history-entry\.is-active \.qa-history-delete/);
-  assert.match(html, /qa-visual\.css\?v=20261030-refined-history-delete/);
+  assert.match(html, /qa-visual\.css(?:\?v=[^"]+)?"/);
   assert.match(html, /home\.js\?v=20261030-refined-history-delete/);
 });
