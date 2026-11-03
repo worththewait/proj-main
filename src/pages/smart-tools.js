@@ -86,6 +86,12 @@
   }
 
   function renderToolPage(tool, root) {
+    // 纠错校对使用独立的审校工作台（三栏：文档、审校助手、审校结果）。
+    if (tool.name === "纠错校对" && window.BaigeProofreadTool) {
+      root.dataset.toolGroup = tool.group;
+      window.BaigeProofreadTool.render(root);
+      return;
+    }
     root.dataset.toolGroup = tool.group;
     root.replaceChildren(document.querySelector("#toolTemplate").content.cloneNode(true));
     root.querySelector("[data-tool-name]").textContent = tool.name;
