@@ -21,6 +21,7 @@
   --success-soft: #e9f5ed;
   --pending: #8c5b08;
   --pending-soft: #fff4dc;
+  --danger: #b4232c;
   --tool-purple: var(--ai);
   --tool-purple-soft: var(--ai-soft);
   --radius: 14px;

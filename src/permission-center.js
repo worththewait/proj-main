@@ -13,7 +13,7 @@
   } catch { /* file:// */ }
   const statusLabel = store.STATUS_LABEL;
   let dialog = null;
-  let activeTab = "apply";
+  let activeTab = "mine";
   let selectedFunctions = new Set();
   let selectedKbs = new Set();
   let historyFilter = "all";
@@ -72,16 +72,16 @@
 
   function template() {
     return `<header class="pc-head"><div><h2>权限中心</h2><p>申请功能与知识库权限，查看审核进度</p></div><div class="pc-head-side"><label class="pc-person">当前人员<select id="pcPerson"></select></label><button class="pc-close" type="button" data-pc-close aria-label="关闭权限中心">×</button></div></header>
-      <div class="pc-tabs" role="tablist" aria-label="权限中心"><button class="pc-tab is-active" type="button" role="tab" aria-selected="true" data-pc-tab="apply">申请权限</button><button class="pc-tab" type="button" role="tab" aria-selected="false" data-pc-tab="mine">我的申请</button></div>
       <div class="pc-body">
-        <section data-pc-panel="apply">
+        <section data-pc-panel="apply" hidden>
+          <div class="pc-apply-head"><div><h3>申请权限</h3><p>选择需要申请的功能与知识库权限，提交后进入审核。</p></div><button class="pc-link" type="button" data-pc-back>返回我的申请</button></div>
           <div class="pc-applicant" id="pcApplicant"></div>
-          <section class="pc-section"><div class="pc-section-head"><div><h3>功能权限</h3><p>勾选需要申请的功能；已开通或审核中的功能不可重复申请。</p></div><span class="pc-count" id="pcFunctionCount"></span></div><div id="pcFunctionList"></div></section>
+          <section class="pc-section"><div class="pc-section-head"><div><h3>功能权限</h3><p>勾选需要申请的功能；已开通或审核中的功能不可重复申请。</p></div><div class="pc-function-actions"><button class="pc-link" type="button" id="pcSelectAllFunctions" data-pc-select-all>全选</button><span class="pc-count" id="pcFunctionCount"></span></div></div><div id="pcFunctionList"></div></section>
           <section class="pc-section"><div class="pc-section-head"><div><h3>数据权限</h3><p>选择需要访问的知识库，可多选。</p></div><span class="pc-count" id="pcKbCount"></span></div><div id="pcKbList" class="pc-kb-groups"></div></section>
           <div class="pc-reason"><label for="pcReason">申请事由 <em>*</em></label><textarea id="pcReason" maxlength="500" placeholder="请说明申请用途、使用场景和预期使用期限"></textarea><small><span id="pcReasonCount">0</span> / 500 字</small><p class="pc-feedback" id="pcFeedback" role="status"></p></div>
         </section>
-        <section data-pc-panel="mine" hidden>
-          <div class="pc-history-head"><h3>我的申请</h3><div id="pcHistoryFilters"></div><span id="pcHistoryCount"></span></div>
+        <section data-pc-panel="mine">
+          <div class="pc-history-head"><div class="pc-history-title"><h3>我的申请</h3><span id="pcHistoryCount"></span></div><div class="pc-history-actions"><div id="pcHistoryFilters"></div><button class="pc-btn is-primary" type="button" data-pc-apply>申请权限</button></div></div>
           <div id="pcHistory"></div>
           <div id="pcDetail" class="pc-detail" hidden></div>
         </section>
@@ -102,6 +102,16 @@
     dialog.addEventListener("click", (event) => {
       if (event.target.closest("[data-pc-close]")) { close(); return; }
       if (event.target.closest("[data-pc-tab]")) { showTab(event.target.closest("[data-pc-tab]").dataset.pcTab); return; }
+      if (event.target.closest("[data-pc-apply]")) { showTab("apply"); return; }
+      if (event.target.closest("[data-pc-select-all]")) {
+        const available = catalog().filter((entry) => functionStatus(entry) === "available");
+        const allSelected = available.length > 0 && available.every((entry) => selectedFunctions.has(functionKey(entry)));
+        selectedFunctions.clear();
+        if (!allSelected) available.forEach((entry) => selectedFunctions.add(functionKey(entry)));
+        renderFunctions();
+        return;
+      }
+      if (event.target.closest("[data-pc-back]")) { showTab("mine"); return; }
       if (event.target.closest("[data-pc-submit]")) { submit(); return; }
       if (event.target.closest("[data-pc-history-view]")) { showDetail(event.target.closest("[data-pc-history-view]").dataset.pcHistoryView); return; }
       if (event.target.closest("[data-pc-detail-back]")) { showHistory(); return; }
@@ -159,7 +169,7 @@
     if (reason) reason.value = "";
     feedback("");
     renderPersonSelect();
-    showTab("apply");
+    showTab("mine");
     renderAll();
   }
   function renderFunctions() {
@@ -177,6 +187,14 @@
     }).join("")}</div></section>`).join("") : '<div class="pc-empty">当前没有可申请的功能。</div>';
     const count = dialog.querySelector("#pcFunctionCount");
     if (count) count.textContent = `已选 ${selectedFunctions.size} 项`;
+    const selectAll = dialog.querySelector("#pcSelectAllFunctions");
+    if (selectAll) {
+      const available = groups.flatMap(([, entries]) => entries).filter((entry) => functionStatus(entry) === "available");
+      const allSelected = available.length > 0 && available.every((entry) => selectedFunctions.has(functionKey(entry)));
+      selectAll.textContent = allSelected ? "取消全选" : "全选";
+      selectAll.disabled = available.length === 0;
+      selectAll.setAttribute("aria-pressed", String(allSelected));
+    }
   }
 
   function renderKbs() {
@@ -224,6 +242,25 @@
       return `<article class="pc-request"><div class="pc-request-main"><div class="pc-request-title"><strong>${escape(request.id)}</strong>${statusHtml(request.status)}</div><div class="pc-request-meta"><span>${escape(request.createdAt || "")}</span><span>${escape(summary)}</span></div></div><div class="pc-request-actions"><button class="pc-link" type="button" data-pc-history-view="${escape(request.id)}">查看详情</button></div></article>`;
     }).join("")}</div>` : `<div class="pc-empty">${historyFilter === "all" ? "暂无申请记录" : "当前状态下暂无申请"}</div>`;
   }
+  function resultApprovedCount(items) {
+    return items.filter((item) => item.status === "approved").length;
+  }
+  function resultRowHtml(item) {
+    return `<div class="pc-result-item"><div class="pc-result-name"><strong>${escape(item.name)}</strong>${item.scope ? `<small>${escape(item.scope)}</small>` : ""}</div><div class="pc-result-state">${itemStatus(item)}</div></div>`;
+  }
+  function resultGroupsHtml(items) {
+    const functions = items.filter((item) => item.type !== "data");
+    const dataItems = items.filter((item) => item.type === "data");
+    const dataGroups = new Map();
+    dataItems.forEach((item) => {
+      const key = item.scope || "其他";
+      if (!dataGroups.has(key)) dataGroups.set(key, []);
+      dataGroups.get(key).push(item);
+    });
+    const functionHtml = functions.length ? `<section class="pc-result-group"><div class="pc-result-head"><div><h4>功能申请</h4><span>${resultApprovedCount(functions)}/${functions.length} 项通过</span></div></div><div class="pc-result-list">${functions.map(resultRowHtml).join("")}</div></section>` : "";
+    const dataHtml = dataItems.length ? `<section class="pc-result-group"><div class="pc-result-head"><div><h4>数据申请</h4><span>${resultApprovedCount(dataItems)}/${dataItems.length} 项通过</span></div></div>${[...dataGroups.entries()].map(([scope, group]) => `<div class="pc-result-data-group"><div class="pc-result-subhead"><strong>${escape(scope)}知识库</strong><span>${resultApprovedCount(group)}/${group.length} 项通过</span></div><div class="pc-result-list">${group.map(resultRowHtml).join("")}</div></div>`).join("")}</section>` : "";
+    return functionHtml + dataHtml || '<div class="pc-empty">暂无申请项</div>';
+  }
   function showDetail(id) {
     const request = store.get(id);
     if (!request) return;
@@ -231,30 +268,29 @@
     const view = dialog.querySelector("#pcHistory");
     const detail = dialog.querySelector("#pcDetail");
     const filters = dialog.querySelector("#pcHistoryFilters");
+    const actions = dialog.querySelector(".pc-history-actions");
     const count = dialog.querySelector("#pcHistoryCount");
     if (view) view.hidden = true;
     if (filters) filters.style.display = "none";
+    if (actions) actions.style.display = "none";
     if (count) count.textContent = "";
     if (!detail) return;
     detail.hidden = false;
     detail.innerHTML = `<div class="pc-detail-head"><h3>${escape(request.id)} ${statusHtml(request.status)}</h3><button class="pc-link" type="button" data-pc-detail-back>返回列表</button></div>
       <dl class="pc-detail-grid"><div><dt>申请人</dt><dd>${escape(request.applicant?.name || "")} · ${escape(request.applicant?.email || "")}</dd></div><div><dt>申请时间</dt><dd>${escape(request.createdAt || "")}</dd></div><div><dt>审核时间</dt><dd>${escape(request.reviewedAt || "—")}</dd></div><div><dt>审核人</dt><dd>${escape(request.reviewer || "—")}</dd></div><div style="grid-column:1/-1"><dt>申请事由</dt><dd>${escape(request.reason || "")}</dd></div></dl>
-      <section class="pc-section"><div class="pc-section-head"><div><h3>申请项与审核结果</h3><p>共 ${request.items.length} 项</p></div></div><div class="pc-items">${request.items.map((item) => `<div class="pc-item"><span>${item.type === "data" ? "数据权限" : "功能权限"} · ${escape(item.name)}${item.scope ? ` <small>${escape(item.scope)}</small>` : ""}</span>${itemStatus(item)}</div>`).join("")}</div></section>
+      <section class="pc-section pc-result-section"><div class="pc-section-head"><div><h3>申请项与审核结果</h3><p>共 ${request.items.length} 项，按功能申请和数据申请分组展示</p></div></div><div class="pc-result-groups">${resultGroupsHtml(request.items || [])}</div></section>
       <section class="pc-section"><div class="pc-section-head"><div><h3>审核意见</h3></div></div><div class="pc-comment">${escape(request.comment || "暂无审核意见")}</div></section>`;
   }
   function showHistory() {
     detailId = "";
     const filters = dialog.querySelector("#pcHistoryFilters");
+    const actions = dialog.querySelector(".pc-history-actions");
     if (filters) filters.style.display = "";
+    if (actions) actions.style.display = "";
     renderHistory();
   }
   function showTab(tab) {
-    activeTab = tab === "mine" ? "mine" : "apply";
-    dialog.querySelectorAll("[data-pc-tab]").forEach((button) => {
-      const active = button.dataset.pcTab === activeTab;
-      button.classList.toggle("is-active", active);
-      button.setAttribute("aria-selected", String(active));
-    });
+    activeTab = tab === "apply" ? "apply" : "mine";
     dialog.querySelectorAll("[data-pc-panel]").forEach((panel) => { panel.hidden = panel.dataset.pcPanel !== activeTab; });
     const submit = dialog.querySelector("[data-pc-submit]");
     if (submit) submit.hidden = activeTab !== "apply";
@@ -301,15 +337,16 @@
   }
   function open(application = null) {
     ensureDialog();
-    if (application && application.route) {
+    const requested = application && application.route;
+    if (requested) {
       const entry = catalog().find((item) => item.route === application.route && (item.child || "") === (application.child || ""));
       if (entry && functionStatus(entry) === "available") selectedFunctions.add(functionKey(entry));
     }
-    showTab("apply");
+    showTab(requested ? "apply" : "mine");
     renderAll();
     if (!dialog.open) dialog.showModal();
-    const first = dialog.querySelector("#pcFunctionList input:not([disabled])") || dialog.querySelector("[data-pc-close]");
-    first?.focus({ preventScroll: true });
+    const first = requested ? dialog.querySelector("#pcFunctionList input:not([disabled])") : dialog.querySelector("[data-pc-apply]");
+    (first || dialog.querySelector("[data-pc-close]"))?.focus({ preventScroll: true });
   }
   function close() {
     if (dialog?.open) dialog.close();

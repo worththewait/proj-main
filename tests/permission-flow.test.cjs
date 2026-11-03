@@ -93,6 +93,18 @@ test("permission center can switch between simulated people and their grants", (
   assert.match(html, /id="pcPerson"/);
   assert.match(html, /function switchViewer/);
   assert.match(html, /store\.isGranted\(viewer\.email/);
+  assert.match(html, /let activeTab = "mine"/);
+  assert.match(html, /data-pc-apply/);
+  assert.match(html, /data-pc-back/);
+  assert.match(html, /showTab\(requested \? "apply" : "mine"\)/);
+  assert.match(html, /function resultGroupsHtml/);
+  assert.match(html, /pc-result-group/);
+  assert.match(html, /pc-result-data-group/);
+  assert.doesNotMatch(html, /pc-result-type/);
+  assert.match(html, /data-pc-select-all/);
+  assert.match(html, /pcSelectAllFunctions/);
+  assert.match(read("permission-center.css"), /\.pc-function-actions/);
+  assert.doesNotMatch(read("src/pages/permission-review.js"), /pr-item-name"><em/);
 });
 
 test("permission center and admin review are wired into the platform", () => {

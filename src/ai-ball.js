@@ -207,7 +207,7 @@
 
   function renderPanel() {
     const visible = allEntries.filter((entry) => entries.includes(entry.id));
-    panel.innerHTML = `<div class="qb-grid">${visible.map(itemHtml).join("")}</div>${visible.length ? "" : '<div class="qb-empty">暂无可展示的快捷入口</div>'}<button class="qb-manage" type="button" id="qbManage">管理入口</button>`;
+    panel.innerHTML = `<div class="qb-grid">${visible.map(itemHtml).join("")}</div>${visible.length ? "" : '<div class="qb-empty">暂无可展示的快捷入口</div>'}`;
   }
 
   function positionPanel() {
@@ -253,11 +253,6 @@
   }
 
   panel.addEventListener("click", (event) => {
-    if (event.target.closest("#qbManage")) {
-      closePanel();
-      openSettings();
-      return;
-    }
     const item = event.target.closest("[data-qb-item]");
     if (!item) return;
     const id = item.dataset.qbItem;

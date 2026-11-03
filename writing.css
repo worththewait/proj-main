@@ -91,7 +91,7 @@ body[data-page="writing"] { --wr-accent: #1f5eff; --wr-ink: #1f2d3d; --wr-muted:
 .writing-dialog[open] { display: flex; flex-direction: column; }
 .writing-dialog::backdrop { background: rgba(18,28,46,.44); }
 .writing-dialog--upload { width: min(880px, calc(100vw - 32px)); }
-.writing-dialog--compose { width: min(780px, calc(100vw - 32px)); }
+.writing-dialog--compose { width: min(1040px, calc(100vw - 32px)); }
 .wr-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 14px; border-bottom: 1px solid #eef2f8; }
 .wr-dialog-head h2 { margin: 0; font-size: 17px; font-weight: 650; }
 .wr-dialog-close { width: 30px; height: 30px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #7a8799; font-size: 20px; cursor: pointer; }
@@ -209,4 +209,65 @@ body[data-page="writing"] { --wr-accent: #1f5eff; --wr-ink: #1f2d3d; --wr-muted:
   .wr-step { gap: 7px; font-size: 12px; }
   .wr-step-index { width: 40px; height: 40px; font-size: 14px; }
   .wr-step-arrow { width: 32px; height: 28px; margin: 0 4px; }
+}
+
+/* 上传文件列表：对齐百舸文库后管端 */
+.wr-file-table-wrap { width: 100%; overflow-x: auto; border: 1px solid #e8eef7; border-radius: 8px; background: #fff; }
+.wr-file-table { width: 100%; min-width: 900px; border-collapse: collapse; }
+.wr-file-table th { padding: 9px 8px; border-bottom: 1px solid #edf1f7; background: #f6f8fc; color: #6d7c91; font-size: 10.5px; font-weight: 500; text-align: left; white-space: nowrap; }
+.wr-file-table td { padding: 8px; border-bottom: 1px solid #f1f4f9; color: #5d6d83; font-size: 11px; line-height: 1.5; white-space: nowrap; }
+.wr-file-table tr:last-child td { border-bottom: 0; }
+.wr-file-table tr.is-locked { background: #fcfdff; }
+.wr-check-cell { width: 32px; text-align: center !important; }
+.wr-check-cell input { width: 13px; height: 13px; accent-color: #245BFF; }
+.wr-check-cell input:disabled { opacity: .4; cursor: not-allowed; }
+.wr-file-name { display: flex; align-items: center; gap: 7px; max-width: 230px; color: #33445e; }
+.wr-file-name > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.wr-file-icon { display: grid; place-items: center; width: 25px; height: 25px; flex: none; border-radius: 5px; color: #fff; font-size: 8px; font-weight: 700; }
+.wr-file-icon.is-pdf { background: #e85d5d; }
+.wr-file-icon.is-doc { background: #5b8def; }
+.wr-tag { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap; }
+.wr-tag.parse-unparsed, .wr-tag.parse-parsing { background: #eef3ff; color: #2f5fc4; }
+.wr-tag.parse-parsed { background: #edf8f1; color: #1f7a4c; }
+.wr-tag.parse-failed { background: #fdeeee; color: #b23a3a; }
+.wr-tag.secret-detecting { background: #eef3ff; color: #2f5fc4; }
+.wr-tag.secret-passed { background: #edf8f1; color: #1f7a4c; }
+.wr-tag.secret-hit, .wr-tag.secret-submitted { background: #fff4dc; color: #8c5b08; }
+.wr-tag.secret-rejected { background: #fdeeee; color: #b23a3a; }
+.wr-secret-cell { display: flex; align-items: center; gap: 4px; }
+.wr-eye { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #6d7c91; font-size: 12px; cursor: pointer; }
+.wr-eye:hover { background: #eef3ff; color: #245BFF; }
+.wr-file-actions { display: flex; align-items: center; gap: 1px; }
+.wr-file-actions button { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #6d7c91; font-size: 11px; cursor: pointer; }
+.wr-file-actions button:hover { background: #eef3ff; color: #245BFF; }
+.wr-file-actions button.is-danger:hover { background: #fdeeee; color: #b4232c; }
+.wr-file-muted { color: #b1bccb; }
+.wr-file-table .wr-upload-empty { padding: 28px; }
+
+/* 涉密检测详情 */
+.writing-dialog--secret { width: min(760px, calc(100vw - 32px)); }
+.wr-secret-alert { display: flex; gap: 10px; margin-bottom: 16px; padding: 12px 14px; border: 1px solid #f3d9b0; border-radius: 8px; background: #fff8ec; color: #6d4b14; }
+.wr-secret-alert > span { flex: none; font-size: 18px; }
+.wr-secret-alert strong { display: block; font-size: 13px; }
+.wr-secret-alert p { margin: 4px 0 0; color: #8a6a36; font-size: 11.5px; line-height: 1.65; }
+.wr-kw-row { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.wr-kw-row b { margin-right: 2px; color: #6d4b14; font-size: 11px; font-weight: 500; }
+.wr-kw { padding: 2px 7px; border-radius: 4px; background: #fdeeee; color: #b4232c; font-size: 10.5px; }
+.wr-file-meta { overflow: hidden; border: 1px solid #e8eef7; border-radius: 9px; background: #fff; }
+.wr-file-meta > div { display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 12px; padding: 9px 13px; border-bottom: 1px solid #f1f4f9; font-size: 11.5px; }
+.wr-file-meta > div:last-child { border-bottom: 0; }
+.wr-file-meta span { color: #8b97a8; }
+.wr-file-meta strong { overflow-wrap: anywhere; color: #33445e; font-weight: 500; }
+.wr-timeline { display: grid; gap: 0; }
+.wr-tl-item { position: relative; display: flex; gap: 9px; padding-bottom: 13px; }
+.wr-tl-item:not(:last-child)::before { content: ''; position: absolute; top: 24px; bottom: 0; left: 11px; width: 1px; background: #e8eef7; }
+.wr-tl-dot { display: grid; place-items: center; width: 23px; height: 23px; flex: none; border-radius: 50%; background: #eef3ff; color: #2f5fc4; font-size: 10px; }
+.wr-tl-dot.is-danger { background: #fdeeee; color: #b4232c; }
+.wr-tl-dot.is-success { background: #edf8f1; color: #1f7a4c; }
+.wr-tl-item strong { display: block; color: #33445e; font-size: 11.5px; font-weight: 550; }
+.wr-tl-item small { display: block; margin-top: 2px; color: #9aa6b6; font-size: 10px; }
+.wr-tl-item p { margin: 3px 0 0; color: #7a8799; font-size: 10.5px; line-height: 1.6; }
+@media (max-width: 900px) {
+  .writing-dialog--compose { width: calc(100vw - 24px); }
+  .wr-file-meta > div { grid-template-columns: 100px minmax(0, 1fr); }
 }

@@ -1,6 +1,6 @@
 /* 百舸问答：消息独立滚动，输入区与欢迎建议共用一条阅读轴。 */
-.qa-module .qa-workspace { position: relative; overflow: hidden; background: #fbfcff; }
-.qa-module .content-scroll { position: relative; background: #fbfcff; }
+.qa-module .qa-workspace { position: relative; overflow: hidden; background: var(--surface); }
+.qa-module .content-scroll { position: relative; background: var(--surface); }
 .qa-module .qa-page {
   width: min(calc(100% - 64px), 800px); max-width: 800px; min-height: 100%;
   padding: clamp(64px, 10vh, 96px) 0 24px;
@@ -18,7 +18,7 @@
 .qa-panel-actions button, .qa-panel-heading button {
   display: inline-flex; align-items: center; justify-content: center; flex: none;
   width: 36px; min-height: 36px; padding: 8px; border: 0; border-radius: 8px;
-  background: transparent; color: #53617a;
+  background: transparent; color: var(--muted);
 }
 .qa-panel-actions button:hover, .qa-panel-actions button[aria-expanded="true"], .qa-panel-heading button:hover { background: var(--accent-soft); color: var(--accent-hover); }
 .qa-panel-actions .icon, .qa-panel-heading .icon { width: 18px; height: 18px; stroke-width: 1.7; }
@@ -26,7 +26,7 @@
 
 /* 输入框由一行起步；高度上限与滚动由页面脚本协调。 */
 .qa-composer-area { position: relative; flex: none; width: 100%; margin: 0 auto; padding: 0; }
-.qa-composer { padding: 18px 18px 14px; border: 1px solid #d5deed; border-radius: 16px; background: #fff; }
+.qa-composer { padding: 18px 18px 14px; border: 1px solid var(--line-strong); border-radius: 16px; background: #fff; }
 .qa-composer:focus-within { border-color: var(--accent); outline: 2px solid var(--accent-soft); outline-offset: 2px; }
 .qa-composer textarea {
   display: block; width: 100%; min-height: 32px; max-height: 144px; padding: 0;
@@ -39,10 +39,10 @@
 .qa-mode-button {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 34px;
   padding: 6px 10px; border: 1px solid transparent; border-radius: 7px;
-  background: transparent; color: #53617a; font-size: 13px; line-height: 1.5; white-space: nowrap;
+  background: transparent; color: var(--muted); font-size: 13px; line-height: 1.5; white-space: nowrap;
 }
 .qa-mode-button .icon { width: 16px; height: 16px; stroke-width: 1.7; }
-.qa-mode-button:hover { border-color: transparent; background: #f1f4fa; color: var(--ink); }
+.qa-mode-button:hover { border-color: transparent; background: var(--surface-subtle); color: var(--ink); }
 .qa-mode-button.is-active { border-color: transparent; background: var(--accent-soft); color: var(--accent-hover); }
 .qa-mode-button[aria-pressed="true"] { font-weight: 500; }
 /* 联网搜索与首页一致：图标加文字，通过浅蓝选中态表示开启。 */
@@ -67,7 +67,7 @@
 
 /* 建议问题是轻量列表，辅助动作维持文本层级。 */
 .qa-suggestions { display: block; margin: 22px 2px 0; }
-.qa-suggestions-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 7px; color: #53617a; font-size: 13px; }
+.qa-suggestions-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 7px; color: var(--muted); font-size: 13px; }
 .qa-suggestions-heading strong { font-weight: 500; }
 #refreshQuestions, #showCitationExample { display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 3px 0; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 12px; }
 #refreshQuestions .icon { width: 14px; height: 14px; }
@@ -89,9 +89,9 @@
   display: flex; flex-direction: column; flex: 1; gap: 28px; min-height: 0; margin: 0;
   padding: 0 16px 26px; overflow: auto; overscroll-behavior: contain; scroll-padding-block: 16px;
 }
-.qa-conversation.is-chatting .qa-composer-area { position: relative; width: calc(100% - 32px); max-width: 768px; margin: 0 auto; padding: 14px 0 0; background: #fbfcff; }
+.qa-conversation.is-chatting .qa-composer-area { position: relative; width: calc(100% - 32px); max-width: 768px; margin: 0 auto; padding: 14px 0 0; background: var(--surface); }
 .qa-conversation.is-chatting .qa-disclaimer { margin-top: 9px; }
-.qa-conversation-messages:focus-visible { outline: 2px solid #9bb6f8; outline-offset: -2px; border-radius: 4px; }
+.qa-conversation-messages:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 4px; }
 .qa-chat-message { flex: none; max-width: 100%; min-width: 0; color: var(--ink); font-size: 15px; line-height: 1.8; overflow-wrap: anywhere; }
 .qa-chat-user { align-self: flex-end; width: fit-content; max-width: 86%; }
 .qa-chat-assistant { align-self: stretch; }
@@ -102,9 +102,9 @@
 .qa-chat-status { color: var(--muted); font-size: 12px; font-weight: 400; }
 .qa-chat-user .qa-chat-author { justify-content: flex-end; }
 .qa-chat-user .qa-chat-label { color: var(--muted); font-weight: 400; }
-.qa-chat-message p, .qa-chat-text { margin: 0; color: #293951; font-size: 15px; line-height: 1.8; text-wrap: pretty; }
+.qa-chat-message p, .qa-chat-text { margin: 0; color: var(--ink); font-size: 15px; line-height: 1.8; text-wrap: pretty; }
 .qa-chat-text { white-space: pre-wrap; }
-.qa-chat-user .qa-chat-text { padding: 11px 16px; border-radius: 13px 13px 3px 13px; background: #edf2fc; }
+.qa-chat-user .qa-chat-text { padding: 11px 16px; border-radius: 13px 13px 3px 13px; background: var(--accent-soft); }
 .qa-chat-text h3 { margin: 25px 0 8px; color: var(--ink); font-size: 16px; font-weight: 600; line-height: 1.6; }
 .qa-chat-text h3:first-child { margin-top: 5px; }
 .qa-chat-text:has(h3) { white-space: normal; }
@@ -146,7 +146,7 @@
 .qa-history-item strong { overflow: hidden; color: #34445e; font-size: 13px; font-weight: 500; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
 .qa-history-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
 .qa-history-meta small, .qa-history-meta time { font-size: 12px; color: inherit; font-variant-numeric: tabular-nums; }
-.qa-history-example { display: flex; align-items: center; flex: none; gap: 8px; width: 100%; min-height: 38px; margin-top: 12px; padding: 9px 6px; border: 0; border-radius: 6px; background: transparent; color: #53617a; font-size: 12px; text-align: left; }
+.qa-history-example { display: flex; align-items: center; flex: none; gap: 8px; width: 100%; min-height: 38px; margin-top: 12px; padding: 9px 6px; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 12px; text-align: left; }
 .qa-history-example:hover { background: #eaf0fb; color: var(--accent-hover); }
 .qa-history-example .icon { width: 16px; height: 16px; }
 .qa-history-example .icon:last-child { margin-left: auto; width: 13px; height: 13px; }

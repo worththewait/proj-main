@@ -111,3 +111,44 @@ test('feature admin uses the same homepage icon tones and sizing',()=>{
   assert.match(css,/\.feature-row-icon > svg \{ display:block; width:20px; height:20px/);
   assert.match(source('home-dashboard.css'),/\.home-directory-icon > \.feature-custom-icon/);
 });
+
+test('an uploaded square icon previews before save and can be restored to default', async () => {
+  const app = setup();
+  const raster = 'data:image/png;base64,iVBORw0KGgo=';
+  app.window.BaigeHomeCardImages = {
+    ...app.window.BaigeHomeCardImages,
+    process: async (_file, {aspectRatio}) => {
+      assert.equal(aspectRatio, 1);
+      return raster;
+    },
+  };
+  const id = 'tool:OCR识别';
+  app.action('featureTable', 'editFeature', id);
+  app.get('uploadFeatureIcon').files = [{name: 'icon.png'}];
+  app.get('uploadFeatureIcon').emit('change');
+  assert.equal(app.get('saveFeatureEdit').disabled, true);
+  await new Promise(resolve => setImmediate(resolve));
+  assert.match(app.get('featureEntryPreview').innerHTML, /feature-custom-icon/);
+  assert.equal(app.config.get(id).iconImage, '');
+  app.get('featureEditorForm').emit('submit');
+  assert.equal(app.config.get(id).iconImage, raster);
+  app.action('featureTable', 'editFeature', id);
+  app.get('resetFeatureIcon').emit('click');
+  app.get('featureEditorForm').emit('submit');
+  assert.equal(app.config.get(id).iconImage, '');
+});
+
+test('editing a description previews the draft and saves it to the shared catalog', () => {
+  const app = setup();
+  const id = 'tool:OCR识别';
+  const original = app.config.get(id).description;
+  app.action('featureTable', 'editFeature', id);
+  const input = app.get('editFeatureDescription');
+  assert.equal(input.value, original);
+  input.value = '提取图片和扫描件中的文字';
+  input.emit('input');
+  assert.match(app.get('featureEntryPreview').innerHTML, /提取图片和扫描件中的文字/);
+  assert.equal(app.config.get(id).description, original);
+  app.get('featureEditorForm').emit('submit');
+  assert.equal(app.config.get(id).description, input.value);
+});

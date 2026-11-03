@@ -74,8 +74,8 @@
     }];
   });
   const byId = new Map(registry.map(item => [item.id, item]));
-  const fields = ['icon', 'iconImage', 'image', 'homeCategory', 'toolCategory'];
-  const defaultFeature = item => ({icon: item.icon, iconImage: '', image: item.image,
+  const fields = ['icon', 'iconImage', 'image', 'description', 'homeCategory', 'toolCategory'];
+  const defaultFeature = item => ({icon: item.icon, iconImage: '', image: item.image, description: item.description,
     homeCategory: item.homeCategory, toolCategory: item.toolCategory});
   function defaults() {
     return {version: 1, categories: clone(initialCategories),
@@ -122,7 +122,11 @@
     if (value.image !== '' && value.image !== entry.image && !isRaster(value.image)) throw Error('大图无效，请重新上传 PNG、JPG 或 WebP。');
     if (!categories.home.some(item => item.id === value.homeCategory)) throw Error('首页分类已不存在，请重新选择分类。');
     if (entry.isTool ? !categories.tools.some(item => item.id === value.toolCategory) : value.toolCategory !== '') throw Error('工具分类无效，请重新选择分类。');
-    return Object.fromEntries(fields.map(field => [field, value[field]]));
+    const description = Object.hasOwn(value, 'description') ? value.description : entry.description;
+    if (typeof description !== 'string' || description.length > 160 || /[\u0000-\u001f\u007f]/.test(description)) {
+      throw Error('功能描述最多 160 字，不能包含换行或控制字符。');
+    }
+    return Object.fromEntries(fields.map(field => [field, field === 'description' ? description.trim() : value[field]]));
   }
   function checkedConfig(value) {
     if (!isObject(value) || value.version !== 1 || !isObject(value.features)) throw Error('功能配置版本无效。');
@@ -189,7 +193,7 @@
   }
   function saveFeature(id, patch) {
     if (!byId.has(id) || !isObject(patch)) throw Error('功能不存在，请刷新列表后重试。');
-    if (Object.keys(patch).some(field => !fields.includes(field))) throw Error('只能修改图标、大图和所属分类。');
+    if (Object.keys(patch).some(field => !fields.includes(field))) throw Error('只能修改图标、大图、功能描述和所属分类。');
     const config = load(true);
     config.features[id] = checkedFeature(id, {...config.features[id], ...patch}, config.categories);
     return persist(config);
