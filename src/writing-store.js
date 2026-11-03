@@ -79,9 +79,31 @@
   }
   function seedUploads() {
     return [
-      { id: "up-seed-1", name: "船舶设计规范汇编.pdf", size: 1258291, type: "pdf", status: "passed", message: "未命中涉密内容", createdAt: "2026-11-02 10:12:30" },
-      { id: "up-seed-2", name: "核心算法设计文档.docx", size: 734003, type: "docx", status: "rejected", message: "命中涉密关键词：秘密、涉密", createdAt: "2026-11-02 10:15:08" },
+      { id: "up-seed-1", name: "船舶设计规范汇编.pdf", size: 1258291, type: "pdf", source: "本地上传", category: "写作素材", version: "V1.0.0", status: "passed", parseStatus: "parsed", keywords: [], message: "未命中涉密内容，检测通过", createdAt: "2026-11-02 10:12:30", updatedAt: "2026-11-02 10:13:05" },
+      { id: "up-seed-2", name: "核心算法设计文档.docx", size: 734003, type: "docx", source: "本地上传", category: "写作素材", version: "V1.0.0", status: "hit", parseStatus: "unparsed", keywords: ["秘密", "涉密"], message: "命中涉密关键词：秘密、涉密", createdAt: "2026-11-02 10:15:08", updatedAt: "2026-11-02 10:15:20" },
     ];
+  }
+  function normalizeUpload(item) {
+    const type = item.type || /\.([^.]+)$/.exec(item.name || "")?.[1]?.toLowerCase() || "file";
+    const status = ["detecting", "passed", "hit", "submitted", "rejected"].includes(item.status) ? item.status : "detecting";
+    const parseStatus = ["unparsed", "parsing", "parsed", "failed"].includes(item.parseStatus)
+      ? item.parseStatus
+      : status === "passed" ? "parsed" : "unparsed";
+    return {
+      id: item.id || uid("up"),
+      name: item.name || "未命名文件",
+      size: Number(item.size) || 0,
+      type,
+      source: item.source || "本地上传",
+      category: item.category || "写作素材",
+      version: item.version || "V1.0.0",
+      status,
+      parseStatus,
+      keywords: Array.isArray(item.keywords) ? item.keywords : [],
+      message: item.message || (status === "passed" ? "未命中涉密内容，检测通过" : status === "hit" ? "命中涉密关键词" : "正在检测涉密内容"),
+      createdAt: item.createdAt || now(),
+      updatedAt: item.updatedAt || item.createdAt || now(),
+    };
   }
   function defaults() {
     return { version: 1, templates: seedTemplates(), uploads: seedUploads(), documents: [] };
@@ -97,6 +119,7 @@
       const parsed = JSON.parse(raw);
       if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.templates)) return defaults();
       if (!Array.isArray(parsed.uploads)) parsed.uploads = seedUploads();
+      parsed.uploads = parsed.uploads.map(normalizeUpload);
       if (!Array.isArray(parsed.documents)) parsed.documents = [];
       return parsed;
     } catch { return defaults(); }
@@ -114,27 +137,55 @@
   function addUploads(files) {
     const value = read();
     const room = Math.max(0, 5 - value.uploads.length);
-    const accepted = Array.from(files || []).slice(0, room).map((file) => ({
+    const accepted = Array.from(files || []).slice(0, room).map((file) => normalizeUpload({
       id: uid("up"),
       name: file.name,
       size: Number(file.size) || 0,
       type: /\.([^.]+)$/.exec(file.name)?.[1]?.toLowerCase() || "file",
+      source: "本地上传",
+      category: "写作素材",
+      version: "V1.0.0",
       status: "detecting",
+      parseStatus: "unparsed",
+      keywords: [],
       message: "正在检测涉密内容",
       createdAt: now(),
+      updatedAt: now(),
     }));
     value.uploads.push(...accepted);
     write(value);
     accepted.forEach((item) => {
       const sensitive = /机密|秘密|涉密|内部|敏感/.test(item.name);
+      const keywords = sensitive ? ["秘密", "涉密"].filter((word) => item.name.includes(word) || word === "涉密") : [];
       window.setTimeout(() => {
         const current = read();
         const target = current.uploads.find((entry) => entry.id === item.id);
         if (!target) return;
-        target.status = sensitive ? "rejected" : "passed";
-        target.message = sensitive ? "命中涉密关键词，需脱敏后重新上传" : "未命中涉密内容，检测通过";
+        target.updatedAt = now();
+        if (sensitive) {
+          target.status = "hit";
+          target.parseStatus = "unparsed";
+          target.keywords = keywords;
+          target.message = `命中涉密关键词：${keywords.join("、")}`;
+        } else {
+          target.status = "passed";
+          target.parseStatus = "parsing";
+          target.keywords = [];
+          target.message = "未命中涉密内容，检测通过，正在解析";
+        }
         write(current);
-      }, 1000);
+        if (!sensitive) {
+          window.setTimeout(() => {
+            const latest = read();
+            const parsed = latest.uploads.find((entry) => entry.id === item.id);
+            if (!parsed || parsed.status !== "passed") return;
+            parsed.parseStatus = "parsed";
+            parsed.updatedAt = now();
+            parsed.message = "检测通过，解析完成";
+            write(latest);
+          }, 1200);
+        }
+      }, 900);
     });
     return accepted.length;
   }
@@ -142,11 +193,37 @@
     const value = read();
     const item = value.uploads.find((entry) => entry.id === id);
     if (!item) return false;
-    item.status = status === "passed" ? "passed" : status === "rejected" ? "rejected" : "detecting";
-    item.message = message || (item.status === "passed" ? "未命中涉密内容，检测通过" : "命中涉密关键词");
+    item.status = ["detecting", "passed", "hit", "submitted", "rejected"].includes(status) ? status : "detecting";
+    item.updatedAt = now();
+    if (item.status === "passed") {
+      item.parseStatus = "parsing";
+      item.message = message || "未命中涉密内容，检测通过";
+    } else if (item.status === "hit") {
+      item.parseStatus = "unparsed";
+      item.message = message || "命中涉密关键词";
+    } else if (item.status === "submitted") {
+      item.parseStatus = "unparsed";
+      item.message = message || "已提交管理员审核";
+    } else if (item.status === "rejected") {
+      item.parseStatus = "unparsed";
+      item.message = message || "管理员审核驳回";
+    } else {
+      item.message = message || "正在检测涉密内容";
+    }
     write(value);
     return true;
   }
+  function submitUpload(id) {
+    return reviewUpload(id, "submitted");
+  }
+  function removeUpload(id) {
+    const value = read();
+    const before = value.uploads.length;
+    value.uploads = value.uploads.filter((item) => item.id !== id);
+    write(value);
+    return value.uploads.length !== before;
+  }
+  function upload(id) { return clone(read().uploads.find((item) => item.id === id) || null); }
   function selectableUploads() { return uploads().filter((item) => item.status === "passed"); }
   function saveDocument(document) {
     const value = read();
@@ -167,5 +244,5 @@
     return clone(value);
   }
 
-  window.BaigeWritingStore = Object.freeze({ KEY, templates, template, uploads, addUploads, reviewUpload, selectableUploads, saveDocument, subscribe, read, reset });
+  window.BaigeWritingStore = Object.freeze({ KEY, templates, template, uploads, upload, addUploads, reviewUpload, submitUpload, removeUpload, selectableUploads, saveDocument, subscribe, read, reset });
 })();

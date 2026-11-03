@@ -39,9 +39,9 @@ test("uploaded documents stay unselectable until secret review passes", () => {
   const { store, timers } = setup();
   const before = store.uploads();
   const passedSeed = before.find((item) => item.status === "passed");
-  const rejectedSeed = before.find((item) => item.status === "rejected");
+  const hitSeed = before.find((item) => item.status === "hit");
   assert.ok(passedSeed);
-  assert.ok(rejectedSeed);
+  assert.ok(hitSeed);
   assert.deepEqual(Array.from(store.selectableUploads().map((item) => item.id)), [passedSeed.id]);
   store.addUploads([{ name: "核心秘密参数.pdf", size: 1024, type: "pdf" }]);
   const pending = store.uploads().at(-1);
@@ -49,7 +49,7 @@ test("uploaded documents stay unselectable until secret review passes", () => {
   assert.equal(store.selectableUploads().some((item) => item.id === pending.id), false);
   while (timers.length) timers.shift()();
   const reviewed = store.uploads().find((item) => item.id === pending.id);
-  assert.equal(reviewed.status, "rejected");
+  assert.equal(reviewed.status, "hit");
   assert.equal(store.selectableUploads().some((item) => item.id === pending.id), false);
   store.reviewUpload(pending.id, "passed");
   assert.equal(store.selectableUploads().some((item) => item.id === pending.id), true);
@@ -66,14 +66,18 @@ test("writing page exposes the complete template-to-upload flow", () => {
     assert.match(js, new RegExp(token));
   }
   assert.match(js, /只有.*已通过.*才可勾选/);
-  assert.match(js, /item\.status === "passed" \? "" : "disabled"/);
-  assert.match(js, /item\.status === "passed" \? "" : "is-disabled"/);
+  assert.match(js, /passed \? "" : "disabled"/);
+  assert.match(js, /passed \? "" : "is-locked"/);
   assert.match(css, /\.wr-workspace/);
-  assert.match(css, /\.wr-upload-row\.is-disabled/);
+  assert.match(css, /\.wr-file-table/);
+  assert.match(css, /\.wr-secret-alert/);
   assert.match(js, /function openPublicWizard/);
   assert.match(js, /function renderWizard/);
   assert.match(js, /function wizardUploadsHtml/);
   assert.match(js, /data-wr-wizard-next/);
   assert.match(js, /data-wr-wizard-finish/);
+  assert.match(js, /filePicker\.click/);
+  assert.match(js, /data-wr-file-action/);
+  assert.match(js, /data-wr-secret/);
   assert.match(css, /\.wr-wizard/);
 });
