@@ -102,6 +102,11 @@ test("permission center can switch between simulated people and their grants", (
   assert.match(html, /pc-result-data-group/);
   assert.doesNotMatch(html, /pc-result-type/);
   assert.match(html, /data-pc-select-all/);
+  assert.match(html, /<h2>权限申请<\/h2>/);
+  assert.match(html, /function departmentKnowledgeBases/);
+  assert.match(html, /data\.knowledgeDirectory\?\.departmentGroups/);
+  assert.match(html, /scope: "部门"/);
+  assert.match(html, /只能申请部门知识库/);
   assert.match(html, /pcSelectAllFunctions/);
   assert.match(read("permission-center.css"), /\.pc-function-actions/);
   assert.doesNotMatch(read("src/pages/permission-review.js"), /pr-item-name"><em/);
@@ -120,5 +125,12 @@ test("permission center and admin review are wired into the platform", () => {
   assert.match(admin, /data-admin-view="access"/);
   assert.match(admin, />权限审核</);
   assert.match(adminJs, /permission-review\.html/);
+  const reviewJs = read("src/pages/permission-review.js");
+  assert.match(reviewJs, /request\.status !== "pending"/);
+  assert.match(reviewJs, /\$\{readonly \? "查看" : "审核"\}权限申请/);
+  assert.match(reviewJs, /is-readonly/);
+  assert.match(reviewJs, /actionIcons/);
+  assert.match(reviewJs, /pr-action-icon/);
+  assert.match(reviewJs, /\$\{reviewed \? "查看" : "审核"\}/);
   assert.ok(fs.existsSync(path.join(project, "pages/permission-review.html")));
 });

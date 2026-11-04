@@ -54,14 +54,13 @@
     });
     return [...groups.entries()];
   }
+  function departmentKnowledgeBases() {
+    const groups = data.knowledgeDirectory?.departmentGroups || [];
+    return groups.flatMap((group) => (group.bases || []).map((item) => ({ ...item, scope: "部门", department: group.name, groupId: group.id })));
+  }
   function kbGroups() {
-    const groups = new Map();
-    (data.knowledgeBases || []).forEach((item) => {
-      const label = `${item.scope || "数据"}知识库`;
-      if (!groups.has(label)) groups.set(label, []);
-      groups.get(label).push(item);
-    });
-    return [...groups.entries()];
+    const groups = data.knowledgeDirectory?.departmentGroups || [];
+    return groups.filter((group) => (group.bases || []).length).map((group) => [group.name, (group.bases || []).map((item) => ({ ...item, scope: "部门", department: group.name, groupId: group.id }))]);
   }
   function statusName(status) { return statusLabel[status] || status; }
   function statusHtml(status) { return `<span class="pc-status ${escape(status)}">${escape(statusName(status))}</span>`; }
@@ -71,13 +70,13 @@
   }
 
   function template() {
-    return `<header class="pc-head"><div><h2>权限中心</h2><p>申请功能与知识库权限，查看审核进度</p></div><div class="pc-head-side"><label class="pc-person">当前人员<select id="pcPerson"></select></label><button class="pc-close" type="button" data-pc-close aria-label="关闭权限中心">×</button></div></header>
+    return `<header class="pc-head"><div><h2>权限申请</h2><p>申请功能与知识库权限，查看审核进度</p></div><div class="pc-head-side"><label class="pc-person">当前人员<select id="pcPerson"></select></label><button class="pc-close" type="button" data-pc-close aria-label="关闭权限申请">×</button></div></header>
       <div class="pc-body">
         <section data-pc-panel="apply" hidden>
           <div class="pc-apply-head"><div><h3>申请权限</h3><p>选择需要申请的功能与知识库权限，提交后进入审核。</p></div><button class="pc-link" type="button" data-pc-back>返回我的申请</button></div>
           <div class="pc-applicant" id="pcApplicant"></div>
           <section class="pc-section"><div class="pc-section-head"><div><h3>功能权限</h3><p>勾选需要申请的功能；已开通或审核中的功能不可重复申请。</p></div><div class="pc-function-actions"><button class="pc-link" type="button" id="pcSelectAllFunctions" data-pc-select-all>全选</button><span class="pc-count" id="pcFunctionCount"></span></div></div><div id="pcFunctionList"></div></section>
-          <section class="pc-section"><div class="pc-section-head"><div><h3>数据权限</h3><p>选择需要访问的知识库，可多选。</p></div><span class="pc-count" id="pcKbCount"></span></div><div id="pcKbList" class="pc-kb-groups"></div></section>
+          <section class="pc-section"><div class="pc-section-head"><div><h3>数据权限</h3><p>只能申请部门知识库，可多选。</p></div><span class="pc-count" id="pcKbCount"></span></div><div id="pcKbList" class="pc-kb-groups"></div></section>
           <div class="pc-reason"><label for="pcReason">申请事由 <em>*</em></label><textarea id="pcReason" maxlength="500" placeholder="请说明申请用途、使用场景和预期使用期限"></textarea><small><span id="pcReasonCount">0</span> / 500 字</small><p class="pc-feedback" id="pcFeedback" role="status"></p></div>
         </section>
         <section data-pc-panel="mine">
@@ -200,8 +199,10 @@
   function renderKbs() {
     const list = dialog.querySelector("#pcKbList");
     if (!list) return;
+    const allowed = new Set(departmentKnowledgeBases().map((item) => item.id));
+    [...selectedKbs].forEach((id) => { if (!allowed.has(id)) selectedKbs.delete(id); });
     const groups = kbGroups();
-    list.innerHTML = groups.length ? groups.map(([label, items]) => `<section class="pc-kb-group"><b>${escape(label)}</b><div class="pc-kb-list">${items.map((item) => `<label class="pc-kb"><input type="checkbox" data-pc-kb value="${escape(item.id)}" ${selectedKbs.has(item.id) ? "checked" : ""} /><span>${escape(item.name)}</span></label>`).join("")}</div></section>`).join("") : '<div class="pc-empty">当前没有可申请的知识库。</div>';
+    list.innerHTML = groups.length ? groups.map(([label, items]) => `<section class="pc-kb-group"><b>${escape(label)}</b><div class="pc-kb-list">${items.map((item) => `<label class="pc-kb"><input type="checkbox" data-pc-kb value="${escape(item.id)}" ${selectedKbs.has(item.id) ? "checked" : ""} /><span>${escape(item.name)}</span></label>`).join("")}</div></section>`).join("") : '<div class="pc-empty">当前没有可申请的部门知识库。</div>';
     renderKbCount();
   }
   function renderKbCount() {
@@ -317,7 +318,7 @@
       if (entry && functionStatus(entry) === "available") items.push({ key: `f:${entry.route}:${entry.child || ""}`, type: "function", name: entry.name, route: entry.route, child: entry.child || "", status: "pending" });
     });
     selectedKbs.forEach((id) => {
-      const item = (data.knowledgeBases || []).find((kb) => kb.id === id);
+      const item = departmentKnowledgeBases().find((kb) => kb.id === id);
       if (item) items.push({ key: `d:${item.id}`, type: "data", name: item.name, kbId: item.id, scope: item.scope || "", status: "pending" });
     });
     if (!items.length) { feedback("请至少选择一项功能或数据权限。"); return; }

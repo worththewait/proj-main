@@ -6,7 +6,7 @@
   <title>权限审核 · 百舸后台</title>
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="../admin.css" />
-  <link rel="stylesheet" href="../permission-review.css?v=20261103-visual-baseline-no-badges" />
+  <link rel="stylesheet" href="../permission-review.css?v=20261104-no-stats" />
 </head>
 <body class="module-page" data-page="permission-review">
   <main class="module-main">
@@ -16,7 +16,6 @@
           <div><h1>权限审核</h1><p>查看功能与知识库权限申请，按申请项逐项审批。</p></div>
           <span class="pr-head-meta">审核身份：系统管理员</span>
         </header>
-        <section class="pr-stats" id="prStats" aria-label="申请统计"></section>
         <div class="pr-toolbar">
           <label>申请人<input id="prApplicant" type="search" placeholder="姓名或账号" autocomplete="off" /></label>
           <label>状态<select id="prStatus"><option value="">全部状态</option><option value="pending">待审核</option><option value="approved">已通过</option><option value="partial">部分通过</option><option value="rejected">已驳回</option></select></label>
@@ -50,6 +49,6 @@
 
   <script src="../src/ui.js"></script>
   <script src="../src/permission-store.js?v=20261102-permission"></script>
-  <script src="../src/pages/permission-review.js?v=20261103-no-type-badges"></script>
+  <script src="../src/pages/permission-review.js?v=20261104-no-stats"></script>
 </body>
 </html>
