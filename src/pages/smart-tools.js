@@ -33,7 +33,11 @@
     bar: document.querySelector("#toolWorkspaceBar"),
     scroller: document.querySelector("#contentScroll"),
     tools, icon, escapeHtml, renderCatalog: renderTools, renderTool: renderToolPage,
-    iconForTool:name=>{const tool=tools.find(item=>item.name===name);return tool?toolIcon(tool):icon('grid');},
+    iconForTool: name => {
+      if (name === "纠错校对") return icon("check");
+      const tool = tools.find(item => item.name === name);
+      return tool ? toolIcon(tool) : icon("grid");
+    },
     onNavigate: (name) => bridge.navigate("smart-tools", name),
   });
 

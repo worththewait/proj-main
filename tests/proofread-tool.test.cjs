@@ -15,11 +15,12 @@ function loadTool() {
 
 test("proofread tool exposes the three-column workspace hooks", () => {
   const js = read("src/proofread-tool.js");
-  for (const token of ["pr-rail", "pr-editor", "pr-result", "审校助手", "历史对话", "新建审校", "审核配置", "开始审校", "全部采纳", "全部忽略"]) {
+  for (const token of ["pr-rail", "pr-editor", "pr-result", "审校助手", "审校记录", "文件选择", "审校范围", "开始审校", "全部采纳", "全部忽略"]) {
     assert.ok(js.includes(token), token);
   }
+  assert.doesNotMatch(js, /返回工具目录|data-options/);
   const css = read("proofread-tool.css");
-  assert.match(css, /grid-template-columns: 236px minmax\(0, 1fr\) 292px/);
+  assert.match(css, /grid-template-columns: clamp\([^)]*\) repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(css, /\.pr-issue/);
   assert.match(css, /\.pr-hit/);
   // 智能工具页只在纠错校对时挂载该工作台。
@@ -27,40 +28,153 @@ test("proofread tool exposes the three-column workspace hooks", () => {
   assert.match(read("pages/smart-tools.html"), /proofread-tool\.css/);
 });
 
-test("left rail switches between the review history and the new-document entry", () => {
+test("review records are shown by default and the file list remains available", () => {
   const js = read("src/proofread-tool.js");
-  // 两个入口分别使用平台已有的 history / newchat 图标。
-  assert.match(js, /icon\('history'\)/);
-  assert.match(js, /icon\('newchat'\)/);
-  assert.match(js, /data-view="history"/);
-  assert.match(js, /data-view="editor"/);
-  // 进入工具时默认停在历史文件列表。
-  assert.match(js, /state\.view = 'history'/);
-  const css = read("proofread-tool.css");
-  assert.match(css, /\.pr-switch-btn\.is-active/);
-  assert.match(css, /\.pr-doc\.is-alert/);
+  assert.match(js, /data-view="history" aria-selected="true"[\s\S]*?data-view="files" aria-selected="false"/);
+  assert.match(js, /data-upload/);
+  assert.doesNotMatch(js, /历史对话|新建审校/);
 });
 
-test("uploaded files carry the library secret-review states, new documents do not", () => {
-  const tool = loadTool();
-  assert.deepEqual(Array.from(tool.scanSecret("纪要.txt", "型号研制任务")), ["型号", "研制"]);
-  assert.deepEqual(Array.from(tool.scanSecret("公开稿.md", "普通内容")), []);
-  // 文件名也参与检测。
-  assert.deepEqual(Array.from(tool.scanSecret("涉密清单.txt", "正文")), ["涉密"]);
+function loadReviewFlow() {
+  const element = {value: "", querySelectorAll: () => [], setAttribute() {}, scrollIntoView() {}};
+  const run = {};
+  let tick;
+  const window = {BaigeUI: {icon: () => "", escapeHtml: String}};
+  const context = vm.createContext({
+    window,
+    setInterval: callback => { tick = callback; return 1; },
+    clearInterval: () => { tick = undefined; },
+    setTimeout: () => 1,
+    clearTimeout() {},
+  });
+  const source = read("src/proofread-tool.js").replace(
+    "  window.BaigeProofreadTool =",
+    `  window.testFlow = {state, switchView, openDoc, openReview, startCheck, acceptIssue, ignoreIssue,
+      stop: () => stopCheck(), setDOM: value => { dom = value; }};
+  window.BaigeProofreadTool =`,
+  );
+  vm.runInContext(source, context);
+  const flow = window.testFlow;
+  flow.setDOM(new Proxy({run}, {get: (elements, name) => elements[name] ?? element}));
+  return {
+    ...flow,
+    run,
+    hasTimer: () => Boolean(tick),
+    finish() {
+      for (let i = 0; tick && i < 20; i++) tick();
+      assert.equal(flow.state.status, "done");
+    },
+  };
+}
 
-  const js = read("src/proofread-tool.js");
-  for (const label of ["检测中", "已通过", "涉密可疑", "审核中", "无需检测"]) assert.ok(js.includes(label), label);
-  // 本地新建的文档不进入检测流程。
-  assert.match(js, /source: 'new'[\s\S]{0,160}secretStatus: 'none'/);
-  // 未通过的三种状态会拦截编辑区。
-  assert.match(js, /const BLOCKED = \['detecting', 'hit', 'submitted'\]/);
+test("cleared files preview their original text until an explicit start creates a running record", () => {
+  const flow = loadReviewFlow();
+  const record = {id: "file", name: "公开稿", fileName: "公开稿.txt", text: "工做严各", secretStatus: "detecting"};
+  flow.state.records.push(record);
+  flow.switchView("files");
+  flow.openDoc(record.id);
+  assert.equal(flow.state.session, null);
+  assert.equal(flow.hasTimer(), false);
 
-  const css = read("proofread-tool.css");
-  for (const selector of [".pr-tag.is-success", ".pr-guard", ".pr-secret", ".pr-timeline li.is-warn"]) {
-    assert.ok(css.includes(selector), selector);
-  }
-  assert.match(js, /流转记录/);
-  assert.match(js, /命中关键词/);
+  record.secretStatus = "passed";
+  flow.openDoc(record.id);
+  assert.equal(flow.state.session.text, record.text);
+  assert.equal(flow.state.view, "files");
+  assert.equal(flow.state.status, "idle");
+  assert.equal(flow.state.issues.length, 0);
+  assert.equal(flow.state.history.length, 0);
+  assert.equal(flow.hasTimer(), false);
+
+  flow.startCheck();
+  assert.equal(flow.state.view, "history");
+  assert.equal(flow.state.status, "running");
+  assert.equal(flow.state.history.length, 1);
+  const reviewId = flow.state.session.reviewId;
+  assert.ok(reviewId);
+  assert.equal(flow.state.history[0].reviewId, reviewId);
+  assert.equal(flow.state.history[0].status, "running");
+  assert.equal(flow.state.session.text, record.text);
+
+  flow.startCheck();
+  assert.equal(flow.state.history.length, 1);
+  flow.finish();
+  assert.equal(flow.state.history[0].status, "done");
+  const [first, second] = flow.state.issues;
+  assert.equal(first.type, "错别字");
+  flow.acceptIssue(first.id);
+  flow.ignoreIssue(second.id);
+
+  flow.switchView("files");
+  flow.openDoc(record.id);
+  assert.equal(flow.state.session.text, "工做严各");
+  flow.startCheck();
+  flow.finish();
+  assert.equal(flow.state.history.length, 2);
+  assert.notEqual(flow.state.session.reviewId, reviewId);
+  assert.equal(flow.state.accepted.size, 0);
+  assert.equal(flow.state.ignored.size, 0);
+
+  flow.openReview(reviewId);
+  assert.equal(flow.state.session.text, "工作严各");
+  assert.equal(flow.state.issues[0].type, "错别字");
+  assert.equal(flow.state.accepted.has(first.id), true);
+  assert.equal(flow.state.ignored.has(second.id), true);
+});
+
+test("stopping preserves the review record and retrying creates a separate run", () => {
+  const flow = loadReviewFlow();
+  const record = {id: "file", name: "公开稿", fileName: "公开稿.txt", text: "工做", secretStatus: "passed"};
+  flow.state.records.push(record);
+  flow.switchView("files");
+  flow.openDoc(record.id);
+  flow.state.session.reviewTypes = ["错别字"];
+  flow.startCheck();
+  const stoppedId = flow.state.session.reviewId;
+  flow.stop();
+  assert.equal(flow.hasTimer(), false);
+  assert.equal(flow.state.status, "stopped");
+  assert.equal(flow.state.history[0].status, "stopped");
+  flow.openReview(stoppedId);
+  assert.equal(flow.state.session.text, record.text);
+  assert.equal(flow.state.status, "stopped");
+
+  flow.startCheck();
+  assert.equal(flow.state.history.length, 2);
+  assert.notEqual(flow.state.session.reviewId, stoppedId);
+  flow.finish();
+  assert.equal(flow.state.history[1].reviewId, stoppedId);
+  assert.equal(flow.state.history[1].status, "stopped");
+  assert.deepEqual(Array.from(flow.state.session.reviewTypes), ["错别字"]);
+});
+
+test("re-review uses the corrected document and chosen scope while keeping the original record", () => {
+  const flow = loadReviewFlow();
+  const file = {id: "file", name: "公开稿", fileName: "公开稿.txt", text: "工做，，其它", secretStatus: "passed"};
+  flow.state.records.push(file);
+  flow.openDoc(file.id);
+  assert.equal(flow.run.textContent, "开始审校");
+  flow.startCheck();
+  assert.equal(flow.run.textContent, "停止审校");
+  flow.finish();
+  assert.equal(flow.run.textContent, "重新审校");
+  assert.equal(flow.run.disabled, false);
+  const firstReviewId = flow.state.session.reviewId;
+  const typo = flow.state.issues.find((issue) => issue.word === "工做");
+  flow.acceptIssue(typo.id);
+
+  flow.startCheck(["错别字", "标点"]);
+  assert.equal(flow.state.history.length, 2);
+  assert.notEqual(flow.state.session.reviewId, firstReviewId);
+  assert.equal(flow.state.session.text, "工作，，其它");
+  flow.finish();
+  assert.deepEqual(Array.from(flow.state.issues, (issue) => issue.word), ["，，"]);
+  assert.equal(flow.state.accepted.size, 0);
+  assert.equal(file.text, "工做，，其它");
+
+  flow.openReview(firstReviewId);
+  assert.equal(flow.state.session.text, "工作，，其它");
+  assert.equal(flow.state.accepted.has(typo.id), true);
+  assert.equal(flow.state.issues.length, 3);
 });
 
 test("detects dictionary typos and punctuation issues in the sample document", () => {
@@ -77,6 +191,8 @@ test("detects dictionary typos and punctuation issues in the sample document", (
   const punct = issues.find((item) => item.word === "，，");
   assert.equal(punct.type, "标点");
   assert.equal(punct.suggestion, "，");
+  assert.deepEqual(Array.from(tool.detect("工做其它，，", ["标点"]), (issue) => issue.word), ["，，"]);
+  assert.deepEqual(Array.from(tool.scanSecret("纪要.txt", "型号研制任务")), ["型号", "研制"]);
 });
 
 test("every issue carries a stable display number and offsets inside the text", () => {

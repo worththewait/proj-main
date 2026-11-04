@@ -1,15 +1,20 @@
 /* 纠错校对：三栏审校工作台（文档区 + 审校助手 + 审校结果）。
    视觉沿用 DESIGN.md 全站基线：白色内容面、百舸蓝交互、12px 辅助文字。 */
 
+[data-page="smart-tools"] .content-inner:has(> .proofread-workspace:not([hidden])) {
+  max-width: none;
+  padding: 8px;
+}
+
 .pr-app {
   display: grid;
-  grid-template-columns: 236px minmax(0, 1fr) 292px;
+  grid-template-columns: clamp(192px, 21%, 240px) repeat(2, minmax(0, 1fr));
   grid-template-rows: minmax(0, 1fr);
-  height: 632px;
-  margin-top: 12px;
+  height: max(480px, calc(100dvh - 70px));
+  gap: 4px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: var(--surface);
+  background: var(--line);
   overflow: hidden;
 }
 
@@ -20,7 +25,6 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-right: 1px solid var(--line);
   background: var(--surface);
 }
 
@@ -38,8 +42,8 @@
   width: 32px;
   height: 32px;
   border-radius: 9px;
-  background: linear-gradient(140deg, #4b8cff 0%, #245bff 100%);
-  color: #fff;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .pr-logo svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
@@ -55,42 +59,17 @@
   line-height: 1.85;
 }
 
-/* 历史文件 / 新建审校：两个图标入口并排，沿用平台 segmented 观感。 */
-.pr-switch {
-  display: flex;
-  gap: 4px;
-  margin: 0 12px 10px;
-  padding: 3px;
-  border-radius: 9px;
-  background: #f2f5fa;
-}
+/* 历史对话和文件选择沿用平台下划线页签。 */
+.pr-switch { display: flex; margin: 6px 16px 0; border-bottom: 1px solid var(--line); }
 .pr-switch-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  flex: 1;
-  min-width: 0;
-  height: 30px;
-  padding: 0 6px;
-  border: 1px solid transparent;
-  border-radius: 7px;
-  background: none;
-  color: var(--muted);
-  font-family: inherit;
-  font-size: 12px;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background-color .16s var(--ease), color .16s var(--ease), border-color .16s var(--ease);
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  flex: 1; min-width: 0; height: 38px; padding: 0 3px;
+  border: 0; border-bottom: 2px solid transparent; background: transparent;
+  color: var(--muted); font: inherit; font-size: 13px; white-space: nowrap;
 }
-.pr-switch-btn .icon { width: 15px; height: 15px; flex: 0 0 15px; }
-.pr-switch-btn:hover { color: var(--ink); }
-.pr-switch-btn.is-active {
-  border-color: #dbe6fb;
-  background: var(--surface);
-  color: var(--accent);
-  font-weight: 600;
-}
+.pr-switch-btn .icon { width: 15px; height: 15px; }
+.pr-switch-btn:hover { color: var(--accent-hover); }
+.pr-switch-btn.is-active { border-bottom-color: var(--accent); color: var(--accent-hover); font-weight: 600; }
 .pr-switch-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .pr-panel {
@@ -245,11 +224,13 @@
 .pr-doc-meta.is-success { color: #187247; }
 .pr-doc-meta.is-info { color: #245bff; }
 .pr-doc-meta.is-warning { color: #8c5b08; }
+.pr-doc-meta.is-danger { color: #b4232c; }
 .pr-doc-meta .pr-dot { margin-right: 1px; }
 .pr-dot { width: 4px; height: 4px; border-radius: 50%; background: #b4bccb; flex: none; }
 .pr-dot.is-success { background: #187247; }
 .pr-dot.is-info { background: #245bff; }
 .pr-dot.is-warning { background: #c98a1b; }
+.pr-dot.is-danger { background: #b4232c; }
 .pr-dot.is-muted { background: #b4bccb; }
 
 .pr-list-empty { padding: 22px 6px; color: #a6b0c0; font-size: 11.5px; line-height: 1.7; text-align: center; }
@@ -306,42 +287,21 @@
 .pr-doc-action:hover { color: var(--accent); }
 .pr-doc-action .icon { width: 13px; height: 13px; }
 
-.pr-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  height: 38px;
-  padding: 0 14px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
-  color: #6b7688;
-  font-size: 12px;
-  overflow: hidden;
-  white-space: nowrap;
-}
-.pr-toolbar b { color: var(--ink); font-weight: 600; }
-.pr-toolbar i { color: var(--line-strong); font-style: normal; }
-.pr-toolbar .pr-tools { display: flex; align-items: center; gap: 10px; margin-left: auto; color: #8b96a8; }
-.pr-toolbar .pr-tools .icon { width: 14px; height: 14px; }
-
 .pr-canvas {
   position: relative;
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 20px 24px;
+  padding: 0;
 }
 .pr-page {
-  max-width: 560px;
-  min-height: 520px;
+  min-height: 100%;
   margin: 0 auto;
-  padding: 52px 56px;
-  border: 1px solid #e6e9ef;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(29, 36, 51, .06);
+  padding: 16px 18px;
+  background: var(--surface);
   color: var(--ink);
-  font-size: 13.5px;
-  line-height: 2;
+  font-size: 14px;
+  line-height: 1.8;
   outline: none;
   white-space: pre-wrap;
 }
@@ -441,7 +401,6 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-left: 1px solid var(--line);
   background: var(--surface);
 }
 
@@ -621,6 +580,7 @@
 .pr-dialog-foot [data-cancel] { border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
 .pr-dialog-foot [data-confirm] { border: 0; background: var(--accent); color: #fff; font-weight: 600; }
 .pr-dialog-foot [data-confirm]:hover { background: var(--accent-hover); }
+.pr-dialog-foot [data-confirm]:disabled { background: var(--line); color: var(--muted); cursor: default; }
 
 /* ---------- 涉密检测详情弹窗（与百舸文库后台同一套信息结构） ---------- */
 .pr-secret {
@@ -751,7 +711,95 @@
 .pr-timeline li.is-warn p { color: #8c5b08; }
 .pr-timeline span { color: #9aa5b8; font-size: 11px; line-height: 1.6; }
 
-@media (max-width: 1240px) {
-  .pr-app { grid-template-columns: 208px minmax(0, 1fr) 262px; }
-  .pr-page { padding: 40px 36px; }
+@media (max-width: 720px) {
+  .pr-app { height: auto; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; }
+  .pr-rail { max-height: 320px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .pr-canvas { min-height: 410px; }
+  .pr-groups { max-height: 320px; }
 }
+
+.pr-upload { margin: 10px 2px 0; gap: 6px; }
+.pr-upload[hidden] { display: none; }
+.pr-upload .icon, .pr-doc-icon > .icon { width: 16px; height: 16px; }
+
+.pr-app.is-rail-collapsed { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.pr-rail[hidden], .pr-summary[hidden], .pr-bulk[hidden] { display: none; }
+.pr-brand { padding: 18px 16px 12px; }
+.pr-panel { border-top: 0; padding-inline: 12px; }
+.pr-search { background: var(--canvas); }
+.pr-search input::placeholder, .pr-list-empty { color: var(--muted); }
+.pr-doc { padding-block: 10px; }
+.pr-result-head { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px 20px; border-bottom: 1px solid var(--line); }
+.pr-result-head h2 { margin: 0 0 3px; font-size: 18px; line-height: 1.5; }
+.pr-result-head [data-result-file] { display: block; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.pr-result-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pr-result-actions .pr-run { height: 34px; min-height: 34px; margin: 0; padding: 0 12px; }
+.pr-inline-status { margin: 8px 20px 0; font-size: 12px; color: var(--muted); }
+.pr-inline-status:empty { display: none; }
+.pr-review-hint { margin: 12px 2px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.pr-summary { padding: 10px 20px 0; }
+.pr-groups { padding: 10px 20px 20px; }
+.pr-empty { color: var(--muted); }
+.pr-empty svg { width: 28px; height: 28px; stroke: var(--accent); }
+
+@media (max-width: 720px) {
+  .pr-app.is-rail-collapsed { grid-template-columns: minmax(0, 1fr); }
+  .pr-result { border-left: 0; }
+}
+
+/* 文档和审校使用同一栏头高度，列表收起后平分工作区。 */
+.pr-editor-head, .pr-result-head { min-height: 68px; height: auto; flex-shrink: 0; padding: 12px 16px; align-items: center; }
+.pr-document-heading { flex: 1; min-width: 0; }
+.pr-document-heading h2, .pr-result-head h2 { margin: 0; font-size: 18px; line-height: 1.5; font-weight: 600; }
+.pr-document-heading .pr-doc-name { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
+.pr-editor { position: relative; }
+.pr-rail-toggle {
+  position: absolute;
+  z-index: 2;
+  inset-inline-start: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 0 5px 5px 0;
+  background: var(--canvas);
+  color: var(--muted);
+}
+.pr-rail-toggle:focus-visible { outline-offset: -2px; }
+.pr-rail-chevron { display: none; }
+.pr-rail-toggle:hover .pr-rail-grip, .pr-rail-toggle:focus-visible .pr-rail-grip { display: none; }
+.pr-rail-toggle:hover .pr-rail-chevron, .pr-rail-toggle:focus-visible .pr-rail-chevron { display: initial; }
+.pr-rail-toggle[aria-expanded="false"] svg { transform: scaleX(-1); }
+.pr-editor { background: var(--canvas); }
+.pr-result-head > div:first-child { min-width: 0; }
+.pr-result-head [data-result-file] { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pr-result-head > div:first-child { flex: 1 1 120px; }
+.pr-result-actions .pr-run[disabled] { display: none; }
+.pr-switch-btn .icon { display: none; }
+.pr-switch { margin-inline: 12px; }
+
+.pr-issue {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3px 8px;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+  border-color: var(--line);
+  background: var(--surface);
+}
+.pr-issue .pr-diff { margin: 0; flex-wrap: wrap; overflow-wrap: anywhere; font-size: 14px; }
+.pr-issue-type { grid-column: 2 / -1; margin: 0; color: var(--muted); font-size: 12px; }
+.pr-issue-actions { grid-column: 3; grid-row: 1; margin: 0; }
+.pr-issue-actions button { height: 28px; font-size: 12px; }
+.pr-issue-actions button[data-accept] { background: var(--accent-soft); color: var(--accent-hover); border-color: transparent; }
+.pr-issue.is-accepted { opacity: 1; }
+.pr-issue.is-accepted .pr-issue-type { color: var(--success); }
+.pr-issue-num { color: var(--muted); }
+.pr-editor-head, .pr-result-head { min-height: 62px; padding-block: 10px; }
+.pr-groups { padding: 6px 14px 14px; }
+.pr-summary { padding: 8px 14px 4px; }
