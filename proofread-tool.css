@@ -225,6 +225,33 @@
 
 .pr-list-empty { padding: 22px 6px; color: #a6b0c0; font-size: 11.5px; line-height: 1.7; text-align: center; }
 
+/* 删除入口：只在悬停或键盘聚焦时出现，避免列表常驻噪音。 */
+.pr-doc-row { position: relative; }
+.pr-doc-row .pr-doc { padding-right: 32px; }
+.pr-doc-del {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  color: #a6b0c0;
+  opacity: 0;
+  transform: translateY(-50%);
+  cursor: pointer;
+  transition: opacity .16s var(--ease), background-color .16s var(--ease), color .16s var(--ease);
+}
+.pr-doc-row:hover .pr-doc-del,
+.pr-doc-del:focus-visible { opacity: 1; }
+.pr-doc-del:hover { background: #fcebeb; color: #b4232c; }
+.pr-doc-del:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pr-doc-del .icon { width: 14px; height: 14px; }
+
 .pr-end {
   margin: 8px 0 2px;
   padding: 0 6px;
@@ -570,6 +597,22 @@
 .pr-dialog-foot [data-cancel] { border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
 .pr-dialog-foot [data-confirm] { border: 0; background: var(--accent); color: #fff; font-weight: 600; }
 .pr-dialog-foot [data-confirm]:hover { background: var(--accent-hover); }
+
+/* 删除确认：沿用弹窗骨架，主按钮改为危险色。 */
+.pr-confirm { width: 380px; }
+.pr-confirm-text { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.8; }
+.pr-confirm .pr-dialog-foot button {
+  height: 32px;
+  padding: 0 16px;
+  border-radius: 7px;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.pr-confirm [data-delete-cancel] { border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
+.pr-confirm [data-delete-cancel]:hover { border-color: #c7d3e5; color: var(--ink); }
+.pr-confirm [data-delete-ok] { border: 0; background: #b4232c; color: #fff; font-weight: 600; }
+.pr-confirm [data-delete-ok]:hover { background: #991f27; }
 .pr-dialog-foot [data-confirm]:disabled { background: var(--line); color: var(--muted); cursor: default; }
 
 /* ---------- 涉密检测详情弹窗（与百舸文库后台同一套信息结构） ---------- */

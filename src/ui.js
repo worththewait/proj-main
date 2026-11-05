@@ -45,6 +45,7 @@
     menu: '<path d="M4 6h16 M4 12h16 M4 18h16"/>',
     panel: '<rect x="3" y="4" width="18" height="16" rx="1"/><path d="M9 4v16"/>',
     close: '<path d="m6 6 12 12 M18 6 6 18"/>',
+    trash: '<path d="M4 7h16 M9.5 7V4.8a1.2 1.2 0 0 1 1.2-1.2h2.6a1.2 1.2 0 0 1 1.2 1.2V7 M6.6 7l.9 12.2A1.9 1.9 0 0 0 9.4 21h5.2a1.9 1.9 0 0 0 1.9-1.8L17.4 7 M10.2 11v6 M13.8 11v6"/>',
     bell: '<path d="M5 10a7 7 0 0 1 14 0v6l2 3H3l2-3Z M10 22h4 M12 1v2"/>',
     down: '<path d="m6 9 6 6 6-6"/>',
     back: '<path d="M20 12H4 m6-6-6 6 6 6"/>',

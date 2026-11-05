@@ -138,7 +138,8 @@ test("UI submission locks the editor and dismissing the modal preserves a separa
   assert.equal(flow.store.read().history[0].status, 'done');
   ui.root.remove();
   const reopened = flow.mount();
-  assert.equal(reopened.root.querySelector('[data-draft-text]').value, '另一份尚未提交的正文');
+  // 未提交的草稿只存在于当前页面，重新打开工具后不再保留
+  assert.equal(reopened.root.querySelector('[data-draft-text]').value, '');
   reopened.root.querySelector('[data-notice]').emit('click');
   reopened.root.querySelector('[data-accept]').emit('click');
   assert.match(reopened.root.querySelector('[data-doc]').textContent, /严格/);
@@ -258,13 +259,81 @@ test("uploaded files stay local until the user starts a review", () => {
   assert.equal(flow.tick(3000).records[0].secretStatus, "passed");
 });
 
-test("drafts never claim to be saved and uploaded files read as local", () => {
+test("drafts never claim to be saved and stay in memory before submission", () => {
   const js = read("src/proofread-tool.js");
   assert.doesNotMatch(js, /草稿已保存/);
-  assert.match(js, /本地未提交/);
-  assert.match(js, /文件仅保存在本地，点击「开始审校」后上传并做涉密审核/);
+  assert.doesNotMatch(js, /本地未提交/);
+  assert.match(js, /未提交的内容不会保存，刷新或关闭后需重新上传/);
+  assert.match(js, /state\.pending = \[\]/);
+  assert.match(js, /local: true/);
   assert.match(js, /待提交审核/);
-  assert.match(js, /record\.secretStatus === 'draft'/);
+});
+
+test("unsubmitted drafts never reach browser storage", () => {
+  const flow = setupFlow();
+  const ui = flow.mount();
+  const get = selector => ui.root.querySelector(selector);
+  get('[data-new]').emit('click');
+  get('[data-draft-text]').value = '只在内存里的正文';
+  get('[data-draft-text]').emit('input');
+  assert.equal(flow.store.read().records.length, 0);
+  assert.equal(flow.store.read().history.length, 0);
+  assert.equal(flow.storage.get('baige.proofread.v1').includes('只在内存里的正文'), false);
+  get('[data-run]').emit('click');
+  get('[data-confirm]').emit('click');
+  assert.equal(flow.store.read().records.length, 1);
+  assert.equal(flow.store.read().records[0].text, '只在内存里的正文');
+});
+
+test("deleting a file also clears its review history", () => {
+  const flow = setupFlow();
+  const draft = flow.draft("工做");
+  flow.store.startReview({fileId: draft.id, types: ["错别字"]});
+  flow.tick(10000);
+  assert.equal(flow.store.read().records.length, 1);
+  assert.equal(flow.store.read().history.length, 1);
+  flow.store.remove(draft.id);
+  assert.equal(flow.store.read().records.length, 0);
+  assert.equal(flow.store.read().history.length, 0);
+  assert.equal(flow.store.remove(draft.id), null);
+});
+
+test("file list asks for confirmation before deleting a submitted file", () => {
+  const flow = setupFlow();
+  const ui = flow.mount();
+  const get = selector => ui.root.querySelector(selector);
+  get('[data-new]').emit('click');
+  get('[data-draft-text]').value = '要被删除的正文';
+  get('[data-draft-text]').emit('input');
+  get('[data-run]').emit('click');
+  get('[data-confirm]').emit('click');
+  flow.tick(10000);
+  get('[data-view="files"]').emit('click');
+  const remove = get('[data-delete]');
+  assert.ok(remove, '文件列表应有删除入口');
+  remove.emit('click');
+  assert.equal(get('[data-confirm-delete]').open, true);
+  assert.match(get('[data-delete-text]').textContent, /1 条审校记录/);
+  get('[data-delete-ok]').emit('click');
+  assert.equal(get('[data-confirm-delete]').open, false);
+  assert.equal(flow.store.read().records.length, 0);
+  assert.equal(flow.store.read().history.length, 0);
+});
+
+test("unsent drafts can be deleted without touching storage", () => {
+  const flow = setupFlow();
+  const ui = flow.mount();
+  const get = selector => ui.root.querySelector(selector);
+  get('[data-new]').emit('click');
+  get('[data-draft-text]').value = '临时内容';
+  get('[data-draft-text]').emit('input');
+  const remove = get('[data-delete]');
+  assert.ok(remove, '未提交项也应能删除');
+  remove.emit('click');
+  assert.match(get('[data-delete-text]').textContent, /还没有提交/);
+  get('[data-delete-ok]').emit('click');
+  assert.equal(get('[data-pending]'), null);
+  assert.equal(flow.store.read().records.length, 0);
 });
 
 test("detects dictionary typos and punctuation issues in the sample document", () => {

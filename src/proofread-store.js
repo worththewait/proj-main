@@ -187,6 +187,17 @@
     });
   }
 
+  // 删除文件时连同它的审校记录一并清除，避免留下无法打开的孤儿记录。
+  function remove(id) {
+    return change(data => {
+      const index = data.records.findIndex(item => item.id === id);
+      if (index < 0) return null;
+      const [file] = data.records.splice(index, 1);
+      data.history = data.history.filter(item => item.id !== id);
+      return file;
+    });
+  }
+
   function markRead(id) {
     return change(data => {
       const review = data.history.find(item => item.reviewId === id);
@@ -196,6 +207,6 @@
 
   window.BaigeProofreadStore = Object.freeze({
     KEY, read, initialize, createDraft, saveDraft, addUpload, startReview,
-    advance, stopReview, audit, decide, markRead, REVIEW_MS,
+    advance, stopReview, audit, decide, remove, markRead, REVIEW_MS,
   });
 })();

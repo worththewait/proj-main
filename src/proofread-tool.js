@@ -38,7 +38,7 @@
 
   /* 与百舸文库后台一致的四档审查状态。 */
   const SECRET_META = {
-    draft: { label: '本地未提交', tone: 'muted' },
+    draft: { label: '未提交', tone: 'muted' },
     detecting: { label: '检测中', tone: 'info' },
     passed: { label: '已通过', tone: 'success' },
     hit: { label: '涉密可疑', tone: 'warning' },
@@ -62,6 +62,7 @@
     view: 'history',
     history: [],
     session: null,
+    pending: [],
     issues: [],
     ignored: new Set(),
     accepted: new Set(),
@@ -70,6 +71,7 @@
     timer: null,
     seq: 0,
     secretId: '',
+    removeId: '',
     selection: null,
     followReview: '',
     original: false,
@@ -142,8 +144,8 @@
     if (!dom) return;
     const keyword = dom.search.value.trim();
     const history = state.view === 'history';
-    const list = (history ? state.history : state.records)
-      .filter(item => item.name.includes(keyword) || item.fileName?.includes(keyword));
+    const pool = history ? state.history : [...state.pending, ...state.records];
+    const list = pool.filter(item => item.name.includes(keyword) || item.fileName?.includes(keyword));
     if (!list.length) {
       const message = keyword ? '没有匹配的记录' : history ? '还没有审校记录' : '新建审校或上传文件开始使用';
       dom.list.innerHTML = `<li class="pr-list-empty">${message}</li>`;
@@ -151,13 +153,25 @@
       return;
     }
     dom.list.innerHTML = list.map(item => {
-      const { label, tone } = history ? REVIEW_META[item.status] : SECRET_META[item.secretStatus];
-      const selected = history ? state.session?.reviewId === item.reviewId : !state.session?.reviewId && state.session?.id === item.id;
-      return `<li><button type="button" class="pr-doc${selected ? ' is-active' : ''}${item.secretStatus === 'hit' ? ' is-alert' : ''}" ${history ? 'data-review' : 'data-record'}="${history ? item.reviewId : item.id}" aria-current="${selected}" title="${escape(item.name)}">
-        <span class="pr-doc-icon is-upload">${icon(history ? 'history' : 'file')}</span>
-        <span class="pr-doc-body"><span class="pr-doc-name">${escape(item.name)}${item.version > 1 ? ` · V${item.version}` : ''}${history && item.unread ? '<i class="pr-unread" aria-label="新结果"></i>' : ''}</span>
-          <span class="pr-doc-meta is-${tone}"><i class="pr-dot is-${tone}" aria-hidden="true"></i>${label}<b>·</b>${clockOf(history ? item.checkedAt : item.uploadedAt, history)}</span></span>
-      </button></li>`;
+      const local = item.local === true;
+      const active = history
+        ? state.session?.reviewId === item.reviewId
+        : local ? state.selection?.kind === 'pending' && state.selection.id === item.id
+          : !state.session?.reviewId && state.session?.id === item.id;
+      const target = local ? `data-pending="${item.id}"` : history ? `data-review="${item.reviewId}"` : `data-record="${item.id}"`;
+      let meta = `<span class="pr-doc-meta">${clockOf(item.uploadedAt)}</span>`;
+      if (!local) {
+        const { label, tone } = history ? REVIEW_META[item.status] : SECRET_META[item.secretStatus];
+        meta = `<span class="pr-doc-meta is-${tone}"><i class="pr-dot is-${tone}" aria-hidden="true"></i>${label}<b>·</b>${clockOf(history ? item.checkedAt : item.uploadedAt, history)}</span>`;
+      }
+      const removable = !history
+        ? `<button type="button" class="pr-doc-del" data-delete="${item.id}" title="删除文件" aria-label="删除 ${escape(item.name)}">${icon('trash')}</button>`
+        : '';
+      return `<li class="pr-doc-row"><button type="button" class="pr-doc${active ? ' is-active' : ''}${!local && item.secretStatus === 'hit' ? ' is-alert' : ''}" ${target} aria-current="${active}" title="${escape(item.name)}">
+        <span class="pr-doc-icon is-upload">${icon(local ? (item.source === 'upload' ? 'file' : 'newchat') : history ? 'history' : 'file')}</span>
+        <span class="pr-doc-body"><span class="pr-doc-name">${escape(item.name)}${!local && item.version > 1 ? ` · V${item.version}` : ''}${!local && history && item.unread ? '<i class="pr-unread" aria-label="新结果"></i>' : ''}</span>
+          ${meta}</span>
+      </button>${removable}</li>`;
     }).join('');
     dom.end.hidden = false;
   }
@@ -194,7 +208,7 @@
       dom.draftText.value = record.text;
       dom.guard.hidden = true;
       dom.docName.textContent = record.source === 'upload'
-        ? '文件仅保存在本地，点击「开始审校」后上传并做涉密审核'
+        ? '未提交的内容不会保存，刷新或关闭后需重新上传'
         : '输入或粘贴正文，提交后仅可通过审校建议修订';
       dom.charCount.textContent = `字数统计 ${charCount(record.text)}`;
       return;
@@ -279,7 +293,7 @@
     if (!hasIssues) {
       const messages = {
         idle: !record ? '选择审校记录查看结果，或从「文件选择」预览原文。'
-          : record.secretStatus === 'draft' && !record.reviewId ? '文件仅保存在本地，点击「开始审校」后上传并做涉密审核。'
+          : record.secretStatus === 'draft' && !record.reviewId ? '点击「开始审校」后才会保存并提交审核，未提交的内容刷新后不保留。'
           : '确认文档原文后，点击「开始审校」选择审校范围。',
         done: '本次审校在所选范围内未发现需要修改的事项。',
         stopped: '本次审校已停止。重新审校会创建一条新记录。',
@@ -424,9 +438,11 @@
   function sync(data = store.read()) {
     state.records = data.records;
     state.history = data.history;
-    const record = state.selection?.kind === 'review'
-      ? data.history.find(item => item.reviewId === state.selection.id)
-      : data.records.find(item => item.id === state.selection?.id);
+    const record = state.selection?.kind === 'pending'
+      ? state.pending.find(item => item.id === state.selection.id)
+      : state.selection?.kind === 'review'
+        ? data.history.find(item => item.reviewId === state.selection.id)
+        : data.records.find(item => item.id === state.selection?.id);
     const file = data.records.find(item => item.id === record?.id);
     state.session = record ? {...record, secretStatus: file?.secretStatus || record.secretStatus} : null;
     state.status = record?.status || 'idle';
@@ -490,6 +506,24 @@
   }
 
   function saveDraft() {
+    if (state.selection?.kind === 'pending') {
+      const pending = state.pending.find(item => item.id === state.selection.id);
+      if (!pending) return true;
+      const nextName = dom.draftTitle.value.trim() || pending.name;
+      const renamed = nextName !== pending.name;
+      pending.name = nextName;
+      pending.text = dom.draftText.value;
+      // 待提交项没有存储快照，这里同步一次会话对象，保证提交时拿到最新正文。
+      sync();
+      if (renamed) renderDocs();
+      state.unsaved = false;
+      state.onDirty(false);
+      dom.root.dataset.autosaved = 'true';
+      dom.saveState.textContent = '';
+      dom.saveRetry.hidden = true;
+      dom.charCount.textContent = `字数统计 ${charCount(pending.text)}`;
+      return true;
+    }
     try {
       const draft = store.saveDraft(state.session.id, dom.draftTitle.value, dom.draftText.value);
       state.unsaved = false;
@@ -527,10 +561,13 @@
 
   function newDraft() {
     if (!canLeaveDraft()) return;
-    const draft = perform(() => store.createDraft());
-    if (!draft) return;
+    const draft = {
+      id: uid('pending'), name: '未命名审校', fileName: '', text: '', source: 'new',
+      secretStatus: 'draft', version: 1, uploadedAt: Date.now(), local: true,
+    };
+    state.pending.unshift(draft);
     state.view = 'files';
-    select('file', draft.id);
+    select('pending', draft.id);
     dom.draftText.focus();
   }
 
@@ -571,21 +608,39 @@
     const selection = JSON.stringify(state.selection);
     const reader = new FileReader();
     reader.onload = () => {
-      const record = perform(() => store.addUpload(file.name, String(reader.result || '')));
-      if (!record) return;
-      if (JSON.stringify(state.selection) !== selection) { hint('文件已上传，可从文件列表查看检测进度。'); return; }
+      const record = {
+        id: uid('pending'), name: file.name.replace(/\.(txt|md)$/i, ''), fileName: file.name,
+        text: String(reader.result || ''), source: 'upload', secretStatus: 'draft', keywords: [],
+        version: 1, uploadedAt: Date.now(), local: true,
+      };
+      state.pending.unshift(record);
+      if (JSON.stringify(state.selection) !== selection) { hint('文件已加入列表，点击「开始审校」后才会提交。'); return; }
       state.view = 'files';
-      select('file', record.id);
+      select('pending', record.id);
     };
     reader.onerror = () => hint('文件读取失败，请重新上传。');
     reader.readAsText(file, 'utf-8');
   }
 
+  function commitPending(record) {
+    if (record.source === 'upload') return store.addUpload(record.fileName, record.text);
+    const draft = store.createDraft();
+    return store.saveDraft(draft.id, record.name, record.text);
+  }
+
   function startCheck(reviewTypes) {
     const record = activeRecord();
     if (!record || state.unsaved) return;
+    if (!record.text.trim()) { hint('请先输入需要审校的正文。'); return; }
+    let fileId = record.id;
+    if (state.selection?.kind === 'pending') {
+      const file = perform(() => commitPending(record));
+      if (!file) return;
+      state.pending = state.pending.filter(item => item.id !== record.id);
+      fileId = file.id;
+    }
     const review = perform(() => store.startReview({
-      fileId: record.id, reviewId: record.reviewId, types: reviewTypes,
+      fileId, reviewId: record.reviewId, types: reviewTypes,
     }));
     if (!review) return;
     state.view = 'history';
@@ -612,6 +667,46 @@
   function ignoreIssue(id) { perform(() => store.decide(state.session.reviewId, id, false)); }
   function acceptAll() { acceptIssue('all'); }
   function ignoreAll() { ignoreIssue('all'); }
+
+  function askDelete(id) {
+    const pending = state.pending.find(item => item.id === id);
+    const file = pending || state.records.find(item => item.id === id);
+    if (!file) return;
+    const reviews = state.history.filter(item => item.id === id).length;
+    state.removeId = id;
+    dom.deleteText.textContent = pending
+      ? `「${file.name}」还没有提交，删除后需要重新上传或重新输入。`
+      : reviews
+        ? `「${file.name}」有 ${reviews} 条审校记录，删除后文件和记录一并移除，无法恢复。`
+        : `「${file.name}」删除后无法恢复。`;
+    dom.confirmDelete.showModal();
+  }
+
+  function removeFile() {
+    const id = state.removeId;
+    state.removeId = '';
+    dom.confirmDelete.close();
+    if (!id) return;
+    const isPending = state.pending.some(item => item.id === id);
+    if (isPending) {
+      state.pending = state.pending.filter(item => item.id !== id);
+    } else if (!perform(() => store.remove(id))) {
+      return;
+    }
+    if (state.selection?.id === id || state.session?.id === id) {
+      const nextPending = state.pending[0];
+      const nextRecord = state.records[0];
+      const nextReview = state.history[0];
+      state.selection = nextPending ? {kind: 'pending', id: nextPending.id}
+        : nextRecord ? {kind: 'file', id: nextRecord.id}
+          : nextReview ? {kind: 'review', id: nextReview.reviewId} : null;
+      if (state.selection?.kind === 'review') state.view = 'history';
+    }
+    try { remember(); } catch { /* 位置保存失败不影响删除结果 */ }
+    sync();
+    renderAll();
+    hint('已删除该文件。');
+  }
 
   function submitAudit(id) { perform(() => store.audit(id, 'submitted')); }
   function approveAudit(id) { perform(() => store.audit(id, 'passed')); tick(); }
@@ -704,6 +799,15 @@
         </div>
       </dialog>
 
+      <dialog class="pr-dialog pr-confirm" data-confirm-delete aria-labelledby="prDeleteTitle">
+        <h2 id="prDeleteTitle">删除文件</h2>
+        <div class="pr-dialog-body"><p class="pr-confirm-text" data-delete-text></p></div>
+        <div class="pr-dialog-foot">
+          <button type="button" data-delete-cancel>取消</button>
+          <button type="button" class="is-danger" data-delete-ok>删除</button>
+        </div>
+      </dialog>
+
       <dialog class="pr-secret" data-secret aria-labelledby="prSecretTitle">
         <header class="pr-secret-head">
           <h2 id="prSecretTitle" data-secret-title>涉密检测详情</h2>
@@ -745,6 +849,8 @@
       charCount: root.querySelector('[data-char]'),
       status: root.querySelector('[data-status]'),
       dialog: root.querySelector('[data-dialog]'),
+      confirmDelete: root.querySelector('[data-confirm-delete]'),
+      deleteText: root.querySelector('[data-delete-text]'),
       secret: root.querySelector('[data-secret]'),
       secretTitle: root.querySelector('[data-secret-title]'),
       secretBody: root.querySelector('[data-secret-body]'),
@@ -783,10 +889,14 @@
 
     dom.search.addEventListener('input', renderDocs);
     dom.list.addEventListener('click', event => {
+      const remove = event.target.closest('[data-delete]');
+      if (remove) { askDelete(remove.dataset.delete); return; }
       const file = event.target.closest('[data-record]');
       const review = event.target.closest('[data-review]');
+      const pending = event.target.closest('[data-pending]');
       if (file) openDoc(file.dataset.record);
       if (review) openReview(review.dataset.review);
+      if (pending && canLeaveDraft()) select('pending', pending.dataset.pending);
     });
 
     dom.guard.addEventListener('click', (event) => {
@@ -854,6 +964,13 @@
       startCheck(reviewTypes);
     });
 
+    dom.confirmDelete.querySelector('[data-delete-cancel]').addEventListener('click', () => {
+      state.removeId = '';
+      dom.confirmDelete.close();
+    });
+    dom.confirmDelete.querySelector('[data-delete-ok]').addEventListener('click', removeFile);
+    dom.confirmDelete.addEventListener('cancel', () => { state.removeId = ''; });
+
     dom.secret.addEventListener('click', (event) => {
       const id = state.secretId;
       if (event.target.closest('[data-secret-x]') || event.target.closest('[data-secret-close]') || event.target === dom.secret) {
@@ -913,6 +1030,7 @@
       const selection = JSON.parse(window.localStorage.getItem('baige.proofread.selection') || 'null');
       state.selection = selection?.selection || {kind: 'review', id: history[0].reviewId};
       state.view = selection?.view || 'history';
+      state.pending = [];
       state.unsaved = false;
       state.foreground = true;
       state.original = false;
