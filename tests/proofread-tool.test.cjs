@@ -244,6 +244,29 @@ test("empty submissions and failed saves never create partial or duplicated task
   assert.equal(flow.store.read().records[0].secretStatus, "draft");
 });
 
+test("uploaded files stay local until the user starts a review", () => {
+  const flow = setupFlow();
+  const file = flow.store.addUpload("会议纪要.txt", "工做内容");
+  assert.equal(file.source, "upload");
+  assert.equal(file.secretStatus, "draft");
+  // 只保存到本地：时间推进也不会自动进入涉密检测
+  assert.equal(flow.tick(10000).records[0].secretStatus, "draft");
+  // 点击「开始审校」时才提交并触发涉密审核
+  const review = flow.store.startReview({fileId: file.id, types: ["错别字"]});
+  assert.equal(review.status, "detecting");
+  assert.equal(flow.store.read().records[0].secretStatus, "detecting");
+  assert.equal(flow.tick(3000).records[0].secretStatus, "passed");
+});
+
+test("drafts never claim to be saved and uploaded files read as local", () => {
+  const js = read("src/proofread-tool.js");
+  assert.doesNotMatch(js, /草稿已保存/);
+  assert.match(js, /本地未提交/);
+  assert.match(js, /文件仅保存在本地，点击「开始审校」后上传并做涉密审核/);
+  assert.match(js, /待提交审核/);
+  assert.match(js, /record\.secretStatus === 'draft'/);
+});
+
 test("detects dictionary typos and punctuation issues in the sample document", () => {
   const tool = loadTool();
   const issues = tool.detect("各部门需要对本年度的工做进行严各的审校，确宝数据准却，，其它事项另行通知。");

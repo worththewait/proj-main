@@ -38,7 +38,7 @@
 
   /* 与百舸文库后台一致的四档审查状态。 */
   const SECRET_META = {
-    draft: { label: '草稿', tone: 'muted' },
+    draft: { label: '本地未提交', tone: 'muted' },
     detecting: { label: '检测中', tone: 'info' },
     passed: { label: '已通过', tone: 'success' },
     hit: { label: '涉密可疑', tone: 'warning' },
@@ -183,16 +183,19 @@
     const draft = record?.secretStatus === 'draft';
     dom.draft.hidden = !draft;
     dom.page.hidden = draft;
-    dom.originalToggle.hidden = !record?.reviewId;
+    const reviewed = Boolean(record?.reviewId) && ['done', 'stopped'].includes(record?.status);
+    dom.originalToggle.hidden = !reviewed;
     dom.originalToggle.textContent = state.original ? '查看修订稿' : '查看原文';
-    dom.editorTitle.textContent = draft ? '新建审校' : record?.reviewId ? (state.original ? '原文' : '修订稿') : '文档预览';
-    dom.saveState.textContent = draft ? (state.unsaved ? '保存失败，请重试' : '草稿已保存') : record ? '正文已锁定' : '';
+    dom.editorTitle.textContent = draft ? (record.source === 'upload' ? '本地文件' : '新建审校') : reviewed ? (state.original ? '原文' : '修订稿') : '文档预览';
+    dom.saveState.textContent = state.unsaved ? '保存失败，请重试' : draft ? '' : record ? '正文已锁定' : '';
     dom.saveRetry.hidden = !state.unsaved;
     if (draft) {
       dom.draftTitle.value = record.name === '未命名审校' ? '' : record.name;
       dom.draftText.value = record.text;
       dom.guard.hidden = true;
-      dom.docName.textContent = '输入或粘贴正文，提交后仅可通过审校建议修订';
+      dom.docName.textContent = record.source === 'upload'
+        ? '文件仅保存在本地，点击「开始审校」后上传并做涉密审核'
+        : '输入或粘贴正文，提交后仅可通过审校建议修订';
       dom.charCount.textContent = `字数统计 ${charCount(record.text)}`;
       return;
     }
@@ -275,7 +278,9 @@
     }
     if (!hasIssues) {
       const messages = {
-        idle: record ? '确认文档原文后，点击「开始审校」选择审校范围。' : '选择审校记录查看结果，或从「文件选择」预览原文。',
+        idle: !record ? '选择审校记录查看结果，或从「文件选择」预览原文。'
+          : record.secretStatus === 'draft' && !record.reviewId ? '文件仅保存在本地，点击「开始审校」后上传并做涉密审核。'
+          : '确认文档原文后，点击「开始审校」选择审校范围。',
         done: '本次审校在所选范围内未发现需要修改的事项。',
         stopped: '本次审校已停止。重新审校会创建一条新记录。',
         failed: '本次审校未完成，请点击「重新审校」。',
@@ -341,7 +346,7 @@
     let html = '';
     if (record.secretStatus === 'detecting') {
       const task = state.history.find(item => item.id === record.id && item.status === 'detecting');
-      html += `<div class="pr-secret-loading" role="status"><span class="pr-spinner" aria-hidden="true"></span><h3>正在进行涉密审核</h3><p>${task ? '任务已保存，可关闭弹窗。审核通过后自动开始审校，可从左侧审校记录查看进度和结果。' : '文件已保存，可关闭弹窗。检测通过后可在文件列表预览并开始审校。'}</p></div>`;
+      html += `<div class="pr-secret-loading" role="status"><span class="pr-spinner" aria-hidden="true"></span><h3>正在上传并审核</h3><p>${task ? '文件已提交至服务器，正在做涉密审核；通过后自动开始审校。可关闭弹窗，稍后从审校记录查看进度和结果。' : '文件已提交至服务器，正在做涉密审核；通过后可在文件列表预览并开始审校。'}</p></div>`;
     }
     if (risky) {
       html += `<div class="pr-alert">
@@ -371,6 +376,10 @@
     const rows = [
       `<li class="is-done"><i aria-hidden="true"></i><div><p>用户发起上传</p><span>${clockOf(record.uploadedAt)}</span></div></li>`,
     ];
+    if (record.secretStatus === 'draft') {
+      rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>待提交审核</p><span>文件仅保存在本地，点击「开始审校」后上传</span></div></li>`);
+      return rows.join('');
+    }
     if (record.secretStatus === 'detecting') {
       rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>系统涉密检测中</p><span>检测完成前文档不会载入编辑区</span></div></li>`);
       return rows.join('');
@@ -487,7 +496,7 @@
       dom.root.dataset.autosaved = 'true';
       state.onDirty(false);
       sync();
-      dom.saveState.textContent = '草稿已保存';
+      dom.saveState.textContent = '';
       dom.saveRetry.hidden = true;
       dom.charCount.textContent = `字数统计 ${charCount(draft.text)}`;
       renderDocs();
@@ -567,7 +576,6 @@
       if (JSON.stringify(state.selection) !== selection) { hint('文件已上传，可从文件列表查看检测进度。'); return; }
       state.view = 'files';
       select('file', record.id);
-      openSecret(record.id);
     };
     reader.onerror = () => hint('文件读取失败，请重新上传。');
     reader.readAsText(file, 'utf-8');

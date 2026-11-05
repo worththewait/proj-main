@@ -55,12 +55,13 @@
     });
   }
 
+  // 上传只落在本地草稿：用户点击「开始审校」时才提交并触发涉密审核。
   function addUpload(name, text) {
     return change(data => {
       const file = {
         id: uid('doc'), name: name.replace(/\.(txt|md)$/i, ''), fileName: name,
-        text, source: 'upload', secretStatus: 'detecting', keywords: [], version: 1,
-        uploadedAt: Date.now(), detectAt: Date.now() + DETECT_MS,
+        text, source: 'upload', secretStatus: 'draft', keywords: [], version: 1,
+        uploadedAt: Date.now(),
       };
       data.records.unshift(file);
       return file;
