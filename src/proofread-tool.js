@@ -611,7 +611,7 @@
   function build(root) {
     root.classList.add('proofread-workspace');
     root.innerHTML = `
-      <div class="pr-app">
+      <div class="pr-app tool-workspace-frame">
         <aside class="pr-rail" id="proofreadRail" aria-label="审校记录与文件">
           <div class="pr-brand">
             <span class="pr-logo" aria-hidden="true">${icon('check')}</span>

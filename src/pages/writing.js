@@ -17,7 +17,7 @@
   let currentDoc = null;
   let composeState = { scenario: "", sources: { personal: true, enterprise: true, web: true }, extras: { conclusion: false, summary: false, references: false }, uploads: new Set() };
   let wizardStep = 1;
-  let wizardState = { title: "", source: "", uploads: new Set(), extras: { conclusion: false, summary: false, references: false } };
+  let wizardState = { title: "", knowledge: false, uploads: new Set(), extras: { conclusion: false, summary: false, references: false } };
   let chapterEdit = null;
   let toastTimer = null;
   let rightTab = "thought";
@@ -36,7 +36,6 @@
     return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
   function statusLabel(status) { return { passed: "已通过", hit: "涉密可疑", submitted: "审核中", rejected: "已驳回", detecting: "检测中" }[status] || status; }
-  function statusHtml(status) { return `<span class="wr-status ${escape(status)}">${statusLabel(status)}</span>`; }
   function parseLabel(status) { return { unparsed: "未解析", parsing: "解析中", parsed: "已解析", failed: "解析失败" }[status] || "未解析"; }
   function parseHtml(status) { return `<span class="wr-tag parse-${escape(status || "unparsed")}">${parseLabel(status)}</span>`; }
   function secretTagHtml(status) { return `<span class="wr-tag secret-${escape(status)}">${statusLabel(status)}</span>`; }
@@ -50,19 +49,16 @@
   filePicker.addEventListener("change", () => {
     const files = Array.from(filePicker.files || []);
     filePicker.value = "";
-    if (!files.length) return;
+    if (view !== "materials" || !files.length) return;
     const allowed = /\.(pdf|doc|docx|ppt|pptx)$/i;
     const invalid = files.find((file) => !allowed.test(file.name) || file.size > 200 * 1024 * 1024);
     if (invalid) { toast(`${invalid.name} 格式或大小不符合要求。`); return; }
-    const room = Math.max(0, 5 - store.uploads().length);
-    if (!room) { toast("最多只能上传 5 个文件。"); return; }
-    store.addUploads(files.slice(0, room));
-    if (view === "wizard" && wizardStep === 2) wizardState.source = "upload";
-    if (view === "wizard") renderWizard();
-    if (composeDialog.open) renderComposeUploads();
-    toast(`已选择 ${Math.min(files.length, room)} 个文件，正在检测涉密内容`);
+    const count = store.addUploads(files);
+    if (!count) { toast("最多只能上传 5 个文件。"); return; }
+    toast(count < files.length ? `已上传 ${count} 个文件，其余文件超过数量上限。` : `已上传 ${count} 个文件，正在检测涉密内容`);
   });
   function openFilePicker() {
+    if (view !== "materials") return;
     if (store.uploads().length >= 5) { toast("最多只能上传 5 个文件。"); return; }
     filePicker.click();
   }
@@ -70,7 +66,7 @@
   function renderTemplates() {
     view = "templates";
     const templates = store.templates().filter((item) => item.scope === templateTab);
-    root.innerHTML = `<header class="wr-head"><div><h1>欢迎使用 <em>智能专业写作</em></h1><p>选择模板开始写作，或从大纲搭建专业内容框架。</p></div></header>
+    root.innerHTML = `<header class="wr-head wr-materials-head"><div><h1>欢迎使用 <em>智能专业写作</em></h1><p>选择模板开始写作，或从大纲搭建专业内容框架。</p></div><div class="wr-head-actions"><button class="wr-btn" type="button" data-wr-manage-materials>素材管理</button></div></header>
       <section class="wr-templates"><div class="wr-tabs" role="tablist" aria-label="模板范围"><button class="wr-tab ${templateTab === "personal" ? "is-active" : ""}" type="button" data-template-tab="personal" role="tab" aria-selected="${templateTab === "personal"}">个人模板</button><button class="wr-tab ${templateTab === "public" ? "is-active" : ""}" type="button" data-template-tab="public" role="tab" aria-selected="${templateTab === "public"}">公共模板</button></div>
       <div class="wr-template-grid">${templates.length ? templates.map((template) => `<article class="wr-template-card"><h3>${html(template.name)}</h3><span class="wr-template-mode">${html(template.mode)}</span><p>${html(template.description)}</p><div class="wr-template-actions"><button class="wr-btn" type="button" data-template-outline="${html(template.id)}">大纲预览</button><button class="wr-btn is-primary" type="button" data-template-use="${html(template.id)}">使用模板</button></div></article>`).join("") : '<div class="wr-template-empty">暂无模板</div>'}</div></section>`;
   }
@@ -91,7 +87,7 @@
     activeTemplate = template;
     outline = cloneOutline(template.outline);
     wizardStep = 1;
-    wizardState = { title: "", source: "", uploads: new Set(), extras: { conclusion: false, summary: false, references: false } };
+    wizardState = { title: "", knowledge: false, uploads: new Set(), extras: { conclusion: false, summary: false, references: false } };
     view = "wizard";
     render();
   }
@@ -174,19 +170,37 @@
     renderOutline();
   }
 
-  function uploadTableHtml(attribute, selected) {
+  function renderMaterials() {
+    root.innerHTML = `<header class="wr-head wr-materials-head"><div><h1 tabindex="-1">素材管理</h1><p>上传文件并查看涉密审核状态。审核通过的文件可供个人模板和公共模板选用。</p></div><div class="wr-head-actions"><button class="wr-btn" type="button" data-writing-back>返回模板</button><button class="wr-btn is-primary" type="button" data-wr-material-upload>上传文件</button></div></header>
+      <p class="wr-materials-help">支持 PDF、Word、PPT，单个文件不超过 200 MB。<span data-wr-material-count></span></p>
+      <section aria-label="写作素材文件" data-wr-material-table></section>`;
+    renderMaterialTable();
+    root.querySelector("h1")?.focus();
+  }
+  function renderMaterialTable() {
     const uploads = store.uploads();
-    if (!uploads.length) return '<div class="wr-upload-empty">暂无文件，点击「上传」选择文件</div>';
+    root.querySelector("[data-wr-material-count]").textContent = `已上传 ${uploads.length} / 5 个文件`;
+    root.querySelector("[data-wr-material-table]").innerHTML = uploadTableHtml(uploads);
+  }
+  function uploadTableHtml(uploads) {
+    if (!uploads.length) return '<p class="wr-material-empty">还没有写作素材。点击「上传文件」添加。</p>';
     const rows = uploads.map((item) => {
       const passed = item.status === "passed";
-      const checked = passed && selected.has(item.id);
       const eye = `<button class="wr-eye" type="button" data-wr-secret="${html(item.id)}" title="查看涉密检测详情" aria-label="查看${html(item.name)}的涉密检测详情">👁</button>`;
       const actions = passed
         ? `<div class="wr-file-actions"><button type="button" data-wr-file-action="preview" data-wr-file-id="${html(item.id)}" title="预览文档">📄</button><button type="button" data-wr-file-action="download" data-wr-file-id="${html(item.id)}" title="下载文件">⬇</button><button type="button" data-wr-file-action="refresh" data-wr-file-id="${html(item.id)}" title="刷新状态">🔄</button><button type="button" data-wr-file-action="edit" data-wr-file-id="${html(item.id)}" title="编辑信息">✏</button><button class="is-danger" type="button" data-wr-file-action="delete" data-wr-file-id="${html(item.id)}" title="删除文件">🗑</button></div>`
         : '<span class="wr-file-muted">—</span>';
-      return `<tr class="${passed ? "" : "is-locked"}"><td class="wr-check-cell"><input type="checkbox" ${attribute}="${html(item.id)}" ${checked ? "checked" : ""} ${passed ? "" : "disabled"} aria-label="选择${html(item.name)}" /></td><td><div class="wr-file-name"><span class="wr-file-icon is-${html(fileType(item).toLowerCase())}">${fileType(item)}</span><span title="${html(item.name)}">${html(item.name)}</span></div></td><td>${html(item.source || "本地上传")}</td><td>${html(item.category || "写作素材")}</td><td>${html(item.version || "V1.0.0")}</td><td>${html(item.createdAt || "-")}</td><td>${parseHtml(item.parseStatus)}</td><td><div class="wr-secret-cell">${secretTagHtml(item.status)}${eye}</div></td><td>${html(item.updatedAt || "-")}</td><td>${actions}</td></tr>`;
+      return `<tr class="${passed ? "" : "is-locked"}"><td><div class="wr-file-name"><span class="wr-file-icon is-${html(fileType(item).toLowerCase())}">${fileType(item)}</span><span title="${html(item.name)}">${html(item.name)}</span></div></td><td>${html(item.source || "本地上传")}</td><td>${html(item.category || "写作素材")}</td><td>${html(item.version || "V1.0.0")}</td><td>${html(item.createdAt || "-")}</td><td>${parseHtml(item.parseStatus)}</td><td><div class="wr-secret-cell">${secretTagHtml(item.status)}${eye}</div></td><td>${html(item.updatedAt || "-")}</td><td>${actions}</td></tr>`;
     }).join("");
-    return `<div class="wr-file-table-wrap"><table class="wr-file-table"><thead><tr><th class="wr-check-cell"></th><th>文件名</th><th>文件来源</th><th>文档类型</th><th>版本号</th><th>创建时间</th><th>解析状态</th><th>涉密审查状态</th><th>最近更新</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<div class="wr-file-table-wrap" tabindex="0" role="region" aria-label="素材文件列表"><table class="wr-file-table"><thead><tr><th>文件名</th><th>文件来源</th><th>文档类型</th><th>版本号</th><th>创建时间</th><th>解析状态</th><th>涉密审查状态</th><th>最近更新</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  function materialPickerHtml(attribute, selected) {
+    const files = store.selectableUploads();
+    if (!files.length) return '<p class="wr-material-empty">暂无可选文件。可返回模板列表，在「素材管理」上传文件并查看审核进度。</p>';
+    return `<ul class="wr-material-choices">${files.map((file) => `<li><label class="wr-material-choice"><input type="checkbox" ${attribute}="${html(file.id)}" ${selected.has(file.id) ? "checked" : ""} /><span class="wr-material-choice-name">${html(file.name)}</span><span class="wr-material-choice-size">${fileSize(file.size)}</span></label></li>`).join("")}</ul>`;
+  }
+  function selectedMaterials(selected) {
+    return store.selectableUploads().filter((item) => selected.has(item.id));
   }
   function secretTimeline(item) {
     const rows = [`<div class="wr-tl-item"><div class="wr-tl-dot">⬆</div><div><strong>用户发起上传</strong><small>${html(item.createdAt || "-")}</small></div></div>`];
@@ -210,11 +224,6 @@
     secretDetailDialog.innerHTML = `<header class="wr-dialog-head"><h2 id="secretDetailTitle">涉密检测详情 — ${statusLabel(item.status)}</h2><button class="wr-dialog-close" type="button" data-wr-secret-close>×</button></header><div class="wr-dialog-body">${danger ? `<div class="wr-secret-alert"><span>⚠</span><div><strong>检测到涉密内容</strong><p>${html(item.message || "系统检测到该文件包含敏感关键词。")}</p>${kws ? `<div class="wr-kw-row"><b>命中关键词</b>${kws}</div>` : ""}</div></div>` : ""}<div class="wr-file-meta"><div><span>文件名</span><strong>${html(item.name)}</strong></div><div><span>版本号</span><strong>${html(item.version || "V1.0.0")}</strong></div><div><span>文件来源</span><strong>${html(item.source || "本地上传")}</strong></div><div><span>文档类型</span><strong>${html(item.category || "写作素材")}</strong></div><div><span>创建时间</span><strong>${html(item.createdAt || "-")}</strong></div><div><span>解析状态</span><strong>${parseLabel(item.parseStatus)}</strong></div><div><span>涉密审查状态</span><strong>${statusLabel(item.status)}</strong></div><div><span>最近更新</span><strong>${html(item.updatedAt || "-")}</strong></div></div><div class="wr-section-title" style="margin-top:20px"><span>流转记录</span></div>${secretTimeline(item)}</div><footer class="wr-dialog-foot">${footer}</footer>`;
     secretDetailDialog.showModal();
   }
-  function refreshUploadViews() {
-    if (view === "wizard") renderWizard();
-    if (composeDialog.open) renderComposeUploads();
-  }
-  function selectableUploads() { return store.uploads().filter((item) => item.status === "passed"); }
   function openComposeDialog() {
     composeState = { scenario: "", sources: { personal: true, enterprise: true, web: true }, extras: { conclusion: false, summary: false, references: false }, uploads: new Set() };
     renderComposeDialog();
@@ -224,7 +233,7 @@
   function renderComposeDialog() {
     composeDialog.innerHTML = `<header class="wr-dialog-head"><h2 id="composeDialogTitle">新建写作</h2><button class="wr-dialog-close" type="button" data-wr-close>×</button></header>
       <div class="wr-dialog-body"><label class="wr-field"><span>写作场景 <em>*</em></span><input class="wr-input" id="wrScenario" maxlength="100" placeholder="请输入写作场景" value="${html(composeState.scenario)}" /></label>
-      <div class="wr-field"><span>写作参考文档 <small style="font-weight:400;color:#8b97a8">配置将应用至全部章节</small></span><div class="wr-source-toggles"><button class="wr-source-toggle ${composeState.sources.personal ? "is-active" : ""}" type="button" data-wr-source="personal">个人知识库</button><button class="wr-source-toggle ${composeState.sources.enterprise ? "is-active" : ""}" type="button" data-wr-source="enterprise">企业知识库</button><button class="wr-source-toggle ${composeState.sources.web ? "is-active" : ""}" type="button" data-wr-source="web">联网搜索</button><button class="wr-source-toggle" type="button" id="wrOpenUpload">上传文件</button></div><p class="wr-hint">上传文档需通过涉密检测：只有“已通过”的文档才可勾选，涉密可疑文档将禁用。</p><div class="wr-upload-list" id="wrComposeUploads"></div></div>
+      <div class="wr-field"><span>写作参考文档 <small style="font-weight:400;color:#8b97a8">配置将应用至全部章节</small></span><div class="wr-source-toggles"><button class="wr-source-toggle ${composeState.sources.personal ? "is-active" : ""}" type="button" data-wr-source="personal">个人知识库</button><button class="wr-source-toggle ${composeState.sources.enterprise ? "is-active" : ""}" type="button" data-wr-source="enterprise">企业知识库</button><button class="wr-source-toggle ${composeState.sources.web ? "is-active" : ""}" type="button" data-wr-source="web">联网搜索</button></div><p class="wr-hint">可从素材管理中选择已通过涉密审核的文件。</p><div class="wr-upload-list" id="wrComposeUploads"></div></div>
       <div class="wr-toggle-row"><span>生成绪论</span><label class="wr-switch"><input type="checkbox" data-wr-extra="conclusion" ${composeState.extras.conclusion ? "checked" : ""} /><i></i></label></div>
       <div class="wr-toggle-row"><span>全文总结</span><label class="wr-switch"><input type="checkbox" data-wr-extra="summary" ${composeState.extras.summary ? "checked" : ""} /><i></i></label></div>
       <div class="wr-toggle-row"><span>参考文献</span><label class="wr-switch"><input type="checkbox" data-wr-extra="references" ${composeState.extras.references ? "checked" : ""} /><i></i></label></div>
@@ -237,14 +246,13 @@
       button.classList.toggle("is-active", composeState.sources[key]);
     }));
     composeDialog.querySelectorAll("[data-wr-extra]").forEach((input) => input.addEventListener("change", () => { composeState.extras[input.dataset.wrExtra] = input.checked; }));
-    composeDialog.querySelector("#wrOpenUpload").addEventListener("click", openFilePicker);
     composeDialog.querySelector("#wrComposeSubmit").addEventListener("click", generateDocument);
     renderComposeUploads();
   }
   function renderComposeUploads() {
     const box = composeDialog.querySelector("#wrComposeUploads");
     if (!box) return;
-    box.innerHTML = uploadTableHtml("data-wr-upload", composeState.uploads);
+    box.innerHTML = materialPickerHtml("data-wr-upload", composeState.uploads);
     box.querySelectorAll("[data-wr-upload]").forEach((input) => input.addEventListener("change", () => {
       if (input.checked) composeState.uploads.add(input.dataset.wrUpload); else composeState.uploads.delete(input.dataset.wrUpload);
     }));
@@ -289,7 +297,7 @@
       composeDialog.querySelector("#wrComposeFeedback").textContent = "请填写写作场景。";
       return;
     }
-    const selectedUploads = store.uploads().filter((item) => composeState.uploads.has(item.id) && item.status === "passed");
+    const selectedUploads = selectedMaterials(composeState.uploads);
     composeDialog.close();
     createDocument({
       title: scenario,
@@ -332,10 +340,10 @@
     }).join("");
   }
   function wizardUploadsHtml() {
-    return uploadTableHtml("data-wr-wizard-upload", wizardState.uploads);
+    return materialPickerHtml("data-wr-wizard-upload", wizardState.uploads);
   }
   function stepMarkup() {
-    const steps = [[1, "输入文章标题"], [2, "上传素材"], [3, "选择工具"]];
+    const steps = [[1, "输入文章标题"], [2, "选择素材"], [3, "选择工具"]];
     return steps.map(([number, label], index) => `<div class="wr-step ${wizardStep === number ? "is-current" : ""} ${wizardStep > number ? "is-done" : ""}"><span class="wr-step-index">${wizardStep > number ? "✓" : number}</span><strong>${label}</strong>${index < steps.length - 1 ? '<i class="wr-step-arrow" aria-hidden="true"></i>' : ""}</div>`).join("");
   }
   function wizardStepContent() {
@@ -343,7 +351,7 @@
       return `<div class="wr-wizard-content"><label class="wr-field"><span>文章标题 <em>*</em></span><input class="wr-input" id="wrWizardTitle" maxlength="100" placeholder="请输入文章标题" value="${html(wizardState.title)}" /></label><p class="wr-field-feedback" id="wrWizardFeedback" role="status"></p></div><div class="wr-wizard-actions"><button class="wr-btn is-primary" type="button" data-wr-wizard-next>下一步</button></div>`;
     }
     if (wizardStep === 2) {
-      return `<div class="wr-wizard-content"><div class="wr-category-row"><span>默认分类 <em>*</em></span><div class="wr-source-choice-group"><button class="wr-source-choice ${wizardState.source === "knowledge" ? "is-active" : ""}" type="button" data-wr-wizard-source="knowledge">知识库</button><button class="wr-source-choice ${wizardState.source === "upload" ? "is-active" : ""}" type="button" data-wr-wizard-upload-open>上传</button></div></div><div class="wr-section-title" style="margin-top:22px"><span>上传素材</span></div><p class="wr-hint">上传文档会先进行涉密检测；只有「已通过」的文档可以勾选，涉密可疑文档显示但不可选。</p><div class="wr-upload-list">${wizardUploadsHtml()}</div><p class="wr-field-feedback" id="wrWizardFeedback" role="status"></p></div><div class="wr-wizard-actions"><button class="wr-btn" type="button" data-wr-wizard-prev>上一步</button><button class="wr-btn is-primary" type="button" data-wr-wizard-next>下一步</button></div>`;
+      return `<div class="wr-wizard-content"><label class="wr-material-choice"><input type="checkbox" data-wr-wizard-knowledge ${wizardState.knowledge ? "checked" : ""} />使用知识库作为参考</label><div class="wr-section-title" style="margin-top:22px"><span>写作素材</span></div><p class="wr-hint">可从素材管理中选择已通过涉密审核的文件。</p><div class="wr-upload-list" id="wrWizardUploads">${wizardUploadsHtml()}</div><p class="wr-field-feedback" id="wrWizardFeedback" role="status"></p></div><div class="wr-wizard-actions"><button class="wr-btn" type="button" data-wr-wizard-prev>上一步</button><button class="wr-btn is-primary" type="button" data-wr-wizard-next>下一步</button></div>`;
     }
     return `<div class="wr-wizard-content"><div class="wr-section-title"><span>选择工具</span></div><div class="wr-toggle-row"><span>生成绪论</span><label class="wr-switch"><input type="checkbox" data-wr-wizard-extra="conclusion" ${wizardState.extras.conclusion ? "checked" : ""} /><i></i></label></div><div class="wr-toggle-row"><span>全文总结</span><label class="wr-switch"><input type="checkbox" data-wr-wizard-extra="summary" ${wizardState.extras.summary ? "checked" : ""} /><i></i></label></div><div class="wr-toggle-row"><span>参考文献</span><label class="wr-switch"><input type="checkbox" data-wr-wizard-extra="references" ${wizardState.extras.references ? "checked" : ""} /><i></i></label></div><p class="wr-field-feedback" id="wrWizardFeedback" role="status"></p></div><div class="wr-wizard-actions"><button class="wr-btn" type="button" data-wr-wizard-prev>上一步</button><button class="wr-btn is-primary" type="button" data-wr-wizard-finish>开始写作</button></div>`;
   }
@@ -368,6 +376,7 @@
 
   function render() {
     if (view === "templates") renderTemplates();
+    else if (view === "materials") renderMaterials();
     else if (view === "outline") renderOutline();
     else if (view === "wizard") renderWizard();
     else if (view === "workspace") root.innerHTML = workspaceHtml();
@@ -389,21 +398,17 @@
   root.addEventListener("click", (event) => {
     const tab = event.target.closest("[data-template-tab]");
     if (tab) { templateTab = tab.dataset.templateTab; renderTemplates(); return; }
-    if (event.target.closest("[data-wr-wizard-upload-open]")) {
-      if (wizardStep === 2) wizardState.source = "upload";
-      openFilePicker();
-      return;
-    }
-    if (event.target.closest("[data-wr-wizard-source]")) { wizardState.source = wizardState.source === "knowledge" ? "" : "knowledge"; renderWizard(); return; }
+    if (event.target.closest("[data-wr-manage-materials]")) { view = "materials"; render(); return; }
+    if (event.target.closest("[data-wr-material-upload]")) { openFilePicker(); return; }
     if (event.target.closest("[data-wr-wizard-next]")) {
       if (wizardStep === 1) {
         const title = root.querySelector("#wrWizardTitle")?.value.trim() || "";
         if (!title) { const feedback = root.querySelector("#wrWizardFeedback"); if (feedback) feedback.textContent = "请输入文章标题。"; return; }
         wizardState.title = title;
       }
-      if (wizardStep === 2 && !wizardState.source) {
+      if (wizardStep === 2 && !wizardState.knowledge && !selectedMaterials(wizardState.uploads).length) {
         const feedback = root.querySelector("#wrWizardFeedback");
-        if (feedback) feedback.textContent = "请选择知识库或上传文件作为素材来源。";
+        if (feedback) feedback.textContent = "请选择知识库或至少一个写作素材文件。";
         return;
       }
       wizardStep = Math.min(3, wizardStep + 1);
@@ -414,8 +419,14 @@
     if (event.target.closest("[data-wr-wizard-finish]")) {
       const title = (root.querySelector("#wrWizardTitle")?.value || wizardState.title).trim();
       if (!title) { wizardStep = 1; renderWizard(); const feedback = root.querySelector("#wrWizardFeedback"); if (feedback) feedback.textContent = "请输入文章标题。"; return; }
-      const selectedUploads = store.uploads().filter((item) => wizardState.uploads.has(item.id) && item.status === "passed");
-      createDocument({ title, scenario: title, sources: { knowledge: wizardState.source === "knowledge" }, extras: wizardState.extras, uploadNames: selectedUploads.map((item) => item.name) });
+      const selectedUploads = selectedMaterials(wizardState.uploads);
+      if (!wizardState.knowledge && !selectedUploads.length) {
+        wizardStep = 2;
+        renderWizard();
+        root.querySelector("#wrWizardFeedback").textContent = "请选择知识库或至少一个写作素材文件。";
+        return;
+      }
+      createDocument({ title, scenario: title, sources: { knowledge: wizardState.knowledge }, extras: wizardState.extras, uploadNames: selectedUploads.map((item) => item.name) });
       return;
     }
     if (event.target.closest("[data-wr-history]")) { openHistoryDialog(); return; }
@@ -432,7 +443,12 @@
     const preview = event.target.closest("[data-template-outline]");
     if (preview) { const template = store.template(preview.dataset.templateOutline); if (template) setOutlineFromTemplate(template); return; }
     const back = event.target.closest("[data-writing-back]");
-    if (back) { view = "templates"; currentDoc = null; activeTemplate = null; outline = []; render(); return; }
+    if (back) {
+      const fromMaterials = view === "materials";
+      view = "templates"; currentDoc = null; activeTemplate = null; outline = []; render();
+      if (fromMaterials) root.querySelector("[data-wr-manage-materials]")?.focus();
+      return;
+    }
     const add = event.target.closest("[data-outline-add]");
     if (add) { openChapterDialog("", add.dataset.outlineAdd); return; }
     if (event.target.closest("[data-outline-add-root]")) { openChapterDialog("", ""); return; }
@@ -468,6 +484,7 @@
   }
 
   document.addEventListener("click", (event) => {
+    if (view !== "materials") return;
     const eye = event.target.closest("[data-wr-secret]");
     if (eye) { openSecretDetail(eye.dataset.wrSecret); return; }
     const action = event.target.closest("[data-wr-file-action]");
@@ -480,14 +497,12 @@
         store.removeUpload(id);
         composeState.uploads.delete(id);
         wizardState.uploads.delete(id);
-        refreshUploadViews();
         toast(`已删除《${item.name}》`);
         return;
       }
       if (action.dataset.wrFileAction === "refresh") {
         const sensitive = /机密|秘密|涉密|内部|敏感/.test(item.name);
         store.reviewUpload(id, sensitive ? "hit" : "passed", sensitive ? "命中涉密关键词" : "未命中涉密内容，检测通过");
-        refreshUploadViews();
         toast(`已刷新《${item.name}》状态`);
         return;
       }
@@ -501,7 +516,6 @@
       const item = store.upload(submit.dataset.wrSecretSubmit);
       store.submitUpload(submit.dataset.wrSecretSubmit);
       secretDetailDialog.close();
-      refreshUploadViews();
       toast(`《${item?.name || "文件"}》已提交管理员审核`);
       return;
     }
@@ -512,7 +526,6 @@
       composeState.uploads.delete(cancel.dataset.wrSecretCancel);
       wizardState.uploads.delete(cancel.dataset.wrSecretCancel);
       secretDetailDialog.close();
-      refreshUploadViews();
       toast(`《${item?.name || "文件"}》已取消上传`);
       return;
     }
@@ -523,14 +536,17 @@
     }
   });
   store.subscribe(() => {
+    if (view === "materials") renderMaterialTable();
     if (composeDialog.open) renderComposeUploads();
-    if (view === "wizard") renderWizard();
+    const wizardUploads = root.querySelector("#wrWizardUploads");
+    if (wizardUploads) wizardUploads.innerHTML = wizardUploadsHtml();
   });
 
   root.addEventListener("input", (event) => {
     if (event.target.id === "wrWizardTitle") wizardState.title = event.target.value;
   });
   root.addEventListener("change", (event) => {
+    if (event.target.matches("[data-wr-wizard-knowledge]")) wizardState.knowledge = event.target.checked;
     const upload = event.target.closest("[data-wr-wizard-upload]");
     if (upload) {
       if (upload.checked) wizardState.uploads.add(upload.dataset.wrWizardUpload); else wizardState.uploads.delete(upload.dataset.wrWizardUpload);

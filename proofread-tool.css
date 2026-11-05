@@ -1,21 +1,11 @@
 /* 纠错校对：三栏审校工作台（文档区 + 审校助手 + 审校结果）。
    视觉沿用 DESIGN.md 全站基线：白色内容面、百舸蓝交互、12px 辅助文字。 */
 
-[data-page="smart-tools"] .content-inner:has(> .proofread-workspace:not([hidden])) {
-  max-width: none;
-  padding: 8px;
-}
-
 .pr-app {
   display: grid;
   grid-template-columns: clamp(192px, 21%, 240px) repeat(2, minmax(0, 1fr));
   grid-template-rows: minmax(0, 1fr);
   height: max(480px, calc(100dvh - 70px));
-  gap: 4px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--line);
-  overflow: hidden;
 }
 
 /* ---------- 左栏：审校助手 ---------- */

@@ -33,11 +33,7 @@
     bar: document.querySelector("#toolWorkspaceBar"),
     scroller: document.querySelector("#contentScroll"),
     tools, icon, escapeHtml, renderCatalog: renderTools, renderTool: renderToolPage,
-    iconForTool: name => {
-      if (name === "纠错校对") return icon("check");
-      const tool = tools.find(item => item.name === name);
-      return tool ? toolIcon(tool) : icon("grid");
-    },
+    iconForTool: name => icon(tools.find(tool => tool.name === name)?.icon || "grid"),
     onNavigate: (name) => bridge.navigate("smart-tools", name),
   });
 
@@ -91,13 +87,11 @@
   }
 
   function renderToolPage(tool, root) {
-    // 纠错校对使用独立的审校工作台（三栏：文档、审校助手、审校结果）。
     if (tool.name === "纠错校对" && window.BaigeProofreadTool) {
       root.dataset.toolGroup = tool.group;
       window.BaigeProofreadTool.render(root);
       return;
     }
-    root.dataset.toolGroup = tool.group;
     root.replaceChildren(document.querySelector("#toolTemplate").content.cloneNode(true));
     root.querySelector("[data-tool-name]").textContent = tool.name;
     root.querySelector("[data-tool-description]").textContent = tool.description;

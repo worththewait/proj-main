@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>智能工具 · 百舸数智平台</title>
   <link rel="stylesheet" href="../styles.css" />
-  <link rel="stylesheet" href="../tools-visual.css?v=20261029-icons" />
-  <link rel="stylesheet" href="../proofread-tool.css?v=20261104-review-rerun" />
+  <link rel="stylesheet" href="../tools-visual.css?v=20261105-workspace" />
+  <link rel="stylesheet" href="../proofread-tool.css?v=20261105-workspace" />
 </head>
 <body class="module-page" data-page="smart-tools">
   <main class="module-main">
@@ -49,19 +49,24 @@
     </template>
     <!-- 每个工具实例各自克隆此模板，后续在这里接入实际内容。 -->
     <template id="toolTemplate">
-      <button class="tool-back-link" data-shortcut="smart-tools"><span data-icon="back" aria-hidden="true"></span>返回工具目录</button>
-      <div class="page-header tool-page-header"><div class="tool-page-identity"><span class="tool-icon" data-detail-icon></span><div><h1 data-tool-name></h1><p data-tool-description></p></div></div></div>
-      <section class="integration-panel"><div class="empty-state"><span data-detail-icon></span><h2>正在集成</h2><p>相关内容接入后，将在这里呈现。</p><button class="secondary-button" data-shortcut="smart-tools">继续浏览工具<span data-icon="arrow" aria-hidden="true"></span></button></div></section>
+      <div class="tool-workspace-frame tool-detail-frame">
+        <header class="tool-page-header">
+          <div class="tool-page-identity"><span class="tool-icon" data-detail-icon></span><div><h1 data-tool-name></h1><p data-tool-description></p></div></div>
+        </header>
+        <section class="integration-panel">
+          <div class="empty-state"><h2>正在集成</h2><p>相关内容接入后，将在这里呈现。</p><button type="button" class="secondary-button" data-shortcut="smart-tools">继续浏览工具<span data-icon="arrow" aria-hidden="true"></span></button></div>
+        </section>
+      </div>
     </template>
   </main>
   <script src="../src/data.js?v=20261029-remove-writing"></script>
-  <script src="../src/ui.js"></script>
+  <script src="../src/ui.js?v=20261105-workspace"></script>
   <script src="../src/page-bridge.js"></script>
   <script src="../src/home-directory-icons.js"></script>
   <script src="../src/home-card-images.js?v=20261030-functions"></script>
   <script src="../src/feature-config.js?v=20261103-feature-description"></script>
-  <script src="../src/proofread-tool.js?v=20261104-review-rerun"></script>
-  <script src="../src/tool-workspace.js?v=20261030-functions"></script>
-  <script src="../src/pages/smart-tools.js?v=20261103-proofread-layout"></script>
+  <script src="../src/proofread-tool.js?v=20261105-workspace"></script>
+  <script src="../src/tool-workspace.js?v=20261105-workspace"></script>
+  <script src="../src/pages/smart-tools.js?v=20261105-workspace"></script>
 </body>
 </html>

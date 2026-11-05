@@ -65,9 +65,11 @@ test("writing page exposes the complete template-to-upload flow", () => {
   for (const token of ["大纲编辑", "编辑章节信息", "新建写作", "上传文档", "开始写作", "涉密检测", "导出"]) {
     assert.match(js, new RegExp(token));
   }
-  assert.match(js, /只有.*已通过.*才可勾选/);
-  assert.match(js, /passed \? "" : "disabled"/);
-  assert.match(js, /passed \? "" : "is-locked"/);
+  assert.match(js, /data-wr-manage-materials/);
+  assert.match(js, /data-wr-material-upload/);
+  assert.match(js, /if \(view !== "materials"\) return/);
+  assert.match(js, /materialPickerHtml\("data-wr-upload", composeState\.uploads\)/);
+  assert.match(js, /materialPickerHtml\("data-wr-wizard-upload", wizardState\.uploads\)/);
   assert.match(css, /\.wr-workspace/);
   assert.match(css, /\.wr-file-table/);
   assert.match(css, /\.wr-secret-alert/);
@@ -80,4 +82,29 @@ test("writing page exposes the complete template-to-upload flow", () => {
   assert.match(js, /data-wr-file-action/);
   assert.match(js, /data-wr-secret/);
   assert.match(css, /\.wr-wizard/);
+});
+
+test("both material pickers show only approved uploads and preserve selected IDs", () => {
+  const { store } = setup();
+  const js = read("src/pages/writing.js");
+  const start = js.indexOf("  function materialPickerHtml(");
+  const end = js.indexOf("  function selectedMaterials(", start);
+  assert.ok(start >= 0 && end > start, "shared material picker must be present");
+  const picker = vm.runInNewContext(`(${js.slice(start, end).trim()})`, {
+    store,
+    html: (value) => String(value).replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;"),
+    fileSize: (size) => `${size} B`,
+  });
+  const passed = store.uploads().find((item) => item.status === "passed");
+  const hit = store.uploads().find((item) => item.status === "hit");
+  for (const attribute of ["data-wr-upload", "data-wr-wizard-upload"]) {
+    const markup = picker(attribute, new Set([passed.id, hit.id]));
+    assert.ok(markup.includes(`${attribute}="${passed.id}" checked`));
+    assert.ok(!markup.includes(hit.id), "unapproved uploads must not appear in the picker");
+  }
+  store.reviewUpload(hit.id, "passed");
+  assert.ok(picker("data-wr-upload", new Set()).includes(hit.id));
+  store.removeUpload(passed.id);
+  store.removeUpload(hit.id);
+  assert.match(picker("data-wr-wizard-upload", new Set()), /暂无可选文件/);
 });

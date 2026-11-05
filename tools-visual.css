@@ -214,42 +214,64 @@ body[data-page="smart-tools"] {
   overflow-wrap: anywhere;
 }
 
-[data-page="smart-tools"] .tool-back-link {
-  margin-bottom: 24px;
+[data-page="smart-tools"] .workspace-tab > [role="tab"] > .icon,
+[data-page="smart-tools"] .open-tool-option > .icon:first-child {
+  width: 18px;
+  height: 18px;
 }
 
-[data-page="smart-tools"] .tool-page-identity {
-  min-width: 0;
+[data-page="smart-tools"] .workspace-tab.is-active > [role="tab"] > .icon,
+[data-page="smart-tools"] .open-tool-option[aria-current="true"] > .icon:first-child {
+  color: var(--accent);
+  stroke-width: 1.8;
 }
 
-[data-page="smart-tools"] .tool-page-identity > div {
-  min-width: 0;
+/* 工具内容共用审校工作台的外框与分隔间距。 */
+[data-page="smart-tools"] .smart-tools-page:has(> .tool-detail-workspace) {
+  max-width: none;
+  padding: 8px;
 }
 
-[data-page="smart-tools"] .tool-page-identity .tool-icon {
-  flex-basis: 60px;
-  width: 60px;
-  height: 60px;
-  border-radius: 16px;
+[data-page="smart-tools"] .tool-detail-workspace:focus-visible { outline-offset: 2px; }
+
+.tool-workspace-frame {
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--line);
+  overflow: hidden;
 }
 
-[data-page="smart-tools"] .tool-page-identity .tool-icon .icon {
-  width: 30px;
-  height: 30px;
+.tool-detail-frame {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: max(340px, calc(100dvh - 70px));
 }
 
-[data-page="smart-tools"] .tool-page-identity h1 {
-  overflow-wrap: anywhere;
+.tool-detail-frame > .tool-page-header {
+  min-height: 62px;
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--surface);
 }
 
-[data-page="smart-tools"] .integration-panel {
-  border: 0;
+.tool-detail-frame .tool-page-identity { gap: 10px; }
+.tool-detail-frame .tool-page-identity > div { min-width: 0; }
+.tool-detail-frame .tool-page-identity h1 { font-size: 18px; overflow-wrap: anywhere; }
+.tool-detail-frame .tool-page-identity p { margin-top: 2px; color: var(--muted); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; }
+
+[data-page="smart-tools"] .tool-detail-frame .tool-icon {
+  flex-basis: 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
 }
 
-[data-page="smart-tools"] .integration-panel .empty-state > .icon {
-  background: var(--tool-tint);
-  color: var(--tool-tone);
-}
+.tool-detail-frame .tool-icon > :is(.home-directory-glyph, .feature-custom-icon) { width: 20px; height: 20px; }
+.tool-detail-frame > .integration-panel { display: grid; place-items: center; min-width: 0; border: 0; border-radius: 0; }
+.tool-detail-frame > .integration-panel .empty-state { padding: 24px 16px; }
+.tool-detail-frame .empty-state .secondary-button { margin-top: 16px; }
 
 @media (max-width: 1199px) {
   [data-page="smart-tools"] .smart-tools-page {

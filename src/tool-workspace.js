@@ -50,7 +50,7 @@
       const uid = `tool-page-${++this.serial}`;
       const panel = document.createElement("section");
       panel.id = uid;
-      panel.className = "tool-workspace-panel";
+      panel.className = tool ? "tool-workspace-panel tool-detail-workspace" : "tool-workspace-panel";
       panel.setAttribute("role", "tabpanel");
       panel.setAttribute("aria-labelledby", `${uid}-tab`);
       panel.tabIndex = 0;
