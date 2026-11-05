@@ -2,6 +2,7 @@
   'use strict';
 
   const { icon, escapeHtml: escape } = window.BaigeUI;
+  const store = window.BaigeProofreadStore;
 
   /* ---------- 演示词库：真实审校由后端模型完成，这里用规则模拟 ---------- */
   const DICT = [
@@ -26,7 +27,6 @@
 
   /* ---------- 涉密关键词：演示规则，正式环境由后端模型判定 ---------- */
   const SECRET_WORDS = ['绝密', '机密', '秘密', '涉密', '型号', '研制', '内部资料', '军品'];
-  const SECRET_SCAN_LIMIT = 2000;
 
   const SAMPLE = [
     '各部门需要对本年度的工做进行严各的审校，确宝各项数据准却无误。',
@@ -38,13 +38,19 @@
 
   /* 与百舸文库后台一致的四档审查状态。 */
   const SECRET_META = {
+    draft: { label: '草稿', tone: 'muted' },
     detecting: { label: '检测中', tone: 'info' },
     passed: { label: '已通过', tone: 'success' },
     hit: { label: '涉密可疑', tone: 'warning' },
     submitted: { label: '审核中', tone: 'warning' },
+    rejected: { label: '已驳回', tone: 'danger' },
   };
 
   const REVIEW_META = {
+    detecting: { label: '涉密检测中', tone: 'info' },
+    hit: { label: '涉密可疑', tone: 'warning' },
+    submitted: { label: '等待人工审核', tone: 'warning' },
+    rejected: { label: '审核已驳回', tone: 'danger' },
     running: { label: '审校中', tone: 'info' },
     done: { label: '已完成', tone: 'success' },
     stopped: { label: '已停止', tone: 'muted' },
@@ -64,6 +70,12 @@
     timer: null,
     seq: 0,
     secretId: '',
+    selection: null,
+    followReview: '',
+    original: false,
+    snapshot: '',
+    unsaved: false,
+    onDirty() {},
   };
 
   let dom = null;
@@ -75,7 +87,7 @@
   }
 
   function isBlocked(record) {
-    return Boolean(record) && record.secretStatus !== 'passed';
+    return Boolean(record) && !['passed', 'draft'].includes(record.secretStatus);
   }
 
   const charCount = (text) => text.replace(/\s/g, '').length;
@@ -116,7 +128,7 @@
 
   /* ---------- 涉密检测 ---------- */
   function scanSecret(fileName, text) {
-    const haystack = `${fileName}\n${text.slice(0, SECRET_SCAN_LIMIT)}`;
+    const haystack = `${fileName}\n${text}`;
     return SECRET_WORDS.filter((word) => haystack.includes(word));
   }
 
@@ -131,9 +143,9 @@
     const keyword = dom.search.value.trim();
     const history = state.view === 'history';
     const list = (history ? state.history : state.records)
-      .filter(item => item.name.includes(keyword) || item.fileName.includes(keyword));
+      .filter(item => item.name.includes(keyword) || item.fileName?.includes(keyword));
     if (!list.length) {
-      const message = keyword ? '没有匹配的记录' : history ? '还没有审校记录' : '上传文件，通过涉密审核后即可预览';
+      const message = keyword ? '没有匹配的记录' : history ? '还没有审校记录' : '新建审校或上传文件开始使用';
       dom.list.innerHTML = `<li class="pr-list-empty">${message}</li>`;
       dom.end.hidden = true;
       return;
@@ -143,7 +155,7 @@
       const selected = history ? state.session?.reviewId === item.reviewId : !state.session?.reviewId && state.session?.id === item.id;
       return `<li><button type="button" class="pr-doc${selected ? ' is-active' : ''}${item.secretStatus === 'hit' ? ' is-alert' : ''}" ${history ? 'data-review' : 'data-record'}="${history ? item.reviewId : item.id}" aria-current="${selected}" title="${escape(item.name)}">
         <span class="pr-doc-icon is-upload">${icon(history ? 'history' : 'file')}</span>
-        <span class="pr-doc-body"><span class="pr-doc-name">${escape(item.name)}</span>
+        <span class="pr-doc-body"><span class="pr-doc-name">${escape(item.name)}${item.version > 1 ? ` · V${item.version}` : ''}${history && item.unread ? '<i class="pr-unread" aria-label="新结果"></i>' : ''}</span>
           <span class="pr-doc-meta is-${tone}"><i class="pr-dot is-${tone}" aria-hidden="true"></i>${label}<b>·</b>${clockOf(history ? item.checkedAt : item.uploadedAt, history)}</span></span>
       </button></li>`;
     }).join('');
@@ -159,6 +171,7 @@
       button.setAttribute('aria-selected', String(on));
     });
     dom.uploadButton.hidden = state.view !== 'files';
+    dom.notice.hidden = !state.history.some(item => item.unread);
     dom.search.placeholder = state.view === 'files' ? '搜索文件名' : '搜索审校记录';
     dom.search.setAttribute('aria-label', dom.search.placeholder);
   }
@@ -167,6 +180,22 @@
   function renderPage() {
     if (!dom) return;
     const record = activeRecord();
+    const draft = record?.secretStatus === 'draft';
+    dom.draft.hidden = !draft;
+    dom.page.hidden = draft;
+    dom.originalToggle.hidden = !record?.reviewId;
+    dom.originalToggle.textContent = state.original ? '查看修订稿' : '查看原文';
+    dom.editorTitle.textContent = draft ? '新建审校' : record?.reviewId ? (state.original ? '原文' : '修订稿') : '文档预览';
+    dom.saveState.textContent = draft ? (state.unsaved ? '保存失败，请重试' : '草稿已保存') : record ? '正文已锁定' : '';
+    dom.saveRetry.hidden = !state.unsaved;
+    if (draft) {
+      dom.draftTitle.value = record.name === '未命名审校' ? '' : record.name;
+      dom.draftText.value = record.text;
+      dom.guard.hidden = true;
+      dom.docName.textContent = '输入或粘贴正文，提交后仅可通过审校建议修订';
+      dom.charCount.textContent = `字数统计 ${charCount(record.text)}`;
+      return;
+    }
     if (!record) {
       dom.page.textContent = '';
       dom.docName.textContent = '请选择已通过涉密审核的文件';
@@ -175,7 +204,7 @@
       return;
     }
     dom.docName.textContent = record.name;
-    const blocked = isBlocked(record);
+    const blocked = isBlocked(record) && !record.reviewId;
 
     if (blocked) {
       dom.page.textContent = '';
@@ -184,8 +213,8 @@
       dom.guard.innerHTML = guardBody(record);
     } else {
       dom.guard.hidden = true;
-      const text = record.text;
-      if (!state.issues.length) {
+      const text = state.original && record.originalText !== undefined ? record.originalText : record.text;
+      if (!state.issues.length || state.original) {
         dom.page.textContent = text;
       } else {
         const parts = [];
@@ -218,28 +247,30 @@
     if (!dom) return;
     const record = activeRecord();
     const running = state.status === 'running';
-    dom.run.textContent = running ? '停止审校' : record?.reviewId ? '重新审校' : '开始审校';
-    dom.run.disabled = !record || isBlocked(record);
-    dom.download.disabled = !record || isBlocked(record);
+    const pending = ['detecting', 'hit', 'submitted', 'running'].includes(state.status);
+    dom.run.textContent = running ? '停止审校' : isBlocked(record) ? '查看审核详情' : record?.reviewId ? '重新审校' : '开始审校';
+    dom.run.disabled = !record || !record.text.trim() || state.unsaved;
+    dom.download.disabled = !record || isBlocked(record) || record.secretStatus === 'draft';
+    dom.stop.hidden = !pending || running;
     dom.resultFile.textContent = record
       ? `${REVIEW_META[state.status]?.label || '待审校'} · ${record.name}`
       : '选择审校记录或已通过审核的文件';
     dom.resultFile.title = dom.resultFile.textContent;
 
-    const pending = state.issues.filter((issue) => !state.ignored.has(issue.id) && !state.accepted.has(issue.id));
+    const remaining = state.issues.filter((issue) => !state.ignored.has(issue.id) && !state.accepted.has(issue.id));
     const hasIssues = state.issues.length > 0;
     dom.summary.hidden = !hasIssues;
     dom.count.textContent = `共 ${state.issues.length} 个事项`;
     dom.bulk.hidden = !hasIssues || running;
-    dom.bulk.querySelectorAll('button').forEach(button => { button.disabled = pending.length === 0; });
+    dom.bulk.querySelectorAll('button').forEach(button => { button.disabled = remaining.length === 0; });
 
     if (running) {
       dom.groups.innerHTML = `<div class="pr-progress"><p>正在检查文档，完成后会在这里显示修改建议。</p><div class="pr-bar" role="progressbar" aria-label="审校进度" aria-valuenow="${state.progress}"><span style="width:${state.progress}%"></span></div><p>已完成 ${state.progress}%</p></div>`;
       return;
     }
     if (isBlocked(record)) {
-      const copy = record.secretStatus === 'detecting' ? '涉密检测中，暂不能审校' : record.secretStatus === 'submitted' ? '等待管理员审核，暂不能审校' : '文档未通过涉密检测，暂不能审校';
-      dom.groups.innerHTML = `<div class="pr-empty">${icon('shield')}<p>${copy}</p></div>`;
+      const copy = state.status === 'stopped' ? '本轮任务已取消，文档审核仍可从详情中查看。' : record.secretStatus === 'detecting' ? '正在进行涉密检测，审核通过后自动审校。可关闭窗口，稍后从审校记录查看。' : record.secretStatus === 'submitted' ? '等待管理员审核，通过后自动继续审校。' : record.secretStatus === 'rejected' ? '人工审核已驳回，请查看审核详情。' : '检测到涉密可疑内容，请查看详情并提交人工审核。';
+      dom.groups.innerHTML = `<p class="pr-review-hint">${copy}</p>`;
       return;
     }
     if (!hasIssues) {
@@ -267,18 +298,18 @@
             return `<article class="${cls}" data-issue="${issue.id}">
               <span class="pr-issue-num">${issue.no}</span>
               <div class="pr-diff"><del>${escape(issue.word)}</del><span class="arrow">→</span><ins>${escape(issue.suggestion)}</ins></div>
-              <p class="pr-issue-type">错误类型：${escape(issue.type)}${done ? ' · 已采纳' : ignored ? ' · 已忽略' : ''}</p>
+              <p class="pr-issue-type">错误类型：${escape(issue.type)}${done ? ' · 已采纳' : ignored ? ' · 未采纳' : ''}</p>
               ${
                 done || ignored
                   ? ''
-                  : `<div class="pr-issue-actions"><button type="button" data-accept="${issue.id}">采纳</button><button type="button" data-ignore="${issue.id}">忽略</button></div>`
+                  : `<div class="pr-issue-actions"><button type="button" data-accept="${issue.id}">采纳</button><button type="button" data-ignore="${issue.id}">不采纳</button></div>`
               }
             </article>`;
           })
           .join('')}`
       )
       .join('');
-    if (!pending.length) dom.count.textContent = `共 ${state.issues.length} 个事项 · 全部处理完成`;
+    if (!remaining.length) dom.count.textContent = `共 ${state.issues.length} 个事项 · 全部处理完成`;
   }
 
   function renderAll() {
@@ -289,33 +320,45 @@
   }
 
   /* ---------- 涉密检测详情弹窗 ---------- */
-  function openSecret(id) {
+  function openSecret(id, followReview = '') {
     const record = state.records.find((item) => item.id === id);
-    if (!record || record.source !== 'upload') return;
+    if (!record) return;
     state.secretId = id;
+    state.followReview = followReview;
+    renderSecret(record);
+    dom.secret.showModal();
+  }
+
+  function renderSecret(record) {
     const meta = SECRET_META[record.secretStatus] || SECRET_META.detecting;
     dom.secretTitle.textContent = `涉密检测详情 — ${meta.label}`;
     dom.secretBody.innerHTML = secretBody(record);
     dom.secretFoot.innerHTML = secretFoot(record);
-    dom.secret.showModal();
   }
 
   function secretBody(record) {
     const risky = record.secretStatus === 'hit' || record.secretStatus === 'submitted';
     let html = '';
+    if (record.secretStatus === 'detecting') {
+      const task = state.history.find(item => item.id === record.id && item.status === 'detecting');
+      html += `<div class="pr-secret-loading" role="status"><span class="pr-spinner" aria-hidden="true"></span><h3>正在进行涉密审核</h3><p>${task ? '任务已保存，可关闭弹窗。审核通过后自动开始审校，可从左侧审校记录查看进度和结果。' : '文件已保存，可关闭弹窗。检测通过后可在文件列表预览并开始审校。'}</p></div>`;
+    }
     if (risky) {
       html += `<div class="pr-alert">
         <span class="pr-alert-mark" aria-hidden="true">!</span>
         <div>
           <strong>检测到涉密内容</strong>
-          <p>该文件包含敏感关键词，请取消上传，或继续提交管理员审核。</p>
+          <p>该文件包含敏感关键词，可提交管理员审核。</p>
           <div class="pr-alert-kw"><span>命中关键词</span>${record.keywords.map((word) => `<b>${escape(word)}</b>`).join('')}</div>
         </div>
       </div>`;
     }
+    if (record.secretStatus === 'rejected') {
+      html += `<div class="pr-alert"><div><strong>人工审核未通过</strong><p>${escape(record.auditReason || '该文档未获准进入审校。')}</p></div></div>`;
+    }
     html += `<dl class="pr-facts">
       <div><dt>文件名</dt><dd>${escape(record.fileName || record.name)}</dd></div>
-      <div><dt>来源</dt><dd>本地上传 · ${charCount(record.text)} 字</dd></div>
+      <div><dt>来源</dt><dd>${record.source === 'upload' ? '本地上传' : '新建审校'} · V${record.version || 1} · ${charCount(record.text)} 字</dd></div>
       <div><dt>上传时间</dt><dd>${clockOf(record.uploadedAt)}</dd></div>
       <div><dt>涉密审查状态</dt><dd>${statusTag(record.secretStatus)}</dd></div>
     </dl>
@@ -347,81 +390,164 @@
   }
 
   function secretFoot(record) {
+    if (record.secretStatus === 'detecting') {
+      return '<button type="button" class="is-primary" data-secret-close>后台继续</button>';
+    }
     if (record.secretStatus === 'hit') {
-      return `<button type="button" class="is-ghost" data-secret-cancel>取消上传</button><button type="button" class="is-primary" data-secret-submit>继续上传并提交审核</button>`;
+      return `<button type="button" class="is-ghost" data-secret-close>稍后处理</button><button type="button" class="is-primary" data-secret-submit>提交人工审核</button>`;
     }
     if (record.secretStatus === 'submitted') {
-      return `<span class="pr-demo-hint">演示：审核由百舸文库审核中心完成</span><button type="button" class="is-ghost" data-secret-close>关闭</button><button type="button" class="is-primary" data-secret-approve>模拟审核通过</button>`;
+      return `<span class="pr-demo-hint">人工审核演示</span><button type="button" class="is-ghost" data-secret-close>关闭</button><button type="button" class="is-ghost" data-secret-reject>模拟驳回</button><button type="button" class="is-primary" data-secret-approve>模拟审核通过</button>`;
     }
+    if (record.secretStatus === 'rejected') return '<p class="pr-demo-hint">人工审核未通过，当前文档无法进入审校。</p><button type="button" class="is-ghost" data-secret-close>关闭</button>';
     return `<button type="button" class="is-ghost" data-secret-close>关闭</button><button type="button" class="is-primary" data-secret-open>预览原文</button>`;
   }
 
-  /* ---------- 行为 ---------- */
-  function stopTimer() {
-    if (state.timer) {
-      clearInterval(state.timer);
-      state.timer = null;
+  /* ---------- 草稿、任务与持久化 ---------- */
+  function hint(text) {
+    if (dom) dom.status.textContent = text;
+  }
+
+  function remember() {
+    window.localStorage.setItem('baige.proofread.selection', JSON.stringify({selection: state.selection, view: state.view}));
+  }
+
+  function sync(data = store.read()) {
+    state.records = data.records;
+    state.history = data.history;
+    const record = state.selection?.kind === 'review'
+      ? data.history.find(item => item.reviewId === state.selection.id)
+      : data.records.find(item => item.id === state.selection?.id);
+    const file = data.records.find(item => item.id === record?.id);
+    state.session = record ? {...record, secretStatus: file?.secretStatus || record.secretStatus} : null;
+    state.status = record?.status || 'idle';
+    state.issues = record?.issues || [];
+    state.accepted = new Set(record?.accepted || []);
+    state.ignored = new Set(record?.ignored || []);
+    state.progress = state.status === 'running'
+      ? Math.min(99, Math.max(0, Math.floor((Date.now() - record.startedAt) / store.REVIEW_MS * 100))) : 0;
+    state.snapshot = window.localStorage.getItem(store.KEY);
+  }
+
+  function refresh(data) {
+    const prior = state.session?.reviewId;
+    const editing = state.session?.secretStatus === 'draft';
+    sync(data);
+    if (!dom?.root.isConnected) return;
+    renderDocs();
+    renderRail();
+    if (!editing || state.session?.secretStatus !== 'draft') renderPage();
+    renderResult();
+    if (dom.secret.open) {
+      const file = state.records.find(item => item.id === state.secretId);
+      if (file?.secretStatus === 'passed' && state.followReview && visible()) {
+        state.selection = {kind: 'review', id: state.followReview};
+        state.view = 'history';
+        closeSecret();
+        remember();
+        sync();
+        renderAll();
+      } else if (file) renderSecret(file);
+    }
+    if (prior && state.status === 'done' && state.history.find(item => item.reviewId === prior)?.unread) {
+      hint('审校已完成，结果已保存。');
     }
   }
 
-  function hint(text) {
-    if (!dom) return;
-    dom.status.textContent = text;
-    clearTimeout(hint.timer);
-    hint.timer = setTimeout(() => {
-      dom.status.textContent = '';
-    }, 3200);
+  function perform(action) {
+    try {
+      const result = action();
+      refresh(store.advance(scanSecret, detect));
+      renderAll();
+      return result;
+    } catch (error) {
+      hint(error.message || '保存失败，请稍后重试。');
+      return null;
+    }
+  }
+
+  function visible() {
+    return dom?.root.isConnected && document.visibilityState !== 'hidden'
+      && !dom.root.closest('[hidden]') && state.foreground !== false;
+  }
+
+  function tick() {
+    if (!store || state.unsaved) return;
+    try {
+      const data = store.advance(scanSecret, detect);
+      if (window.localStorage.getItem(store.KEY) !== state.snapshot) refresh(data);
+      else if (state.status === 'running' && visible()) { sync(data); renderResult(); }
+    } catch (error) { hint(error.message || '进度更新失败，可稍后重试。'); }
+  }
+
+  function saveDraft() {
+    try {
+      const draft = store.saveDraft(state.session.id, dom.draftTitle.value, dom.draftText.value);
+      state.unsaved = false;
+      dom.root.dataset.autosaved = 'true';
+      state.onDirty(false);
+      sync();
+      dom.saveState.textContent = '草稿已保存';
+      dom.saveRetry.hidden = true;
+      dom.charCount.textContent = `字数统计 ${charCount(draft.text)}`;
+      renderDocs();
+      renderResult();
+      return true;
+    } catch {
+      state.unsaved = true;
+      dom.root.dataset.autosaved = 'false';
+      state.onDirty(true);
+      dom.saveState.textContent = '保存失败，当前内容仍保留，请重试';
+      dom.saveRetry.hidden = false;
+      renderResult();
+      return false;
+    }
+  }
+
+  function canLeaveDraft() {
+    return !state.unsaved || saveDraft();
+  }
+
+  function select(kind, id) {
+    state.selection = {kind, id};
+    state.original = false;
+    try { remember(); } catch { hint('页面位置保存失败，文档内容已单独保存。'); }
+    sync();
+    renderAll();
+  }
+
+  function newDraft() {
+    if (!canLeaveDraft()) return;
+    const draft = perform(() => store.createDraft());
+    if (!draft) return;
+    state.view = 'files';
+    select('file', draft.id);
+    dom.draftText.focus();
   }
 
   function switchView(next) {
     state.view = next;
     dom.search.value = '';
+    try { remember(); } catch { hint('列表位置保存失败。'); }
     renderRail();
     renderDocs();
   }
 
   function openDoc(id) {
-    const record = state.records.find(item => item.id === id);
-    if (!record || state.status === 'running') {
-      if (record) hint('请等待当前审校完成，或先停止审校。');
-      return;
-    }
-    if (isBlocked(record)) {
-      if (record.secretStatus === 'detecting') hint('文档正在检测涉密内容，请稍候。');
-      else openSecret(id);
-      return;
-    }
-    state.session = {...record, reviewTypes: TYPES.slice()};
-    state.issues = [];
-    state.ignored = new Set();
-    state.accepted = new Set();
-    state.status = 'idle';
-    renderAll();
+    if (!canLeaveDraft()) return;
+    const file = state.records.find(item => item.id === id);
+    if (!file) return;
+    const current = state.history.find(item => item.id === id && ['detecting', 'hit', 'submitted', 'running'].includes(item.status));
+    if (current) { openReview(current.reviewId); return; }
+    select('file', id);
+    if (isBlocked(file)) openSecret(id);
   }
 
   function openReview(id) {
-    if (state.session?.reviewId === id) return;
-    if (state.status === 'running') {
-      hint('请等待当前审校完成，或先停止审校。');
-      return;
-    }
-    const review = state.history.find(item => item.reviewId === id);
-    if (!review) return;
-    state.session = {...review};
-    state.issues = review.issues.slice();
-    state.ignored = new Set(review.ignored);
-    state.accepted = new Set(review.accepted);
-    state.status = review.status;
-    renderAll();
-  }
-
-  function saveReview() {
-    const record = state.session;
-    if (!record?.reviewId) return;
-    const review = {...record, status: state.status, issues: state.issues.slice(), ignored: [...state.ignored], accepted: [...state.accepted]};
-    const index = state.history.findIndex(item => item.reviewId === review.reviewId);
-    if (index < 0) state.history.unshift(review);
-    else state.history[index] = review;
+    if (!canLeaveDraft()) return;
+    perform(() => store.markRead(id));
+    state.view = 'history';
+    select('review', id);
   }
 
   function upload() {
@@ -432,184 +558,63 @@
   function onFile() {
     const file = dom.file.files?.[0];
     if (!file) return;
-    if (!/\.(txt|md)$/i.test(file.name)) {
-      hint('原型仅支持 TXT / MD 文本演示，其余格式待接入。');
-      return;
-    }
+    if (!/\.(txt|md)$/i.test(file.name)) { hint('原型支持 TXT / MD 文本。'); return; }
+    const selection = JSON.stringify(state.selection);
     const reader = new FileReader();
     reader.onload = () => {
-      const text = String(reader.result || '');
-      const record = {
-        id: uid('rec'),
-        name: file.name.replace(/\.(txt|md)$/i, ''),
-        text,
-        updated: Date.now(),
-        source: 'upload',
-        fileName: file.name,
-        uploadedAt: Date.now(),
-        secretStatus: 'detecting',
-        keywords: [],
-        reviewedAt: 0,
-        auditedAt: 0,
-      };
-      state.records.unshift(record);
-      switchView('files');
-
-      setTimeout(() => {
-        const keywords = scanSecret(file.name, text);
-        record.keywords = keywords;
-        record.reviewedAt = Date.now();
-        record.secretStatus = keywords.length ? 'hit' : 'passed';
-        if (!state.records.includes(record)) return;
-        if (record.secretStatus === 'passed') {
-          hint('涉密检测通过，点击列表中的文件预览原文。');
-          renderAll();
-        } else {
-          renderDocs();
-          if (!dom.secret.open && state.view === 'files') openSecret(record.id);
-        }
-      }, 1400);
+      const record = perform(() => store.addUpload(file.name, String(reader.result || '')));
+      if (!record) return;
+      if (JSON.stringify(state.selection) !== selection) { hint('文件已上传，可从文件列表查看检测进度。'); return; }
+      state.view = 'files';
+      select('file', record.id);
+      openSecret(record.id);
     };
     reader.onerror = () => hint('文件读取失败，请重新上传。');
     reader.readAsText(file, 'utf-8');
   }
 
-  function startCheck(reviewTypes = state.session?.reviewTypes) {
-    if (state.status === 'running' || !reviewTypes?.length) return;
-    const current = activeRecord();
-    const source = state.records.find(item => item.id === current?.id);
-    if (source?.secretStatus !== 'passed') {
-      hint('当前文档未通过涉密检测，暂不能审校。');
-      return;
-    }
-    const record = {
-      ...source,
-      text: current.text,
-      reviewId: uid('review'),
-      checkedAt: Date.now(),
-      reviewTypes: reviewTypes.slice(),
-    };
-    state.session = record;
-    state.issues = [];
-    state.ignored = new Set();
-    state.accepted = new Set();
-    state.progress = 0;
-    state.status = 'running';
-    saveReview();
+  function startCheck(reviewTypes) {
+    const record = activeRecord();
+    if (!record || state.unsaved) return;
+    const review = perform(() => store.startReview({
+      fileId: record.id, reviewId: record.reviewId, types: reviewTypes,
+    }));
+    if (!review) return;
     state.view = 'history';
-    dom.search.value = '';
-    renderAll();
-    state.timer = setInterval(() => {
-      state.progress = Math.min(100, state.progress + 8);
-      if (state.progress < 100) {
-        renderResult();
-        return;
-      }
-      try {
-        state.issues = detect(record.text, record.reviewTypes);
-      } catch (error) {
-        console.error('审校失败', error);
-        finishCheck('failed');
-        return;
-      }
-      finishCheck('done');
-    }, 130);
-  }
-
-  function finishCheck(status) {
-    stopTimer();
-    state.status = status;
-    dom.status.textContent = '';
-    saveReview();
-    renderAll();
+    select('review', review.reviewId);
+    if (isBlocked(state.session)) openSecret(review.id, review.reviewId);
   }
 
   function stopCheck() {
-    if (state.status === 'running') finishCheck('stopped');
+    const id = state.session?.reviewId;
+    if (!id) return;
+    perform(() => store.stopReview(id));
+    closeSecret();
   }
 
   function openDialog() {
     dom.dialog.querySelectorAll('input').forEach(input => {
-      input.checked = state.session.reviewTypes.includes(input.value);
+      input.checked = (state.session.reviewTypes || TYPES).includes(input.value);
     });
     dom.dialog.querySelector('[data-confirm]').disabled = false;
     dom.dialog.showModal();
   }
 
-  function applySuggestion(id) {
-    const issue = state.issues.find(item => item.id === id);
-    if (!issue || state.accepted.has(id) || state.ignored.has(id)) return;
-    const record = activeRecord();
-    const lengthChange = issue.suggestion.length - (issue.end - issue.start);
-    record.text = record.text.slice(0, issue.start) + issue.suggestion + record.text.slice(issue.end);
-    state.accepted.add(id);
-    state.issues = state.issues.map(item => item.start >= issue.end
-      ? {...item, start: item.start + lengthChange, end: item.end + lengthChange}
-      : item);
-  }
+  function acceptIssue(id) { perform(() => store.decide(state.session.reviewId, id, true)); }
+  function ignoreIssue(id) { perform(() => store.decide(state.session.reviewId, id, false)); }
+  function acceptAll() { acceptIssue('all'); }
+  function ignoreAll() { ignoreIssue('all'); }
 
-  function refreshReview() {
-    renderPage();
-    renderResult();
-    saveReview();
-  }
-
-  function acceptIssue(id) {
-    if (state.status !== 'done') return;
-    applySuggestion(id);
-    refreshReview();
-  }
-
-  function ignoreIssue(id) {
-    if (state.status !== 'done' || state.accepted.has(id)) return;
-    state.ignored.add(id);
-    refreshReview();
-  }
-
-  function acceptAll() {
-    if (state.status !== 'done') return;
-    state.issues.forEach(issue => applySuggestion(issue.id));
-    refreshReview();
-  }
-
-  function ignoreAll() {
-    if (state.status !== 'done') return;
-    state.issues.forEach(issue => {
-      if (!state.accepted.has(issue.id)) state.ignored.add(issue.id);
-    });
-    refreshReview();
-  }
-
-  function submitAudit(id) {
-    const record = state.records.find((item) => item.id === id);
-    if (record?.secretStatus !== 'hit') return;
-    record.secretStatus = 'submitted';
+  function submitAudit(id) { perform(() => store.audit(id, 'submitted')); }
+  function approveAudit(id) { perform(() => store.audit(id, 'passed')); tick(); }
+  function rejectAudit(id) { perform(() => store.audit(id, 'rejected')); }
+  function closeSecret() {
+    state.followReview = '';
     dom.secret.close();
-    renderAll();
-    hint('已提交至百舸文库审核中心，审核通过后可预览。');
-  }
-
-  function approveAudit(id) {
-    const record = state.records.find((item) => item.id === id);
-    if (record?.secretStatus !== 'submitted') return;
-    record.secretStatus = 'passed';
-    record.auditedAt = Date.now();
-    dom.secret.close();
-    renderAll();
-    hint('管理员已审核通过，点击列表中的文件预览原文。');
-  }
-
-  function cancelUpload(id) {
-    const index = state.records.findIndex((item) => item.id === id);
-    if (index < 0) return;
-    state.records.splice(index, 1);
-    dom.secret.close();
-    renderAll();
-    hint('已取消上传，文件未进入校审。');
   }
 
   function build(root) {
-    root.classList.add('proofread-workspace');
+    root.classList.toggle('proofread-workspace', true);
     root.innerHTML = `
       <div class="pr-app tool-workspace-frame">
         <aside class="pr-rail" id="proofreadRail" aria-label="审校记录与文件">
@@ -617,10 +622,12 @@
             <span class="pr-logo" aria-hidden="true">${icon('check')}</span>
             <div><h2>审校助手</h2><p>纠错校对</p></div>
           </div>
+          <button type="button" class="secondary-button pr-new" data-new>${icon('newchat')}新建审校</button>
+          <button type="button" class="pr-completion" data-notice hidden>有新的审校结果 · 点击查看</button>
 
           <div class="pr-switch" role="tablist" aria-label="文档视图">
             <button class="pr-switch-btn" type="button" role="tab" data-view="history" aria-selected="true">${icon('history')}<span>审校记录</span></button>
-            <button class="pr-switch-btn" type="button" role="tab" data-view="files" aria-selected="false">${icon('folder')}<span>文件选择</span></button>
+            <button class="pr-switch-btn" type="button" role="tab" data-view="files" aria-selected="false">${icon('folder')}<span>文件列表</span></button>
           </div>
           <div class="pr-panel">
             <button class="secondary-button pr-upload" type="button" data-upload>${icon('file')}上传文件</button>
@@ -638,17 +645,24 @@
             </svg>
           </button>
           <header class="pr-editor-head">
-            <div class="pr-document-heading"><h2>文档预览</h2><span class="pr-doc-name" data-doc-name>未选择文档</span></div>
+            <div class="pr-document-heading"><h2 data-editor-title>文档预览</h2><span class="pr-doc-name" data-doc-name>未选择文档</span></div>
             <div class="pr-doc-actions">
+              <button class="pr-doc-action" type="button" data-original hidden>查看原文</button>
               <button class="pr-doc-action" type="button" data-download><span aria-hidden="true">↓</span><span>下载</span></button>
             </div>
           </header>
           <div class="pr-canvas">
-            <div class="pr-page" data-doc role="region" aria-label="文档正文" tabindex="0"></div>
+            <div class="pr-draft" data-draft hidden>
+              <label class="pr-draft-title"><span class="sr-only">文档名称</span><input type="text" data-draft-title maxlength="100" placeholder="文档名称（可选）" /></label>
+              <label class="pr-draft-body"><span class="sr-only">审校正文</span><textarea data-draft-text placeholder="在这里输入或粘贴需要审校的正文…" spellcheck="false"></textarea></label>
+            </div>
+            <div class="pr-page" data-doc role="region" aria-label="文档正文" tabindex="0" contenteditable="false"></div>
             <div class="pr-guard" data-guard hidden></div>
           </div>
           <footer class="pr-status">
             <span data-char>字数统计 0</span>
+            <span data-save-state role="status"></span>
+            <button type="button" class="pr-doc-action" data-retry-save hidden>重试保存</button>
           </footer>
         </section>
 
@@ -657,12 +671,13 @@
             <div><h2>审校结果</h2><span data-result-file>选择审校记录或已通过审核的文件</span></div>
             <div class="pr-result-actions">
               <button class="pr-run" type="button" data-run>开始审校</button>
+              <button class="pr-stop" type="button" data-stop hidden>取消任务</button>
             </div>
           </header>
           <p class="pr-inline-status" data-status role="status"></p>
           <div class="pr-summary" data-summary hidden>
             <span data-count>共 0 个事项</span>
-            <div class="pr-bulk" data-bulk hidden><button type="button" data-accept-all>全部采纳</button><button type="button" data-ignore-all>全部忽略</button></div>
+            <div class="pr-bulk" data-bulk hidden><button type="button" data-accept-all>全部采纳</button><button type="button" data-ignore-all>全部不采纳</button></div>
           </div>
           <div class="pr-groups" data-groups></div>
         </aside>
@@ -696,6 +711,14 @@
     dom = {
       root,
       page: root.querySelector('[data-doc]'),
+      draft: root.querySelector('[data-draft]'),
+      draftTitle: root.querySelector('[data-draft-title]'),
+      draftText: root.querySelector('[data-draft-text]'),
+      saveState: root.querySelector('[data-save-state]'),
+      saveRetry: root.querySelector('[data-retry-save]'),
+      editorTitle: root.querySelector('[data-editor-title]'),
+      originalToggle: root.querySelector('[data-original]'),
+      notice: root.querySelector('[data-notice]'),
       guard: root.querySelector('[data-guard]'),
       docName: root.querySelector('[data-doc-name]'),
       switchRoot: root.querySelector('.pr-switch'),
@@ -705,6 +728,7 @@
       search: root.querySelector('[data-search]'),
       end: root.querySelector('[data-end]'),
       run: root.querySelector('[data-run]'),
+      stop: root.querySelector('[data-stop]'),
       resultFile: root.querySelector('[data-result-file]'),
       summary: root.querySelector('[data-summary]'),
       count: root.querySelector('[data-count]'),
@@ -722,6 +746,16 @@
   }
 
   function bind() {
+    dom.root.querySelector('[data-new]').addEventListener('click', newDraft);
+    dom.saveRetry.addEventListener('click', saveDraft);
+    dom.draft.addEventListener('input', saveDraft);
+    dom.originalToggle.addEventListener('click', () => { state.original = !state.original; renderPage(); });
+    dom.notice.addEventListener('click', () => {
+      const review = state.history.find(item => item.unread);
+      if (review) openReview(review.reviewId);
+    });
+    dom.stop.addEventListener('click', stopCheck);
+    dom.secret.addEventListener('cancel', () => { state.followReview = ''; });
     const app = dom.root.querySelector('.pr-app');
     const rail = dom.root.querySelector('#proofreadRail');
     const toggle = dom.root.querySelector('[data-toggle-rail]');
@@ -755,6 +789,8 @@
 
     dom.run.addEventListener('click', () => {
       if (state.status === 'running') stopCheck();
+      else if (isBlocked(state.session)) openSecret(state.session.id,
+        ['detecting', 'hit', 'submitted'].includes(state.status) ? state.session.reviewId : '');
       else openDialog();
     });
     dom.groups.addEventListener('click', (event) => {
@@ -789,10 +825,12 @@
     dom.root.querySelector('[data-download]').addEventListener('click', () => {
       const record = activeRecord();
       if (!record || isBlocked(record)) return;
-      const blob = new Blob([record.text], { type: 'text/plain;charset=utf-8' });
+      const text = state.original ? record.originalText : record.text;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `${record.name || '审校文档'}.txt`;
+      const suffix = record.reviewId ? (state.original ? '-原文' : '-修订稿') : '';
+      link.download = `${record.name || '审校文档'}${suffix}.txt`;
       link.click();
       URL.revokeObjectURL(link.href);
     });
@@ -811,7 +849,7 @@
     dom.secret.addEventListener('click', (event) => {
       const id = state.secretId;
       if (event.target.closest('[data-secret-x]') || event.target.closest('[data-secret-close]') || event.target === dom.secret) {
-        dom.secret.close();
+        closeSecret();
         return;
       }
       if (event.target.closest('[data-secret-submit]')) {
@@ -822,24 +860,25 @@
         approveAudit(id);
         return;
       }
-      if (event.target.closest('[data-secret-cancel]')) {
-        cancelUpload(id);
+      if (event.target.closest('[data-secret-reject]')) {
+        rejectAudit(id);
         return;
       }
       if (event.target.closest('[data-secret-open]')) {
         const record = state.records.find((item) => item.id === id);
-        dom.secret.close();
+        closeSecret();
         if (record) openDoc(record.id);
       }
     });
   }
 
-  function render(target) {
+  function render(target, onDirty = () => {}) {
+    state.onDirty = onDirty;
     build(target);
     bind();
-    stopTimer();
+    clearInterval(state.timer);
     const now = Date.now();
-    state.records = [
+    const records = [
       ['项目周会纪要', SAMPLE, 'passed'],
       ['船舶设备维护简报', '截止目前，设备按装和调试已完成，，请各班组核对维护记录。', 'passed'],
       ['试验计划草稿', '演示材料：下周拟召开型号研制协调会议。', 'submitted'],
@@ -850,25 +889,47 @@
       return {
         id: uid('rec'), name, text, secretStatus, fileName, uploadedAt,
         updated: uploadedAt, reviewedAt: uploadedAt + 1500, auditedAt: 0,
-        source: 'upload', keywords: scanSecret(fileName, text),
+        source: 'upload', version: 1, keywords: scanSecret(fileName, text),
       };
     });
-    state.history = [
-      [state.records[0], SAMPLE, 30],
-      [state.records[1], state.records[1].text, 65],
-      [state.records[0], '请各部门严各核对会仪材料，确宝记录完整。', 120],
+    const history = [
+      [records[0], SAMPLE, 30],
+      [records[1], records[1].text, 65],
+      [records[0], '请各部门严各核对会仪材料，确宝记录完整。', 120],
     ].map(([record, text, minutesAgo]) => ({
-      ...record, text, reviewId: uid('review'), checkedAt: now - minutesAgo * 60000,
+      ...record, text, originalText: text, reviewId: uid('review'), checkedAt: now - minutesAgo * 60000,
       status: 'done', reviewTypes: TYPES.slice(), issues: detect(text), ignored: [], accepted: [],
     }));
-    state.session = null;
-    state.view = 'history';
-    state.status = 'idle';
-    state.issues = [];
-    state.ignored = new Set();
-    state.accepted = new Set();
-    openReview(state.history[0].reviewId);
+    try {
+      store.initialize(records, history);
+      const selection = JSON.parse(window.localStorage.getItem('baige.proofread.selection') || 'null');
+      state.selection = selection?.selection || {kind: 'review', id: history[0].reviewId};
+      state.view = selection?.view || 'history';
+      state.unsaved = false;
+      state.foreground = true;
+      state.original = false;
+      state.followReview = '';
+      target.dataset.autosaved = 'true';
+      sync(store.advance(scanSecret, detect));
+      if (!state.session && state.history.length) state.selection = {kind: 'review', id: state.history[0].reviewId};
+      sync();
+      renderAll();
+      state.timer = setInterval(tick, 400);
+    } catch (error) { hint(error.message || '无法读取审校数据，请检查浏览器存储空间。'); }
   }
 
-  window.BaigeProofreadTool = { render, detect, scanSecret, SAMPLE, SECRET_META };
+  function deactivate() {
+    state.foreground = false;
+    state.followReview = '';
+    dom?.secret.close();
+    dom?.dialog.close();
+  }
+
+  function resume() {
+    state.foreground = true;
+    tick();
+  }
+
+  window.addEventListener?.('storage', event => { if (event.key === store?.KEY) tick(); });
+  window.BaigeProofreadTool = { render, resume, deactivate, detect, scanSecret, SAMPLE, SECRET_META };
 })();

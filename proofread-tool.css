@@ -768,7 +768,6 @@
 .pr-result-head > div:first-child { min-width: 0; }
 .pr-result-head [data-result-file] { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pr-result-head > div:first-child { flex: 1 1 120px; }
-.pr-result-actions .pr-run[disabled] { display: none; }
 .pr-switch-btn .icon { display: none; }
 .pr-switch { margin-inline: 12px; }
 
@@ -793,3 +792,20 @@
 .pr-editor-head, .pr-result-head { min-height: 62px; padding-block: 10px; }
 .pr-groups { padding: 6px 14px 14px; }
 .pr-summary { padding: 8px 14px 4px; }
+
+/* 草稿仅在提交前可编辑，审校记录保留只读原文和修订稿。 */
+.pr-new { margin: 0 12px 6px; gap: 6px; min-height: 34px; }
+.pr-new .icon { width: 16px; height: 16px; }
+.pr-completion { margin: 0 12px 8px; padding: 8px; border: 0; border-radius: 6px; background: var(--accent-soft); color: var(--accent-hover); font: inherit; font-size: 12px; text-align: left; }
+.pr-unread { display: inline-block; width: 6px; height: 6px; margin-left: 6px; border-radius: 50%; background: var(--accent); vertical-align: middle; }
+.pr-draft { display: flex; flex-direction: column; min-height: 100%; padding: 18px; gap: 14px; background: var(--surface); }
+.pr-draft-title input { width: 100%; border: 0; border-bottom: 1px solid var(--line); padding: 0 0 12px; color: var(--ink); background: transparent; font: inherit; font-size: 18px; font-weight: 600; }
+.pr-draft-body { display: flex; flex: 1; min-height: 320px; }
+.pr-draft-body textarea { flex: 1; width: 100%; resize: vertical; border: 0; padding: 0; background: transparent; color: var(--ink); font: inherit; font-size: 14px; line-height: 1.8; }
+.pr-draft :is(input, textarea):focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
+.pr-status { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; }
+.pr-secret-loading { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 20px; padding: 14px 10px 20px; border-bottom: 1px solid var(--line); text-align: center; }
+.pr-secret-loading h3 { margin: 0; font-size: 16px; color: var(--ink); }
+.pr-secret-loading p { max-width: 38ch; font-size: 13px; line-height: 1.7; color: var(--muted); }
+.pr-stop { height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; }
+.pr-draft[hidden], .pr-page[hidden], .pr-completion[hidden], .pr-stop[hidden], [data-original][hidden], [data-retry-save][hidden] { display: none; }

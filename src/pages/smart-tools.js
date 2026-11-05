@@ -89,7 +89,7 @@
   function renderToolPage(tool, root) {
     if (tool.name === "纠错校对" && window.BaigeProofreadTool) {
       root.dataset.toolGroup = tool.group;
-      window.BaigeProofreadTool.render(root);
+      window.BaigeProofreadTool.render(root, dirty => toolWorkspace.setDirty(tool.name, dirty));
       return;
     }
     root.replaceChildren(document.querySelector("#toolTemplate").content.cloneNode(true));
@@ -136,7 +136,10 @@
       toolWorkspace.catalog.querySelector("#toolSearch").focus();
     }
   });
-  bridge.onDeactivate(() => toolWorkspace.closePicker());
+  bridge.onDeactivate(() => {
+    toolWorkspace.closePicker();
+    window.BaigeProofreadTool?.deactivate();
+  });
   featureConfig?.subscribe(refreshConfiguration);
   bridge.onActivate(({ child, focusSearch }) => {
     refreshConfiguration();
@@ -144,6 +147,8 @@
       toolWorkspace.show(child);
       activeChild = child;
     } else toolWorkspace.revealActiveTab();
+    if (child === "纠错校对") window.BaigeProofreadTool?.resume();
+    else window.BaigeProofreadTool?.deactivate();
     if (focusSearch) toolWorkspace.catalog.querySelector("#toolSearch").focus();
   });
 })();
