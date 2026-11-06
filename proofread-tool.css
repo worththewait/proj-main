@@ -335,6 +335,11 @@
   color: #8b96a8;
   text-decoration-color: #c9d1de;
 }
+.pr-page .pr-hit.is-accepted {
+  background: var(--success-soft);
+  color: var(--success);
+  text-decoration: none;
+}
 
 /* ---------- 未通过涉密检测时的拦截态 ---------- */
 .pr-guard {
@@ -894,6 +899,7 @@
 .pr-intake-table-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 10px; }
 .pr-intake-table-heading h2 { margin: 0; font-size: 18px; line-height: 1.5; font-weight: 600; }
 .pr-intake-table-heading > span { color: var(--muted); font-size: 12px; }
+.pr-material-table .wr-file-icon.is-sheet { background: var(--success); }
 .pr-material-table :is(.wr-eye, .wr-file-actions) .icon { width: 14px; height: 14px; }
 .pr-material-table .wr-file-actions .pr-material-action { width: auto; padding: 0 6px; color: var(--accent-hover); font-size: 12px; }
 .pr-intake-empty { margin: 0; padding: 36px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); text-align: center; }

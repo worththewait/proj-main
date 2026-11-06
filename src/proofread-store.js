@@ -87,7 +87,7 @@
     if (typeof text !== 'string' || !text.trim()) throw new Error('请先输入需要审校的正文。');
     if (typeof name !== 'string' || typeof fileName !== 'string' || !['text', 'upload'].includes(source)
       || (source === 'upload' && !fileName.trim())) throw new Error('文档信息不完整，请重新提交。');
-    const title = name.trim() || fileName.replace(/\.(txt|md)$/i, '').trim() || text.trim().split(/\r?\n/)[0].slice(0, 24);
+    const title = name.trim() || fileName.replace(/\.(txt|md|pdf|docx?|xlsx?)$/i, '').trim() || text.trim().split(/\r?\n/)[0].slice(0, 24);
     return {
       id: uid('doc'), name: title, fileName: fileName || `${title}.txt`, text, source,
       secretStatus: 'draft', keywords: [], version: 1, uploadedAt: Date.now(),
@@ -213,6 +213,18 @@
     });
   }
 
+  function undoDecision(reviewId, issueId) {
+    return change(data => {
+      const review = data.history.find(item => item.reviewId === reviewId);
+      if (review?.status !== 'done') return null;
+      const decisions = review.accepted.includes(issueId) ? review.accepted : review.ignored;
+      const index = decisions.indexOf(issueId);
+      if (index === -1) return null;
+      decisions.splice(index, 1);
+      return review;
+    });
+  }
+
   // 删除文件时连同它的审校记录一并清除，避免留下无法打开的孤儿记录。
   function remove(id) {
     return change(data => {
@@ -233,6 +245,6 @@
 
   window.BaigeProofreadStore = Object.freeze({
     KEY, read, initialize, createDraft, saveDraft, addUpload, submitFile, startReview,
-    advance, stopReview, audit, decide, remove, markRead, REVIEW_MS,
+    advance, stopReview, audit, decide, undoDecision, remove, markRead, REVIEW_MS,
   });
 })();

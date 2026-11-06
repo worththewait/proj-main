@@ -3,6 +3,7 @@
 
   const { icon, escapeHtml: escape } = window.BaigeUI;
   const store = window.BaigeProofreadStore;
+  const files = window.BaigeProofreadFile;
 
   /* ---------- 演示词库：真实审校由后端模型完成，这里用规则模拟 ---------- */
   const DICT = [
@@ -151,7 +152,9 @@
       const approved = file.secretStatus === 'passed';
       const fileName = file.fileName || file.name;
       const name = escape(fileName);
-      const type = /\.md$/i.test(fileName) ? 'MD' : 'TXT';
+      const format = files.extension(fileName);
+      const type = format.toUpperCase() || 'TXT';
+      const fileIcon = format === 'pdf' ? 'pdf' : (format === 'xls' || format === 'xlsx' ? 'sheet' : 'doc');
       const secret = SECRET_META[file.secretStatus] || SECRET_META.detecting;
       const updated = Math.max(file.uploadedAt || 0, file.updated || 0, file.reviewedAt || 0,
         file.auditedAt || 0, review?.checkedAt || 0, review?.finishedAt || 0);
@@ -166,9 +169,9 @@
         action = `<button type="button" class="pr-material-action" data-intake-start="${id}">${label}</button>`;
       }
       return `<tr class="${approved ? '' : 'is-locked'}">
-        <td><div class="wr-file-name"><span class="wr-file-icon is-doc">${type}</span><span title="${name}">${name}</span></div></td>
+        <td><div class="wr-file-name"><span class="wr-file-icon is-${fileIcon}">${escape(type)}</span><span title="${name}">${name}</span></div></td>
         <td>${file.source === 'upload' ? '本地上传' : '文字录入'}</td><td>校对文档</td><td>V${file.version || 1}.0.0</td>
-        <td>${tableTime(file.uploadedAt)}</td><td><span class="wr-tag parse-${approved ? 'parsed' : 'unparsed'}">${approved ? '已解析' : '未解析'}</span></td>
+        <td>${tableTime(file.uploadedAt)}</td><td><span class="wr-tag parse-${file.secretStatus === 'draft' ? 'unparsed' : 'parsed'}">${file.secretStatus === 'draft' ? '未解析' : '已解析'}</span></td>
         <td><div class="wr-secret-cell"><span class="wr-tag secret-${escape(file.secretStatus)}">${escape(secret.label)}</span>
           <button type="button" class="wr-eye" data-intake-secret="${id}" title="查看涉密核查详情" aria-label="查看 ${name} 的涉密核查详情">${icon('eye')}</button></div></td>
         <td>${tableTime(updated)}</td><td><div class="wr-file-actions">${action}
@@ -195,6 +198,27 @@
   }
 
   /* ---------- 渲染：文档区与拦截态 ---------- */
+  function documentParts(record) {
+    // 以原文和原文位置为准，采纳长度变化时不移动后续建议的位置。
+    const original = record.originalText ?? record.text;
+    const parts = [];
+    let cursor = 0;
+    for (const issue of state.issues) {
+      if (issue.start < cursor) continue;
+      const accepted = state.accepted.has(issue.id);
+      const tone = accepted ? ' is-accepted' : state.ignored.has(issue.id) ? ' is-ignored' : '';
+      parts.push({text: original.slice(cursor, issue.start)});
+      parts.push({
+        id: issue.id,
+        text: accepted ? issue.suggestion : original.slice(issue.start, issue.end),
+        tone,
+      });
+      cursor = issue.end;
+    }
+    parts.push({text: original.slice(cursor)});
+    return parts;
+  }
+
   function renderPage() {
     if (!dom) return;
     const record = activeRecord();
@@ -205,32 +229,19 @@
       dom.charCount.textContent = '字数统计 0';
       return;
     }
-    const text = record.originalText ?? record.text;
     if (isBlocked(record)) {
       dom.page.textContent = '';
-      dom.page.setAttribute('contenteditable', 'false');
       dom.guard.hidden = false;
       dom.guard.innerHTML = guardBody(record);
-    } else {
-      dom.guard.hidden = true;
-      if (!state.issues.length) {
-        dom.page.textContent = text;
-      } else {
-        const parts = [];
-        let cursor = 0;
-        for (const issue of state.issues) {
-          if (issue.start < cursor) continue;
-          parts.push(escape(text.slice(cursor, issue.start)));
-          const resolved = state.accepted.has(issue.id) || state.ignored.has(issue.id);
-          const cls = resolved ? 'pr-hit is-ignored' : 'pr-hit';
-          parts.push(`<span class="${cls}" data-hit="${issue.id}">${escape(text.slice(issue.start, issue.end))}</span>`);
-          cursor = issue.end;
-        }
-        parts.push(escape(text.slice(cursor)));
-        dom.page.innerHTML = parts.join('');
-      }
+      dom.charCount.textContent = '字数统计 0';
+      return;
     }
-    dom.charCount.textContent = `字数统计 ${charCount(text)}`;
+    dom.guard.hidden = true;
+    const parts = documentParts(record);
+    dom.page.innerHTML = parts.map(({id, text, tone}) => id
+      ? `<span class="pr-hit${tone}" data-hit="${id}">${escape(text)}</span>`
+      : escape(text)).join('');
+    dom.charCount.textContent = `字数统计 ${charCount(parts.map(part => part.text).join(''))}`;
   }
 
   function guardBody(record) {
@@ -290,15 +301,14 @@
             const done = state.accepted.has(issue.id);
             const ignored = state.ignored.has(issue.id);
             const cls = done ? 'pr-issue is-accepted' : ignored ? 'pr-issue is-ignored' : 'pr-issue';
+            const actions = done || ignored
+              ? `<button type="button" data-undo-decision="${issue.id}" aria-label="撤回第 ${issue.no} 条建议的${done ? '采纳' : '不采纳'}">撤回</button>`
+              : `<button type="button" data-accept="${issue.id}">采纳</button><button type="button" data-ignore="${issue.id}">不采纳</button>`;
             return `<article class="${cls}" data-issue="${issue.id}">
               <span class="pr-issue-num">${issue.no}</span>
               <div class="pr-diff"><del>${escape(issue.word)}</del><span class="arrow">→</span><ins>${escape(issue.suggestion)}</ins></div>
               <p class="pr-issue-type">错误类型：${escape(issue.type)}${done ? ' · 已采纳' : ignored ? ' · 未采纳' : ''}</p>
-              ${
-                done || ignored
-                  ? ''
-                  : `<div class="pr-issue-actions"><button type="button" data-accept="${issue.id}">采纳</button><button type="button" data-ignore="${issue.id}">不采纳</button></div>`
-              }
+              <div class="pr-issue-actions">${actions}</div>
             </article>`;
           })
           .join('')}`
@@ -533,25 +543,27 @@
     dom.file.click();
   }
 
-  function onFile() {
-    const file = dom.file.files?.[0];
-    if (!file) return;
-    state.followReview = '';
-    if (!/\.(txt|md)$/i.test(file.name)) { hint('请选择 TXT 或 MD 文件。'); return; }
+  async function onFile() {
     const target = dom;
-    const reader = new FileReader();
+    const file = target.file.files?.[0];
+    if (!file || target.uploadButton.disabled) return;
+    state.followReview = '';
     target.uploadButton.disabled = true;
-    reader.onload = () => {
-      target.uploadButton.disabled = false;
+    target.intakeStatus.textContent = '正在读取文件正文…';
+    try {
+      const text = await files.read(file);
       if (dom !== target) return;
-      const saved = perform(() => store.submitFile({fileName: file.name, text: String(reader.result || ''), source: 'upload'}));
+      target.intakeStatus.textContent = '';
+      const saved = perform(() => store.submitFile({fileName: file.name, text, source: 'upload'}));
       if (saved && state.screen === 'files') showIntakeNotice();
-    };
-    reader.onerror = () => {
+    } catch (error) {
+      if (dom === target) {
+        target.intakeStatus.textContent = error instanceof DOMException
+          ? '文件读取失败，请重新上传。' : error.message || '文件读取失败，请重新上传。';
+      }
+    } finally {
       target.uploadButton.disabled = false;
-      if (dom === target) hint('文件读取失败，请重新上传。');
-    };
-    reader.readAsText(file, 'utf-8');
+    }
   }
 
   function startCheck(reviewTypes) {
@@ -629,7 +641,7 @@
           </div>
         </header>
         <section class="pr-material-table" data-files aria-labelledby="prFilesTitle">
-          <div class="pr-intake-table-heading"><h2 id="prFilesTitle">文件列表</h2><span>支持 TXT、MD</span></div>
+          <div class="pr-intake-table-heading"><h2 id="prFilesTitle">文件列表</h2><span>支持 TXT、MD、PDF、Word、Excel</span></div>
           <div class="wr-file-table-wrap" data-file-table tabindex="0" role="region" aria-label="校对文件列表">
             <table class="wr-file-table">
               <thead><tr><th scope="col">文件名</th><th scope="col">文件来源</th><th scope="col">文档类型</th><th scope="col">版本号</th><th scope="col">创建时间</th><th scope="col">解析状态</th><th scope="col">涉密审查状态</th><th scope="col">最近更新</th><th scope="col">操作</th></tr></thead>
@@ -666,7 +678,7 @@
           </div>
         </aside>
 
-        <section class="pr-editor" aria-label="原文">
+        <section class="pr-editor" aria-label="文档预览">
           <button class="pr-rail-toggle" type="button" data-toggle-rail aria-controls="proofreadRail" aria-expanded="true" title="收起列表" aria-label="收起列表">
             <svg viewBox="0 0 12 36" width="12" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path class="pr-rail-grip" d="M6 5v26"/>
@@ -674,9 +686,9 @@
             </svg>
           </button>
           <header class="pr-editor-head">
-            <div class="pr-document-heading"><h2>原文</h2></div>
+            <div class="pr-document-heading"><h2>文档预览</h2></div>
             <div class="pr-doc-actions">
-              <button class="pr-doc-action" type="button" data-download>${icon('download')}下载原文</button>
+              <button class="pr-doc-action" type="button" data-download>${icon('download')}下载文档</button>
             </div>
           </header>
           <div class="pr-canvas">
@@ -747,7 +759,7 @@
         <footer class="pr-secret-foot" data-secret-foot></footer>
       </dialog>
 
-      <input type="file" accept=".txt,.md,text/plain" hidden data-file />
+      <input type="file" accept="${files.accept}" hidden data-file />
     `;
 
     dom = {
@@ -843,6 +855,15 @@
     });
     dom.run.addEventListener('click', stopCheck);
     dom.groups.addEventListener('click', (event) => {
+      const undo = event.target.closest('[data-undo-decision]');
+      if (undo) {
+        const issueId = undo.dataset.undoDecision;
+        const restoreFocus = document.activeElement === undo;
+        if (perform(() => store.undoDecision(state.session.reviewId, issueId)) && restoreFocus) {
+          dom.groups.querySelector(`[data-accept="${issueId}"]`)?.focus({preventScroll: true});
+        }
+        return;
+      }
       const accept = event.target.closest('[data-accept]');
       if (accept) {
         acceptIssue(accept.dataset.accept);
@@ -874,11 +895,11 @@
     dom.root.querySelector('[data-download]').addEventListener('click', () => {
       const record = activeRecord();
       if (!record || isBlocked(record)) return;
-      const text = record.originalText ?? record.text;
+      const text = documentParts(record).map(part => part.text).join('');
       const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      link.download = `${record.name || '校对文档'}-原文.txt`;
+      link.download = `${record.name || '校对文档'}.txt`;
       link.click();
       URL.revokeObjectURL(link.href);
     });

@@ -47,9 +47,6 @@ function setupFlow(storage = new Map()) {
   const timeouts = new Map();
   let failWrites = false;
   class Clock extends Date { static now() { return time; } }
-  class FileReader {
-    readAsText(file) { this.result = file.text; this.onload(); }
-  }
   const window = {
     BaigeUI: {icon: () => "", escapeHtml: String},
     localStorage: {
@@ -61,7 +58,8 @@ function setupFlow(storage = new Map()) {
     },
     addEventListener() {},
   };
-  const ctx = vm.createContext({window, Date: Clock, FileReader, console,
+  const ctx = vm.createContext({window, Date: Clock, URL, DOMException, console,
+    document: {currentScript: {src: 'file:///prototype/src/proofread-file.js'}},
     setInterval: callback => { interval = callback; return 1; }, clearInterval: () => { interval = null; },
     setTimeout(callback, delay) {
       const id = ++nextTimeout;
@@ -71,6 +69,7 @@ function setupFlow(storage = new Map()) {
     clearTimeout: id => timeouts.delete(id),
   });
   vm.runInContext(read("src/proofread-store.js"), ctx);
+  vm.runInContext(read("src/proofread-file.js"), ctx);
   vm.runInContext(read("src/proofread-tool.js"), ctx);
   const store = window.BaigeProofreadStore;
   const tool = window.BaigeProofreadTool;
@@ -190,8 +189,8 @@ test("submitting text locks the original and background completion does not inte
   assert.equal(typo.word, '严各');
   reopened(`[data-accept="${punctuation.id}"]`).emit('click');
   reopened(`[data-ignore="${typo.id}"]`).emit('click');
-  assert.equal(reopened('[data-doc]').textContent.length, original.length);
-  assert.equal(reopened(`[data-hit="${punctuation.id}"]`).textContent, punctuation.word);
+  assert.equal(reopened('[data-char]').textContent, `字数统计 ${original.length - 1}`);
+  assert.equal(reopened(`[data-hit="${punctuation.id}"]`).textContent, punctuation.suggestion);
   assert.equal(reopened(`[data-hit="${typo.id}"]`).textContent, typo.word);
   const decided = flow.store.read().history[0];
   assert.equal(decided.originalText, original);
@@ -222,7 +221,7 @@ test("text review opens automatically after the five-second notice closes", () =
   assert.equal(get('[data-intake-review]').textContent, '查看状态');
 });
 
-test("saved legacy results display the original and retain issue locations after old text replacements", () => {
+test("saved legacy results apply the accepted change once and retain later issue locations", () => {
   const flow = setupFlow();
   const original = '计划完成，，请严各审校。';
   const draft = flow.draft(original);
@@ -239,7 +238,8 @@ test("saved legacy results display the original and retain issue locations after
 
   const {get} = flow.mount();
   get('[data-intake-review]').emit('click');
-  assert.equal(get('[data-doc]').textContent.length, original.length);
+  assert.equal(get('[data-char]').textContent, `字数统计 ${original.length - 1}`);
+  assert.equal(get(`[data-hit="${punctuation.id}"]`).textContent, '，');
   assert.equal(get(`[data-hit="${typo.id}"]`).textContent, '严各');
   assert.match(get(`[data-issue="${punctuation.id}"]`).textContent, /已采纳/);
 });
@@ -295,6 +295,70 @@ test("decisions are recorded without modifying original text or issue offsets", 
   assert.equal(flow.store.read().history.length, 1);
 });
 
+test("accepting a shorter replacement updates the document and can be undone after reopening", () => {
+  const flow = setupFlow();
+  const draft = flow.draft("计划完成，，请严各审校。");
+  flow.store.startReview({fileId: draft.id, types: ["错别字", "标点"]});
+  const done = flow.tick(10000).history[0];
+  const [first, second] = done.issues;
+  const opened = flow.mount();
+  opened.get('[data-intake-review]').emit('click');
+  opened.get(`[data-accept="${first.id}"]`).emit('click');
+  assert.equal(opened.get(`[data-hit="${first.id}"]`).textContent, '，');
+  assert.equal(opened.get(`[data-hit="${second.id}"]`).textContent, '严各');
+  assert.equal(opened.get('[data-char]').textContent, `字数统计 ${draft.text.length - 1}`);
+  opened.get('[data-accept-all]').emit('click');
+
+  const reopened = setupFlow(flow.storage);
+  const {get} = reopened.mount();
+  get('[data-intake-review]').emit('click');
+  assert.equal(get('[data-accept-all]').disabled, true);
+  assert.equal(get(`[data-hit="${first.id}"]`).textContent, '，');
+  assert.equal(get(`[data-hit="${second.id}"]`).textContent, '严格');
+  const undo = get(`[data-undo-decision="${first.id}"]`);
+  assert.ok(undo, '已采纳建议应提供撤回入口');
+  undo.emit('click');
+
+  const {history: [saved], records: [file]} = setupFlow(flow.storage).store.read();
+  assert.deepEqual(Array.from(saved.accepted), [second.id]);
+  assert.equal(saved.originalText, draft.text);
+  assert.equal(saved.text, draft.text);
+  assert.equal(file.text, draft.text);
+  assert.equal(get(`[data-hit="${first.id}"]`).textContent, '，，');
+  assert.equal(get(`[data-hit="${second.id}"]`).textContent, '严格');
+  assert.equal(get('[data-char]').textContent, `字数统计 ${draft.text.length}`);
+  assert.ok(get(`[data-accept="${first.id}"]`));
+  assert.ok(get(`[data-ignore="${first.id}"]`));
+  assert.equal(get(`[data-undo-decision="${first.id}"]`), null);
+  assert.equal(get('[data-accept-all]').disabled, false);
+});
+
+test("undoing a rejected suggestion restores its choices and leaves other decisions intact", () => {
+  const flow = setupFlow();
+  const draft = flow.draft("工做严各。");
+  flow.store.startReview({fileId: draft.id, types: ["错别字"]});
+  const {issues: [first, second]} = flow.tick(10000).history[0];
+  const {get} = flow.mount();
+  get('[data-intake-review]').emit('click');
+  get(`[data-accept="${second.id}"]`).emit('click');
+  get(`[data-ignore="${first.id}"]`).emit('click');
+  assert.equal(get(`[data-hit="${first.id}"]`).textContent, '工做');
+  assert.match(get(`[data-issue="${first.id}"]`).textContent, /未采纳/);
+
+  const undo = get(`[data-undo-decision="${first.id}"]`);
+  assert.ok(undo, '未采纳建议应提供撤回入口');
+  undo.emit('click');
+
+  const saved = setupFlow(flow.storage).store.read().history[0];
+  assert.equal(saved.ignored.length, 0);
+  assert.deepEqual(Array.from(saved.accepted), [second.id]);
+  assert.equal(get(`[data-hit="${first.id}"]`).textContent, '工做');
+  assert.equal(get(`[data-hit="${second.id}"]`).textContent, '严格');
+  assert.ok(get(`[data-ignore="${first.id}"]`));
+  get(`[data-accept="${first.id}"]`).emit('click');
+  assert.equal(get(`[data-hit="${first.id}"]`).textContent, '工作');
+});
+
 test("empty submissions and failed saves never create partial or duplicated tasks", () => {
   const flow = setupFlow();
   const draft = flow.draft("   ");
@@ -306,11 +370,12 @@ test("empty submissions and failed saves never create partial or duplicated task
   assert.equal(flow.store.read().records[0].secretStatus, "draft");
 });
 
-test("uploaded files pass screening before manual review and can reopen the result in two columns", () => {
+test("uploaded files pass screening before manual review and can reopen the result in two columns", async () => {
   const flow = setupFlow();
   const {get, advance} = flow.mount();
-  get('[data-file]').files = [{name: '会议纪要.txt', text: '工做内容'}];
+  get('[data-file]').files = [{name: '会议纪要.txt', size: 12, text: async () => '工做内容'}];
   get('[data-file]').emit('change');
+  await new Promise(setImmediate);
   assert.equal(get('[data-intake-notice]').open, true);
   assert.equal(flow.store.read().records[0].secretStatus, 'detecting');
   assert.equal(flow.store.read().history.length, 0);
@@ -340,11 +405,12 @@ test("uploaded files pass screening before manual review and can reopen the resu
   assert.ok(get('[data-accept]'));
 });
 
-test("uploaded suspicious files require manual approval before offering proofreading", () => {
+test("uploaded suspicious files require manual approval before offering proofreading", async () => {
   const flow = setupFlow();
   const {get, advance} = flow.mount();
-  get('[data-file]').files = [{name: '资料.txt', text: '内部资料工做'}];
+  get('[data-file]').files = [{name: '资料.md', size: 18, text: async () => '内部资料工做'}];
   get('[data-file]').emit('change');
+  await new Promise(setImmediate);
   advance(5000);
   assert.equal(flow.store.read().records[0].secretStatus, 'hit');
   assert.equal(get('[data-intake-start]'), null);
