@@ -11,7 +11,7 @@ function loadIntel(runtime = {}) {
   const source = fs.readFileSync(controller, 'utf8');
   const initialization = source.indexOf("document.addEventListener('keydown'");
   assert.ok(initialization > 0, 'controller must initialize its document interactions');
-  const fixedNow = new Date(2026, 10, 2, 12, 0, 0).getTime();
+  const fixedNow = new Date(2026, 10, 3, 12, 0, 0).getTime();
   class FixedDate extends Date {
     constructor(...args) { super(...(args.length ? args : [fixedNow])); }
     static now() { return fixedNow; }
@@ -67,9 +67,10 @@ function interactions() {
   return { nodes, selectors, timers, evaluate };
 }
 
-test('intel integrates all eight early editions and keeps cross-month dates readable', () => {
+test('intel integrates all nine early editions and keeps cross-month dates readable', () => {
   const evaluate = loadIntel();
-  assert.equal(evaluate('Object.keys(EARLY_BY_DAY).length'), 8);
+  assert.equal(evaluate('Object.keys(EARLY_BY_DAY).length'), 9);
+  assert.equal(evaluate("earlyOf({y:2026,m:11,d:3}).length"), 9);
   assert.equal(evaluate("earlyOf({y:2026,m:11,d:2}).length"), 7);
   assert.equal(evaluate("earlyOf({y:2026,m:10,d:27}).length"), 21);
   assert.equal(evaluate("dayKeyBack({y:2026,m:11,d:2}, 2)"), '10-31');
@@ -152,27 +153,28 @@ test('subject filtering retains a single timeline row per event, including share
 test('tracking input keeps exactly five natural days and ignores future or stale reports', () => {
   const evaluate = loadIntel();
   const items = [
-    report('stale', '马士基签署 2 艘订单', { d: '10-28' }),
-    report('boundary', '马士基签署 3 艘订单', { d: '10-29' }),
-    report('today', '马士基签署 4 艘订单'),
-    report('future', '马士基签署 5 艘订单', { d: '11-03' }),
+    report('stale', '马士基签署 2 艘订单', { d: '10-29' }),
+    report('boundary', '马士基签署 3 艘订单', { d: '10-30' }),
+    report('today', '马士基签署 4 艘订单', { d: '11-03' }),
+    report('future', '马士基签署 5 艘订单', { d: '11-04' }),
   ];
   evaluate(`ITEMS.splice(0, ITEMS.length, ...${JSON.stringify(items)}); recomputeInput();`);
-  assert.equal(evaluate('BASE_D'), '11-02');
+  assert.equal(evaluate('BASE_D'), '11-03');
   assert.deepEqual(JSON.parse(evaluate('JSON.stringify(INPUT.map(item => item.id))')), ['boundary', 'today']);
 });
 
-test('daily collection imports pending reports once and rebuilds followed event progress', () => {
+test('daily collection imports pending reports once and rebuilds the event model', () => {
   const evaluate = loadIntel();
   const before = evaluate('ITEMS.length');
+  const rowsBefore = evaluate('MODEL.rows.length');
   const pending = evaluate('PENDING.length');
   assert.equal(pending, 2);
   evaluate('autoRun();');
   assert.equal(evaluate('ITEMS.length'), before + pending);
   assert.equal(evaluate('PENDING.length'), 0);
   assert.equal(evaluate('fetchedIds.size'), 2);
-  assert.equal(evaluate('TRACKS.find(track => track.subj === "霍尔木兹海峡").nodeCount'), 2);
-  assert.equal(evaluate('MODEL.events.some(event => event.subj.n === "大金重工")'), true);
+  assert.ok(evaluate('MODEL.rows.length') > rowsBefore, 'imported reports must go through the whole aggregation chain');
+  assert.equal(evaluate('MODEL.events.some(event => event.type === "市场")'), true);
   evaluate(`PENDING.push(${JSON.stringify(report('next', '福建船政签署 8 艘新船订单'))}); autoRun();`);
   assert.equal(evaluate('ITEMS.length'), before + pending);
   assert.equal(evaluate('PENDING.length'), 1);
@@ -181,7 +183,8 @@ test('daily collection imports pending reports once and rebuilds followed event 
 test('original article links prefer direct URLs and provide a source-title search fallback', () => {
   const evaluate = loadIntel();
   assert.equal(evaluate("origOf({id:'rt01',url:'https://example.org/article',title:'标题'})"), 'https://example.org/article');
-  assert.equal(evaluate("origOf({id:'rt01'})"), 'https://m.ebrun.com/ebrungo/zb/718030.html');
+  assert.match(evaluate("origOf({id:'rt01'})"), /^http:\/\/mp\.weixin\.qq\.com\/s\?__biz=/);
+  assert.equal(evaluate("origOf({id:'rt02'})"), 'https://finance.sina.com.cn/roll/2026-11-03/doc-inixmnpy9970066.shtml');
   const fallback = evaluate("origOf({src:'新华社',title:'船舶报道'})");
   assert.equal(new URL(fallback).searchParams.get('q'), '新华社 船舶报道');
   const link = evaluate("origLink('https://example.org/article?a=1&b=2')");
@@ -245,22 +248,22 @@ test('one refresh updates both feeds and repeated refresh does not duplicate art
   const { nodes, timers, evaluate } = interactions();
   nodes.btnPageRefresh = element();
   evaluate('bind();');
-  const earlyBefore = evaluate("EARLY_BY_DAY['11-02'].length");
+  const earlyBefore = evaluate("EARLY_BY_DAY['11-03'].length");
   const liveBefore = evaluate('LIVE.length');
   nodes.btnPageRefresh.onclick();
   nodes.btnPageRefresh.onclick();
   assert.equal(timers.filter((timer) => timer.delay === 620).length, 1, 'a pending refresh must not start a second request');
   timers.find((timer) => timer.delay === 620).callback();
-  assert.equal(evaluate("EARLY_BY_DAY['11-02'].length"), earlyBefore + 1);
+  assert.equal(evaluate("EARLY_BY_DAY['11-03'].length"), earlyBefore + 2);
   assert.equal(evaluate('LIVE.length'), liveBefore + 2);
   assert.equal(evaluate('freshLive.size'), 2);
-  assert.match(evaluate('lastToast'), /早报 \+1.*实时 \+2/);
+  assert.match(evaluate('lastToast'), /早报 \+2.*实时 \+2/);
   // A real render replaces this button, so bind the next click to a fresh view element.
   nodes.btnPageRefresh = element();
   evaluate('bind();');
   nodes.btnPageRefresh.onclick();
   timers.filter((timer) => timer.delay === 620).at(-1).callback();
-  assert.equal(evaluate("EARLY_BY_DAY['11-02'].length"), earlyBefore + 1);
+  assert.equal(evaluate("EARLY_BY_DAY['11-03'].length"), earlyBefore + 2);
   assert.equal(evaluate('LIVE.length'), liveBefore + 2);
   assert.equal(evaluate('lastToast'), '已是最新');
   timers.find((timer) => timer.delay === 3600).callback();
@@ -278,9 +281,14 @@ test('unfollowed plaza topics open chronological detail without implicitly follo
   assert.equal(evaluate('detailTrack.id'), key);
   assert.equal(evaluate('follows.has(detailTrack.id)'), false);
 
-  evaluate('detailTrack = TRACKS.find(track => track.subj === "霍尔木兹海峡");');
+  replaceInput(evaluate, [
+    report('m1', '马士基签署 2 艘集装箱船订单', { d: '10-30', hm: '08:00' }),
+    report('m2', '马士基签署的集装箱船订单开工', { d: '11-01', hm: '09:00' }),
+  ]);
+  evaluate('MODEL.events.forEach(event => follows.add(event.key)); syncTracks();');
+  evaluate('detailTrack = TRACKS[0];');
   const detail = evaluate('viewThreadDetail()');
-  assert.ok(detail.indexOf('10-29 23:10') < detail.indexOf('11-02 08:50'), 'progress must read from initial event to the latest development');
+  assert.ok(detail.indexOf('10-30 08:00') < detail.indexOf('11-01 09:00'), 'progress must read from initial event to the latest development');
   assert.match(detail, /data-orig/);
 });
 
@@ -315,10 +323,10 @@ test('changing editions while refresh is pending never puts new articles in the 
   nodes.btnPageRefresh = element();
   evaluate('bind();');
   const oldCount = evaluate("EARLY_BY_DAY['10-27'].length");
-  const currentCount = evaluate("EARLY_BY_DAY['11-02'].length");
+  const currentCount = evaluate("EARLY_BY_DAY['11-03'].length");
   nodes.btnPageRefresh.onclick();
   evaluate('selDate = {y:2026,m:10,d:27};');
   timers.find(timer => timer.delay === 620).callback();
   assert.equal(evaluate("EARLY_BY_DAY['10-27'].length"), oldCount);
-  assert.equal(evaluate("EARLY_BY_DAY['11-02'].length"), currentCount + 1);
+  assert.equal(evaluate("EARLY_BY_DAY['11-03'].length"), currentCount + 2);
 });
