@@ -9,6 +9,19 @@
   const copy = value => JSON.parse(JSON.stringify(value));
   const uid = prefix => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
+  function restoreOriginal(review) {
+    if (typeof review.originalText !== 'string' || typeof review.text !== 'string' || review.text === review.originalText) return;
+    // 旧记录按原文顺序存放问题，只有前方采纳的修改会移动后续位置。
+    const accepted = new Set(review.accepted);
+    let shift = 0;
+    for (const issue of review.issues) {
+      issue.start -= shift;
+      issue.end -= shift;
+      if (accepted.has(issue.id)) shift += issue.suggestion.length - (issue.end - issue.start);
+    }
+    review.text = review.originalText;
+  }
+
   function read() {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return {version: 1, records: [], history: []};
@@ -16,6 +29,7 @@
     if (data.version !== 1 || !Array.isArray(data.records) || !Array.isArray(data.history)) {
       throw new Error('审校数据无法读取，请保留当前内容后重试。');
     }
+    data.history.forEach(restoreOriginal);
     return data;
   }
 
@@ -55,7 +69,7 @@
     });
   }
 
-  // 上传只落在本地草稿：用户点击「开始审校」时才提交并触发涉密审核。
+  // 保留旧草稿入口，新上传流程使用 submitFile。
   function addUpload(name, text) {
     return change(data => {
       const file = {
@@ -68,37 +82,54 @@
     });
   }
 
-  function startReview({fileId, reviewId, types}) {
-    if (!types?.length || types.some(type => !TYPES.includes(type))) throw new Error('请至少选择一项审校范围。');
+  function prepareFile(document) {
+    const {name = '', fileName = '', text, source} = document || {};
+    if (typeof text !== 'string' || !text.trim()) throw new Error('请先输入需要审校的正文。');
+    if (typeof name !== 'string' || typeof fileName !== 'string' || !['text', 'upload'].includes(source)
+      || (source === 'upload' && !fileName.trim())) throw new Error('文档信息不完整，请重新提交。');
+    const title = name.trim() || fileName.replace(/\.(txt|md)$/i, '').trim() || text.trim().split(/\r?\n/)[0].slice(0, 24);
+    return {
+      id: uid('doc'), name: title, fileName: fileName || `${title}.txt`, text, source,
+      secretStatus: 'draft', keywords: [], version: 1, uploadedAt: Date.now(),
+    };
+  }
+
+  function beginDetection(file) {
+    file.secretStatus = 'detecting';
+    file.detectAt = Date.now() + DETECT_MS;
+  }
+
+  function submitFile(document) {
     return change(data => {
-      const prior = reviewId && data.history.find(item => item.reviewId === reviewId);
-      let file = data.records.find(item => item.id === (prior?.id || fileId));
+      const file = prepareFile(document);
+      beginDetection(file);
+      data.records.unshift(file);
+      return file;
+    });
+  }
+
+  function startReview({fileId, types, document}) {
+    if (!Array.isArray(types) || !types.length || types.some(type => !TYPES.includes(type))) throw new Error('请至少选择一项审校范围。');
+    const newDocument = document !== undefined;
+    if (newDocument && fileId) throw new Error('请重新选择需要审校的文档。');
+    return change(data => {
+      const file = newDocument ? prepareFile(document) : data.records.find(item => item.id === fileId);
       if (!file || !file.text.trim()) throw new Error('请先输入需要审校的正文。');
-      const existing = data.history.find(item => pending.includes(item.status)
-        && (item.id === file.id || (prior && item.parentReviewId === reviewId && item.originalText === prior.text)));
-      if (existing) return existing;
-      if (prior && prior.text !== file.text) {
-        const documentId = file.documentId || file.id;
-        const version = Math.max(...data.records.filter(item => (item.documentId || item.id) === documentId).map(item => item.version)) + 1;
-        file = {
-          ...file, id: uid('doc'), documentId, text: prior.text, version,
-          parentId: file.id, secretStatus: 'draft', keywords: [], uploadedAt: Date.now(),
-        };
-        data.records.unshift(file);
-      }
-      if (!['draft', 'passed', 'detecting'].includes(file.secretStatus)) {
+      const existing = data.history.find(item => item.id === file.id);
+      if (existing && pending.includes(existing.status)) return existing;
+      if (!['draft', 'passed'].includes(file.secretStatus)) {
         throw new Error('请先完成该文档的涉密审核。');
       }
-      if (!file.name.trim() || file.name === '未命名审校') file.name = file.text.trim().split('\n')[0].slice(0, 24);
-      file.fileName ||= `${file.name}.txt`;
-      if (file.secretStatus === 'draft') {
-        file.secretStatus = 'detecting';
-        file.detectAt = Date.now() + DETECT_MS;
+      if (existing) throw new Error('该文件已有校对记录，请在文件列表中查看。');
+      if (!file.name.trim() || (!newDocument && file.secretStatus === 'draft' && file.name === '未命名审校')) {
+        file.name = file.text.trim().split(/\r?\n/)[0].slice(0, 24);
       }
+      file.fileName ||= `${file.name}.txt`;
+      if (file.secretStatus === 'draft') beginDetection(file);
+      if (newDocument) data.records.unshift(file);
       const running = file.secretStatus === 'passed';
       const review = {
         id: file.id, reviewId: uid('review'), name: file.name, fileName: file.fileName,
-        parentReviewId: reviewId || '',
         version: file.version, source: file.source, originalText: file.text, text: file.text,
         secretStatus: file.secretStatus, checkedAt: Date.now(), status: running ? 'running' : 'detecting',
         startedAt: running ? Date.now() : 0, finishAt: running ? Date.now() + REVIEW_MS : 0,
@@ -175,13 +206,8 @@
       const issues = issueId === 'all' ? review.issues : review.issues.filter(item => item.id === issueId);
       for (const issue of issues) {
         if (review.accepted.includes(issue.id) || review.ignored.includes(issue.id)) continue;
-        if (!accepted) { review.ignored.push(issue.id); continue; }
-        const delta = issue.suggestion.length - (issue.end - issue.start);
-        review.text = review.text.slice(0, issue.start) + issue.suggestion + review.text.slice(issue.end);
-        review.accepted.push(issue.id);
-        for (const later of review.issues) {
-          if (later !== issue && later.start >= issue.end) { later.start += delta; later.end += delta; }
-        }
+        if (accepted) review.accepted.push(issue.id);
+        else review.ignored.push(issue.id);
       }
       return review;
     });
@@ -206,7 +232,7 @@
   }
 
   window.BaigeProofreadStore = Object.freeze({
-    KEY, read, initialize, createDraft, saveDraft, addUpload, startReview,
+    KEY, read, initialize, createDraft, saveDraft, addUpload, submitFile, startReview,
     advance, stopReview, audit, decide, remove, markRead, REVIEW_MS,
   });
 })();

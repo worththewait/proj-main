@@ -15,7 +15,7 @@ function loadTool() {
 
 test("proofread tool exposes the three-column workspace hooks", () => {
   const js = read("src/proofread-tool.js");
-  for (const token of ["pr-rail", "pr-editor", "pr-result", "审校助手", "审校记录", "文件列表", "审校范围", "开始审校", "全部采纳", "全部不采纳"]) {
+  for (const token of ["pr-rail", "pr-editor", "pr-result", "审校记录", "文件列表", "审校范围", "开始审校", "全部采纳", "全部不采纳"]) {
     assert.ok(js.includes(token), token);
   }
   assert.doesNotMatch(js, /返回工具目录|data-options/);
@@ -28,21 +28,28 @@ test("proofread tool exposes the three-column workspace hooks", () => {
   assert.match(read("pages/smart-tools.html"), /proofread-tool\.css/);
 });
 
-test("review records are shown by default and the file list remains available", () => {
-  const js = read("src/proofread-tool.js");
-  assert.match(js, /data-view="history" aria-selected="true"[\s\S]*?data-view="files" aria-selected="false"/);
-  assert.match(js, /data-upload/);
-  assert.doesNotMatch(js, /历史对话/);
-  assert.match(js, /新建审校/);
-  assert.match(js, /<textarea data-draft-text/);
-  assert.match(js, /contenteditable="false"/);
+test("the file list opens first without showing the input or the review workspace", () => {
+  const {get} = setupFlow().mount();
+  assert.equal(get('[data-files]').hidden, false);
+  assert.equal(get('[data-intake-editor]').hidden, true);
+  assert.equal(get('[data-workbench]').hidden, true);
+  assert.equal(get('[data-files-empty]').hidden, false);
+  assert.ok(get('[data-upload]'));
+  assert.deepEqual(get('.wr-file-table').querySelectorAll('th').map(cell => cell.textContent), [
+    '文件名', '文件来源', '文档类型', '版本号', '创建时间', '解析状态', '涉密审查状态', '最近更新', '操作',
+  ]);
 });
 
 function setupFlow(storage = new Map()) {
   let time = 100000;
   let interval;
+  let nextTimeout = 0;
+  const timeouts = new Map();
   let failWrites = false;
   class Clock extends Date { static now() { return time; } }
+  class FileReader {
+    readAsText(file) { this.result = file.text; this.onload(); }
+  }
   const window = {
     BaigeUI: {icon: () => "", escapeHtml: String},
     localStorage: {
@@ -54,8 +61,15 @@ function setupFlow(storage = new Map()) {
     },
     addEventListener() {},
   };
-  const ctx = vm.createContext({window, Date: Clock, console,
-    setInterval: callback => { interval = callback; return 1; }, clearInterval: () => { interval = null; }});
+  const ctx = vm.createContext({window, Date: Clock, FileReader, console,
+    setInterval: callback => { interval = callback; return 1; }, clearInterval: () => { interval = null; },
+    setTimeout(callback, delay) {
+      const id = ++nextTimeout;
+      timeouts.set(id, {callback, due: time + delay});
+      return id;
+    },
+    clearTimeout: id => timeouts.delete(id),
+  });
   vm.runInContext(read("src/proofread-store.js"), ctx);
   vm.runInContext(read("src/proofread-tool.js"), ctx);
   const store = window.BaigeProofreadStore;
@@ -76,10 +90,40 @@ function setupFlow(storage = new Map()) {
       document.append(root);
       tool.render(root);
       root.querySelectorAll('input[value]').forEach(input => { input.value = input.attributes.value; });
-      return {root, document, advance: ms => { time += ms; interval?.(); }};
+      return {
+        root, document,
+        get: selector => root.querySelector(selector),
+        advance(ms) {
+          const end = time + ms;
+          while (timeouts.size) {
+            const [id, timer] = [...timeouts].sort((a, b) => a[1].due - b[1].due)[0];
+            if (timer.due > end) break;
+            time = timer.due;
+            interval?.();
+            if (timeouts.delete(id)) timer.callback();
+          }
+          time = end;
+          interval?.();
+        },
+      };
     },
     fail() { failWrites = true; },
+    restore() { failWrites = false; },
   };
+}
+
+function typeDraft(get, text) {
+  get('[data-new]').emit('click');
+  const editor = get('[data-draft-text]');
+  editor.value = text;
+  editor.emit('input');
+}
+
+function submitDraft(get) {
+  assert.equal(get('[data-intake-submit]').disabled, false);
+  get('[data-intake-editor]').emit('submit');
+  assert.equal(get('[data-dialog]').open, true);
+  get('[data-confirm]').emit('click');
 }
 
 test("drafts persist and submitting locks the original before asynchronous review", () => {
@@ -113,70 +157,94 @@ test("closing and reloading restores elapsed tasks and independent background re
   assert.equal(data.history[0].originalText, second.text);
 });
 
-test("UI submission locks the editor and dismissing the modal preserves a separate draft", () => {
+test("submitting text locks the original and background completion does not interrupt a new draft", () => {
   const flow = setupFlow();
-  const ui = flow.mount();
-  const get = selector => ui.root.querySelector(selector);
-  get('[data-new]').emit('click');
-  get('[data-draft-text]').value = '这份文稿需要严各审校。';
-  get('[data-draft-text]').emit('input');
-  get('[data-run]').emit('click');
-  assert.equal(get('[data-dialog]').open, true);
-  get('[data-confirm]').emit('click');
-  assert.equal(get('[data-secret]').open, true);
-  assert.equal(get('[data-draft]').hidden, true);
+  const {get, root, advance} = flow.mount();
+  const original = '计划完成，，这份文稿需要严各审校。';
+  typeDraft(get, original);
+  submitDraft(get);
+  assert.equal(get('[data-intake-notice]').open, true);
+  assert.equal(get('[data-intake-editor]').hidden, true);
+  assert.equal(get('[data-workbench]').hidden, true);
   assert.equal(get('[data-doc]').attributes.contenteditable, 'false');
   const first = flow.store.read().history[0];
-  get('[data-secret-close]').emit('click');
-  get('[data-new]').emit('click');
-  get('[data-draft-text]').value = '另一份尚未提交的正文';
-  get('[data-draft-text]').emit('input');
-  ui.advance(10000);
-  assert.equal(get('[data-secret]').open, false);
+  assert.equal(first.originalText, original);
+  get('[data-notice-close]').emit('click');
+  typeDraft(get, '另一份尚未提交的正文');
+  advance(10000);
+  assert.equal(get('[data-intake-notice]').open, false);
   assert.equal(get('[data-draft-text]').value, '另一份尚未提交的正文');
-  assert.equal(get('[data-draft]').hidden, false);
+  assert.equal(get('[data-intake-editor]').hidden, false);
   assert.equal(flow.store.read().history[0].status, 'done');
-  ui.root.remove();
-  const reopened = flow.mount();
-  // 未提交的草稿只存在于当前页面，重新打开工具后不再保留
-  assert.equal(reopened.root.querySelector('[data-draft-text]').value, '');
-  reopened.root.querySelector('[data-notice]').emit('click');
-  reopened.root.querySelector('[data-accept]').emit('click');
-  assert.match(reopened.root.querySelector('[data-doc]').textContent, /严格/);
-  reopened.root.querySelector('[data-original]').emit('click');
-  assert.match(reopened.root.querySelector('[data-doc]').textContent, /严各/);
-  assert.equal(flow.store.read().history.find(item => item.reviewId === first.reviewId).originalText, first.originalText);
+
+  root.remove();
+  const {get: reopened} = flow.mount();
+  assert.equal(reopened('[data-draft-text]').value, '');
+  reopened('[data-intake-review]').emit('click');
+  assert.equal(reopened('[data-workbench]').classList.contains('is-result-only'), true);
+  assert.equal(reopened('#proofreadRail').hidden, true);
+  assert.equal(reopened('[data-run]').hidden, true);
+  assert.equal(reopened('[data-original]'), null);
+  const [punctuation, typo] = flow.store.read().history[0].issues;
+  assert.equal(punctuation.word, '，，');
+  assert.equal(typo.word, '严各');
+  reopened(`[data-accept="${punctuation.id}"]`).emit('click');
+  reopened(`[data-ignore="${typo.id}"]`).emit('click');
+  assert.equal(reopened('[data-doc]').textContent.length, original.length);
+  assert.equal(reopened(`[data-hit="${punctuation.id}"]`).textContent, punctuation.word);
+  assert.equal(reopened(`[data-hit="${typo.id}"]`).textContent, typo.word);
+  const decided = flow.store.read().history[0];
+  assert.equal(decided.originalText, original);
+  assert.ok(decided.accepted.includes(punctuation.id));
+  assert.ok(decided.ignored.includes(typo.id));
 });
 
-test("waiting in the modal enters review automatically and manual approval resumes it", () => {
+test("text review opens automatically after the five-second notice closes", () => {
   const flow = setupFlow();
-  const ui = flow.mount();
-  const get = selector => ui.root.querySelector(selector);
-  get('[data-new]').emit('click');
-  get('[data-draft-text]').value = '工做';
-  get('[data-draft-text]').emit('input');
-  get('[data-run]').emit('click');
-  get('[data-confirm]').emit('click');
-  ui.advance(2800);
-  assert.equal(get('[data-secret]').open, false);
-  assert.equal(get('[data-run]').textContent, '停止审校');
-  get('[data-new]').emit('click');
-  get('[data-draft-text]').value = '内部资料工做';
-  get('[data-draft-text]').emit('input');
-  get('[data-run]').emit('click');
-  get('[data-confirm]').emit('click');
-  ui.advance(2800);
-  get('[data-secret-submit]').emit('click');
-  assert.equal(flow.store.read().history[0].status, 'submitted');
-  get('[data-secret-approve]').emit('click');
-  assert.equal(get('[data-secret]').open, false);
+  const {get, advance} = flow.mount();
+  typeDraft(get, '工做');
+  submitDraft(get);
+  advance(4999);
+  assert.equal(get('[data-intake-notice]').open, true);
+  assert.equal(get('[data-workbench]').hidden, true);
   assert.equal(flow.store.read().history[0].status, 'running');
+  advance(1);
+  assert.equal(get('[data-intake-notice]').open, false);
+  assert.equal(get('[data-workbench]').hidden, false);
+  assert.equal(get('#proofreadRail').hidden, false);
+  assert.equal(get('[data-run]').textContent, '停止审校');
   get('[data-run]').emit('click');
-  ui.advance(10000);
+  advance(10000);
   assert.equal(flow.store.read().history[0].status, 'stopped');
+  assert.equal(get('[data-run]').hidden, true);
+  get('[data-workbench] [data-intake-back]').emit('click');
+  assert.equal(get('[data-intake-start]'), null);
+  assert.equal(get('[data-intake-review]').textContent, '查看状态');
 });
 
-test("sensitive submissions wait for manual review and cancelled jobs stay stopped", () => {
+test("saved legacy results display the original and retain issue locations after old text replacements", () => {
+  const flow = setupFlow();
+  const original = '计划完成，，请严各审校。';
+  const draft = flow.draft(original);
+  flow.store.startReview({fileId: draft.id, types: ['错别字', '标点']});
+  const data = flow.tick(10000);
+  const review = data.history[0];
+  const [punctuation, typo] = review.issues;
+  // Older saves replaced accepted text and moved later issue offsets into the revision.
+  review.text = original.replace('，，', '，');
+  review.accepted.push(punctuation.id);
+  typo.start--;
+  typo.end--;
+  flow.storage.set('baige.proofread.v1', JSON.stringify(data));
+
+  const {get} = flow.mount();
+  get('[data-intake-review]').emit('click');
+  assert.equal(get('[data-doc]').textContent.length, original.length);
+  assert.equal(get(`[data-hit="${typo.id}"]`).textContent, '严各');
+  assert.match(get(`[data-issue="${punctuation.id}"]`).textContent, /已采纳/);
+});
+
+test("sensitive submissions wait for manual review and cancelled jobs cannot restart", () => {
   const flow = setupFlow();
   const draft = flow.draft("涉密材料工做");
   const review = flow.store.startReview({fileId: draft.id, types: ["错别字"]});
@@ -187,10 +255,8 @@ test("sensitive submissions wait for manual review and cancelled jobs stay stopp
   flow.store.audit(draft.id, "passed");
   assert.equal(flow.tick(10000).history[0].status, "stopped");
   assert.equal(flow.store.read().records[0].secretStatus, "passed");
-  const retry = flow.store.startReview({fileId: draft.id, types: ["错别字"]});
-  assert.equal(retry.status, "running");
-  assert.equal(flow.tick(4000).history[0].status, "done");
-  assert.equal(flow.store.read().history[1].status, "stopped");
+  assert.throws(() => flow.store.startReview({fileId: draft.id, types: ["错别字"]}), /校对|审校/);
+  assert.equal(flow.store.read().history.length, 1);
 });
 
 test("manual approval resumes the submitted task while rejection blocks it", () => {
@@ -210,28 +276,23 @@ test("manual approval resumes the submitted task while rejection blocks it", () 
   assert.throws(() => flow.store.startReview({fileId: second.id, types: ["错别字"]}), /审核/);
 });
 
-test("decisions change only the revision and changed content is screened as a new version", () => {
+test("decisions are recorded without modifying original text or issue offsets", () => {
   const flow = setupFlow();
   const draft = flow.draft("截止目前工做，，");
   const review = flow.store.startReview({fileId: draft.id, types: ["错别字", "标点", "语法"]});
   const done = flow.tick(10000).history[0];
-  const grammar = done.issues.find(issue => issue.type === "语法");
-  flow.store.decide(review.reviewId, grammar.id, true);
+  const punctuation = done.issues.find(issue => issue.type === "标点");
+  flow.store.decide(review.reviewId, punctuation.id, true);
   flow.store.decide(review.reviewId, "all", false);
-  const revised = flow.store.read().history[0];
-  assert.equal(revised.text, "截至目前工做，，");
-  assert.equal(revised.originalText, draft.text);
+  const decided = flow.store.read().history[0];
+  assert.equal(decided.text, draft.text);
+  assert.equal(decided.originalText, draft.text);
+  assert.deepEqual(decided.issues, done.issues);
   assert.equal(flow.store.read().records[0].text, draft.text);
-  assert.equal(revised.accepted.length, 1);
-  assert.equal(revised.ignored.length, 2);
-  const next = flow.store.startReview({reviewId: review.reviewId, types: ["错别字"]});
-  assert.equal(next.status, "detecting");
-  assert.equal(next.version, 2);
-  assert.equal(next.originalText, revised.text);
-  assert.notEqual(next.id, draft.id);
-  const data = flow.tick(10000);
-  assert.equal(data.history[0].issues.length, 1);
-  assert.equal(data.history[1].accepted.length, 1);
+  assert.equal(decided.accepted[0], punctuation.id);
+  assert.equal(decided.ignored.length, 2);
+  assert.throws(() => flow.store.startReview({fileId: draft.id, types: ["错别字"]}), /校对|审校/);
+  assert.equal(flow.store.read().history.length, 1);
 });
 
 test("empty submissions and failed saves never create partial or duplicated tasks", () => {
@@ -245,44 +306,82 @@ test("empty submissions and failed saves never create partial or duplicated task
   assert.equal(flow.store.read().records[0].secretStatus, "draft");
 });
 
-test("uploaded files stay local until the user starts a review", () => {
+test("uploaded files pass screening before manual review and can reopen the result in two columns", () => {
   const flow = setupFlow();
-  const file = flow.store.addUpload("会议纪要.txt", "工做内容");
-  assert.equal(file.source, "upload");
-  assert.equal(file.secretStatus, "draft");
-  // 只保存到本地：时间推进也不会自动进入涉密检测
-  assert.equal(flow.tick(10000).records[0].secretStatus, "draft");
-  // 点击「开始审校」时才提交并触发涉密审核
-  const review = flow.store.startReview({fileId: file.id, types: ["错别字"]});
-  assert.equal(review.status, "detecting");
-  assert.equal(flow.store.read().records[0].secretStatus, "detecting");
-  assert.equal(flow.tick(3000).records[0].secretStatus, "passed");
+  const {get, advance} = flow.mount();
+  get('[data-file]').files = [{name: '会议纪要.txt', text: '工做内容'}];
+  get('[data-file]').emit('change');
+  assert.equal(get('[data-intake-notice]').open, true);
+  assert.equal(flow.store.read().records[0].secretStatus, 'detecting');
+  assert.equal(flow.store.read().history.length, 0);
+  assert.equal(get('[data-intake-start]'), null);
+  get('[data-notice-close]').emit('click');
+  advance(3000);
+  assert.equal(flow.store.read().records[0].secretStatus, 'passed');
+  assert.equal(flow.store.read().history.length, 0);
+  assert.equal(get('[data-files]').hidden, false);
+  assert.equal(get('[data-workbench]').hidden, true);
+  get('[data-intake-start]').emit('click');
+  assert.equal(get('[data-dialog]').open, true);
+  get('[data-confirm]').emit('click');
+  assert.equal(get('[data-workbench]').hidden, false);
+  assert.equal(get('#proofreadRail').hidden, false);
+  assert.equal(get('[data-workbench]').classList.contains('is-result-only'), false);
+  assert.equal(flow.store.read().history[0].status, 'running');
+  advance(4000);
+  get('[data-workbench] [data-intake-back]').emit('click');
+  const viewResult = get('[data-intake-review]');
+  assert.equal(viewResult.textContent, '查看结果');
+  viewResult.emit('click');
+  assert.equal(get('[data-workbench]').hidden, false);
+  assert.equal(get('#proofreadRail').hidden, true);
+  assert.equal(get('[data-workbench]').classList.contains('is-result-only'), true);
+  assert.match(get('[data-doc]').textContent, /工做/);
+  assert.ok(get('[data-accept]'));
 });
 
-test("drafts never claim to be saved and stay in memory before submission", () => {
-  const js = read("src/proofread-tool.js");
-  assert.doesNotMatch(js, /草稿已保存/);
-  assert.doesNotMatch(js, /本地未提交/);
-  assert.match(js, /未提交的内容不会保存，刷新或关闭后需重新上传/);
-  assert.match(js, /state\.pending = \[\]/);
-  assert.match(js, /local: true/);
-  assert.match(js, /待提交审核/);
+test("uploaded suspicious files require manual approval before offering proofreading", () => {
+  const flow = setupFlow();
+  const {get, advance} = flow.mount();
+  get('[data-file]').files = [{name: '资料.txt', text: '内部资料工做'}];
+  get('[data-file]').emit('change');
+  advance(5000);
+  assert.equal(flow.store.read().records[0].secretStatus, 'hit');
+  assert.equal(get('[data-intake-start]'), null);
+  get('[data-intake-secret]').emit('click');
+  get('[data-secret-submit]').emit('click');
+  assert.equal(flow.store.read().records[0].secretStatus, 'submitted');
+  get('[data-secret-approve]').emit('click');
+  assert.equal(flow.store.read().records[0].secretStatus, 'passed');
+  assert.equal(flow.store.read().history.length, 0);
+  get('[data-secret-close]').emit('click');
+  assert.ok(get('[data-intake-start]'));
+  assert.equal(get('[data-workbench]').hidden, true);
 });
 
-test("unsubmitted drafts never reach browser storage", () => {
+test("unsubmitted text stays local and a failed submission retains it for retry without partial records", () => {
   const flow = setupFlow();
-  const ui = flow.mount();
-  const get = selector => ui.root.querySelector(selector);
-  get('[data-new]').emit('click');
-  get('[data-draft-text]').value = '只在内存里的正文';
-  get('[data-draft-text]').emit('input');
+  const {get} = flow.mount();
+  typeDraft(get, '   ');
+  assert.equal(get('[data-intake-submit]').disabled, true);
+  get('[data-intake-editor]').emit('submit');
+  assert.equal(get('[data-dialog]').open, false);
+  typeDraft(get, '只在内存里的正文');
   assert.equal(flow.store.read().records.length, 0);
   assert.equal(flow.store.read().history.length, 0);
   assert.equal(flow.storage.get('baige.proofread.v1').includes('只在内存里的正文'), false);
-  get('[data-run]').emit('click');
-  get('[data-confirm]').emit('click');
+  flow.fail();
+  submitDraft(get);
+  assert.equal(get('[data-intake-notice]').open, false);
+  assert.equal(get('[data-intake-editor]').hidden, false);
+  assert.equal(get('[data-draft-text]').value, '只在内存里的正文');
+  assert.equal(flow.store.read().records.length, 0);
+  assert.equal(flow.store.read().history.length, 0);
+  flow.restore();
+  submitDraft(get);
   assert.equal(flow.store.read().records.length, 1);
   assert.equal(flow.store.read().records[0].text, '只在内存里的正文');
+  assert.equal(flow.store.read().history.length, 1);
 });
 
 test("deleting a file also clears its review history", () => {
@@ -300,15 +399,10 @@ test("deleting a file also clears its review history", () => {
 
 test("file list asks for confirmation before deleting a submitted file", () => {
   const flow = setupFlow();
-  const ui = flow.mount();
-  const get = selector => ui.root.querySelector(selector);
-  get('[data-new]').emit('click');
-  get('[data-draft-text]').value = '要被删除的正文';
-  get('[data-draft-text]').emit('input');
-  get('[data-run]').emit('click');
-  get('[data-confirm]').emit('click');
+  const draft = flow.draft('要被删除的正文');
+  flow.store.startReview({fileId: draft.id, types: ['错别字']});
   flow.tick(10000);
-  get('[data-view="files"]').emit('click');
+  const {get} = flow.mount();
   const remove = get('[data-delete]');
   assert.ok(remove, '文件列表应有删除入口');
   remove.emit('click');
@@ -320,19 +414,16 @@ test("file list asks for confirmation before deleting a submitted file", () => {
   assert.equal(flow.store.read().history.length, 0);
 });
 
-test("unsent drafts can be deleted without touching storage", () => {
+test("returning to the file list preserves unsubmitted text in the current tool", () => {
   const flow = setupFlow();
-  const ui = flow.mount();
-  const get = selector => ui.root.querySelector(selector);
+  const {get} = flow.mount();
+  typeDraft(get, '临时内容');
+  get('[data-intake-editor] [data-intake-back]').emit('click');
+  assert.equal(get('[data-files]').hidden, false);
+  assert.equal(get('[data-intake-editor]').hidden, true);
+  assert.equal(get('[data-delete]'), null);
   get('[data-new]').emit('click');
-  get('[data-draft-text]').value = '临时内容';
-  get('[data-draft-text]').emit('input');
-  const remove = get('[data-delete]');
-  assert.ok(remove, '未提交项也应能删除');
-  remove.emit('click');
-  assert.match(get('[data-delete-text]').textContent, /还没有提交/);
-  get('[data-delete-ok]').emit('click');
-  assert.equal(get('[data-pending]'), null);
+  assert.equal(get('[data-draft-text]').value, '临时内容');
   assert.equal(flow.store.read().records.length, 0);
 });
 

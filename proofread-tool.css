@@ -1,4 +1,4 @@
-/* 纠错校对：三栏审校工作台（文档区 + 审校助手 + 审校结果）。
+/* 纠错校对：文件列表、录入与审校工作台。
    视觉沿用 DESIGN.md 全站基线：白色内容面、百舸蓝交互、12px 辅助文字。 */
 
 .pr-app {
@@ -836,7 +836,7 @@
 .pr-groups { padding: 6px 14px 14px; }
 .pr-summary { padding: 8px 14px 4px; }
 
-/* 草稿仅在提交前可编辑，审校记录保留只读原文和修订稿。 */
+/* 草稿仅在提交前可编辑，工作台始终展示只读原文。 */
 .pr-new { margin: 0 12px 6px; gap: 6px; min-height: 34px; }
 .pr-new .icon { width: 16px; height: 16px; }
 .pr-completion { margin: 0 12px 8px; padding: 8px; border: 0; border-radius: 6px; background: var(--accent-soft); color: var(--accent-hover); font: inherit; font-size: 12px; text-align: left; }
@@ -851,4 +851,97 @@
 .pr-secret-loading h3 { margin: 0; font-size: 16px; color: var(--ink); }
 .pr-secret-loading p { max-width: 38ch; font-size: 13px; line-height: 1.7; color: var(--muted); }
 .pr-stop { height: 32px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font: inherit; font-size: 12px; }
-.pr-draft[hidden], .pr-page[hidden], .pr-completion[hidden], .pr-stop[hidden], [data-original][hidden], [data-retry-save][hidden] { display: none; }
+.pr-page[hidden], .pr-run[hidden] { display: none; }
+
+/* 录入区与工具页操作保持一致，文件列表的样式由素材管理组件提供。 */
+.pr-intake { display: grid; min-width: 0; align-content: start; gap: 16px; padding: 16px; }
+.pr-intake-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px 24px; }
+.pr-intake-head > div:first-child { flex: 1 1 240px; min-width: 0; }
+.pr-intake-head h1 { margin: 0; font-size: 24px; line-height: 1.4; font-weight: 600; }
+.pr-intake-head p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+.pr-intake-card { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.pr-intake-toolbar, .pr-intake-editor-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 12px 16px;
+}
+.pr-intake-toolbar h2 { margin: 0; font-size: 18px; line-height: 1.5; font-weight: 600; }
+.pr-intake-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pr-intake-actions :is(.primary-button, .secondary-button) { gap: 6px; }
+.pr-intake .primary-button:disabled { opacity: .52; cursor: not-allowed; }
+.pr-intake-actions .icon, .pr-intake-back .icon { width: 16px; height: 16px; }
+.pr-intake-link, .pr-intake-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--accent-hover);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.pr-intake-link:hover, .pr-intake-back:hover { background: var(--accent-soft); }
+.pr-intake-back { flex: none; }
+.pr-tag.is-danger { background: #fff1f2; color: var(--danger); }
+.pr-material-table { min-width: 0; }
+.pr-intake-table-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 10px; }
+.pr-intake-table-heading h2 { margin: 0; font-size: 18px; line-height: 1.5; font-weight: 600; }
+.pr-intake-table-heading > span { color: var(--muted); font-size: 12px; }
+.pr-material-table :is(.wr-eye, .wr-file-actions) .icon { width: 14px; height: 14px; }
+.pr-material-table .wr-file-actions .pr-material-action { width: auto; padding: 0 6px; color: var(--accent-hover); font-size: 12px; }
+.pr-intake-empty { margin: 0; padding: 36px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--muted); text-align: center; }
+.pr-intake .pr-inline-status { margin: 0; }
+
+.pr-intake-editor { overflow: hidden; }
+.pr-intake-editor .pr-draft { min-height: 0; padding: 0 16px 12px; gap: 10px; }
+.pr-intake-editor .pr-draft-title input { padding: 8px 10px; font-size: 14px; font-weight: 500; }
+.pr-intake-editor .pr-draft-body { min-height: 0; }
+.pr-intake-editor .pr-draft-body textarea { min-height: 168px; padding: 10px; resize: vertical; }
+.pr-intake-editor .pr-draft :is(input, textarea) { border: 1px solid var(--line-strong); border-radius: 8px; }
+.pr-intake-editor .pr-draft :is(input, textarea):focus-visible { outline-offset: 1px; }
+.pr-intake-editor-foot { border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
+
+.pr-dialog[data-intake-notice] { width: 400px; }
+.pr-dialog[data-intake-notice] p { margin: 0; color: var(--muted); }
+.pr-dialog[data-intake-notice] .pr-dialog-foot { align-items: center; }
+.pr-dialog[data-intake-notice] .pr-demo-hint { color: var(--muted); font-size: 12px; }
+.pr-dialog[data-intake-notice] [data-notice-close] { border: 0; background: var(--accent); color: var(--surface); }
+.pr-dialog[data-intake-notice] [data-notice-close]:hover { background: var(--accent-hover); }
+
+.pr-workbench { display: grid; min-width: 0; gap: 8px; }
+.pr-workbench-head { display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 38px; padding: 0 8px; }
+.pr-workbench-head [data-workbench-name] {
+  min-width: 0;
+  overflow: hidden;
+  margin: 0;
+  padding-inline-start: 10px;
+  border-inline-start: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.pr-workbench .pr-app { height: max(480px, calc(100dvh - 116px)); }
+.pr-intake[hidden], .pr-intake [hidden], .pr-workbench[hidden], .pr-rail-toggle[hidden] { display: none; }
+.pr-workbench.is-result-only .pr-app { grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); }
+.pr-workbench.is-result-only .pr-rail, .pr-workbench.is-result-only .pr-rail-toggle { display: none; }
+
+@media (max-width: 1050px) {
+  .pr-material-table .wr-file-table :is(th, td):last-child { position: sticky; right: 0; border-inline-start: 1px solid var(--line); }
+  .pr-material-table .wr-file-table th:last-child { background: var(--surface-subtle); }
+  .pr-material-table .wr-file-table td:last-child { background: var(--surface); }
+}
+
+@media (max-width: 720px) {
+  .pr-workbench .pr-app { height: auto; }
+  .pr-workbench.is-result-only .pr-app { grid-template-columns: minmax(0, 1fr); }
+  .pr-intake { padding: 12px; }
+}

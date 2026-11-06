@@ -12,6 +12,8 @@
     globe: '<circle cx="12" cy="12" r="10" fill="currentColor"/><g '+detail+'><ellipse cx="12" cy="12" rx="4.5" ry="10"/><path d="M2 12h20 M4 6.5c5 2 11 2 16 0 M4 17.5c5-2 11-2 16 0"/></g>',
     chart: '<g fill="currentColor"><rect x="2" y="13" width="5" height="9" rx="1.5" opacity=".68"/><rect x="9.5" y="7" width="5" height="15" rx="1.5" opacity=".84"/><rect x="17" y="1" width="5" height="21" rx="1.5"/></g>',
     translate: '<rect x="1" y="2" width="14" height="16" rx="2" fill="currentColor" opacity=".42"/><path d="M4 7h8 M8 5v2 M5 7c0 4 3 6 6 7 M11 7c0 4-3 6-6 7" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="10" y="8" width="13" height="15" rx="2" fill="currentColor"/><path d="m13 20 3.5-9 3.5 9 M14 17h5" '+detail+'/>',
+    'translate-document': '<path fill="currentColor" d="M6 2h8l6 6v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M14 2v6h6 M8.5 18.5l3.5-8 3.5 8 M9.8 15.5h4.4" '+detail+'/>',
+    'translate-text': '<path d="M2 7h10 M7 4.5V7 M4.5 7c.4 4.2 2.8 7.4 7 9.5 M9.5 7C9 11.2 6.6 14.4 2.5 16.5 M13 19l4.5-11L22 19 M14.6 15h5.8" fill="none" stroke="currentColor" stroke-width="2"/>',
     scan: '<path d="M8 3H4a1 1 0 0 0-1 1v4 M16 3h4a1 1 0 0 1 1 1v4 M21 16v4a1 1 0 0 1-1 1h-4 M8 21H4a1 1 0 0 1-1-1v-4 M6 12h12" fill="none" stroke="currentColor" stroke-width="2.5"/>',
     check: '<path fill="currentColor" d="m12 1 10 4v7c0 5-4 9-10 11C6 21 2 17 2 12V5Z"/><path d="m7 12 3 3 7-7" fill="none" stroke="white" stroke-width="2"/>',
     slides: '<rect x="1" y="2" width="17" height="17" rx="2" fill="currentColor" opacity=".35"/><rect x="5" y="5" width="18" height="17" rx="2" fill="currentColor"/><path d="M10 18V9h4a2.5 2.5 0 0 1 0 5h-4" fill="none" stroke="white" stroke-width="1.8"/>',

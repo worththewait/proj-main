@@ -55,6 +55,25 @@ test('same-name entries are removed: 标准编制 and 专利编制 stay only und
   assert.equal(model.idFor('digital', '标准编制'), 'route:digital:标准编制');
 });
 
+test('translation tools have distinct icons and upgrade saved defaults without losing customization', () => {
+  const documentId = 'tool:文档翻译';
+  const textId = 'tool:文本翻译';
+  const {model} = setup();
+  const documentMarkup = model.iconMarkup(model.get(documentId));
+  const textMarkup = model.iconMarkup(model.get(textId));
+  assert.notEqual(documentMarkup, textMarkup);
+
+  const saved = model.defaults();
+  Object.assign(saved.features[documentId], {icon: 'translate', description: '自定义文档翻译描述'});
+  Object.assign(saved.features[textId], {icon: 'translate', iconImage: raster});
+  const restored = setup({[key]: JSON.stringify(saved)}).model;
+  assert.equal(restored.iconMarkup(restored.get(documentId)), documentMarkup);
+  assert.equal(restored.get(documentId).description, '自定义文档翻译描述');
+  assert.equal(restored.get(textId).iconImage, raster);
+  restored.saveFeature(textId, {iconImage: ''});
+  assert.equal(restored.iconMarkup(restored.get(textId)), textMarkup);
+});
+
 test('saving one feature merges current configuration without touching other destinations', () => {
   const {model} = setup();
   model.saveFeature('tool:OCR识别', {icon: 'book', iconImage: raster, image: raster, homeCategory: 'knowledge-research'});

@@ -71,7 +71,8 @@ test("writing page exposes the complete template-to-upload flow", () => {
   assert.match(js, /materialPickerHtml\("data-wr-upload", composeState\.uploads\)/);
   assert.match(js, /materialPickerHtml\("data-wr-wizard-upload", wizardState\.uploads\)/);
   assert.match(css, /\.wr-workspace/);
-  assert.match(css, /\.wr-file-table/);
+  assert.match(html, /material-table\.css/);
+  assert.match(read("material-table.css"), /\.wr-file-table/);
   assert.match(css, /\.wr-secret-alert/);
   assert.match(js, /function openPublicWizard/);
   assert.match(js, /function renderWizard/);

@@ -7,7 +7,8 @@
   const iconOptions = Object.freeze([
     ['chat', '对话'], ['book', '知识'], ['pen', '写作'], ['file', '文档'],
     ['folder', '文件夹'], ['shield', '权限'], ['globe', '情报'], ['chart', '分析'],
-    ['translate', '翻译'], ['scan', '识别'], ['check', '校对'], ['slides', '演示文稿'],
+    ['translate', '翻译'], ['translate-document', '文档翻译'], ['translate-text', '文本翻译'],
+    ['scan', '识别'], ['check', '校对'], ['slides', '演示文稿'],
     ['branch', '思维导图'], ['standard', '标准'], ['compass', '探索'], ['layers', '系统'],
     ['database', '数据集'], ['code', '开发'], ['server', '数据平台'], ['bulb', '提示词'],
     ['tag', '标注'], ['bug', '采集'],
@@ -117,7 +118,10 @@
   function checkedFeature(id, value, categories) {
     const entry = byId.get(id);
     if (!entry || !isObject(value)) throw Error('功能不存在，请刷新列表后重试。');
-    if (!iconIds.has(value.icon)) throw Error('请选择列表中的内置图标。');
+    // Older snapshots stored the same built-in icon for both translation tools.
+    const icon = value.icon === 'translate' && ['translate-document', 'translate-text'].includes(entry.icon)
+      ? entry.icon : value.icon;
+    if (!iconIds.has(icon)) throw Error('请选择列表中的内置图标。');
     if (value.iconImage !== '' && !isRaster(value.iconImage)) throw Error('图标图片无效，请重新上传 PNG、JPG 或 WebP。');
     if (value.image !== '' && value.image !== entry.image && !isRaster(value.image)) throw Error('大图无效，请重新上传 PNG、JPG 或 WebP。');
     if (!categories.home.some(item => item.id === value.homeCategory)) throw Error('首页分类已不存在，请重新选择分类。');
@@ -126,7 +130,7 @@
     if (typeof description !== 'string' || description.length > 160 || /[\u0000-\u001f\u007f]/.test(description)) {
       throw Error('功能描述最多 160 字，不能包含换行或控制字符。');
     }
-    return Object.fromEntries(fields.map(field => [field, field === 'description' ? description.trim() : value[field]]));
+    return {...Object.fromEntries(fields.map(field => [field, value[field]])), icon, description: description.trim()};
   }
   function checkedConfig(value) {
     if (!isObject(value) || value.version !== 1 || !isObject(value.features)) throw Error('功能配置版本无效。');

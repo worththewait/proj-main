@@ -1,8 +1,8 @@
 (() => {
 "use strict";
 const tools = [
- {name:"文档翻译",group:"文档处理",icon:"translate",description:"翻译完整文档，保留原文结构与专业表达。"},
- {name:"文本翻译",group:"文档处理",icon:"translate",description:"处理中外文段落，理解跨语言资料。"},
+ {name:"文档翻译",group:"文档处理",icon:"translate-document",description:"翻译完整文档，保留原文结构与专业表达。"},
+ {name:"文本翻译",group:"文档处理",icon:"translate-text",description:"处理中外文段落，理解跨语言资料。"},
  {name:"OCR识别",group:"文档处理",icon:"scan",description:"将图片、扫描件中的文字转为可编辑内容。"},
  {name:"纠错校对",group:"文档处理",icon:"check",description:"检查错别字、语病与标点，完善文本表达。"},
  {name:"提示词生成",group:"写作创作",icon:"chat",description:"明确任务、角色与要求，组织有效的提示词。"},
