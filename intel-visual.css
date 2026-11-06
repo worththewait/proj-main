@@ -22,9 +22,6 @@ body { background:var(--canvas); }
 .col-btn { height:28px; border-color:#dce3ee; border-radius:6px; }
 .eb-card { gap:16px; padding:0; }
 .eb-group { padding:0 20px; box-shadow:none; border-radius:10px; border-color:#e3e8f0; }
-.eb-gh { height:40px; margin:0 -20px; padding:0 20px; background:var(--surface-subtle); border-radius:8px 8px 0 0; }
-.eb-gh .idx, .eb-gh .dt { display:none; }
-.eb-gh .nm { font-size:13px; letter-spacing:0; }
 .eb-row, .eb-row.lead { padding:14px 0; }
 .eb-row:last-child { padding-bottom:16px; }
 .eb-row::after { right:-12px; }
@@ -132,8 +129,27 @@ body { background:var(--canvas); }
 .plaza-h::before { display:none; }
 .plaza-t { margin:0; font-size:15px; font-weight:600; color:var(--ink); }
 .plaza-h .intel-page-btn { margin-left:auto; }
-.pl-row { display:flex; align-items:center; gap:16px; padding:13px 0; border-top:1px solid #e9edf3; }
-.pl-line { flex:1; min-width:0; display:grid; grid-template-columns:170px 56px minmax(0,1fr); align-items:center; gap:12px; }
+/* 两条一行、一列一件事：左列主体与标题，右列阶段标签与「日期 + 关注」，标签在上。 */
+.pl-grid { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:2px 44px; padding:4px 0 10px; }
+.pl-card { display:grid; grid-template-columns:minmax(0, 1fr) auto; grid-template-rows:auto auto; align-items:center; gap:3px 16px; padding:11px 0; }
+.pl-card .pl-subj { grid-column:1; grid-row:1; }
+.pl-card .pl-tt { display:block; grid-column:1; grid-row:2; color:var(--muted); line-height:1.7; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; }
+.pl-side { grid-column:2; grid-row:1 / span 2; display:flex; flex-direction:column; align-items:flex-end; justify-content:center; gap:6px; }
+.pl-side .tk-step { padding:1px 7px; border-radius:4px; background:var(--accent); color:#fff; }
+.pl-side .pl-ops { display:flex; align-items:center; gap:8px; }
+.pl-side .pl-d { width:auto; padding:0; text-align:right; }
+/* 关注：描边小胶囊 + 加号。有边界才看得出是操作，加号说明是「加入跟踪」；
+   不用蓝底是为了不和右上角的阶段标签争注意力。 */
+.pl-side .pl-ops .pl-follow {
+  display:inline-flex; align-items:center; gap:3px;
+  height:22px; min-height:0; padding:0 9px 0 8px;
+  border:1px solid #cfd8e6; border-radius:5px; background:#fff; color:#4e5a6e;
+  font-family:inherit; font-size:12px; line-height:1; cursor:pointer;
+  transition:border-color .16s var(--ease), background-color .16s var(--ease), color .16s var(--ease);
+}
+.pl-side .pl-ops .pl-follow:hover { border-color:var(--accent); background:#f5f9ff; color:var(--accent); }
+.pl-side .pl-ops .pl-follow:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+.pl-side .pl-ops .pl-follow svg { width:11px; height:11px; flex:0 0 11px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
 .pl-subj { display:flex; align-items:baseline; gap:5px; min-width:0; }
 .pl-subj b { min-width:0; font-size:13px; font-weight:600; color:var(--ink); overflow-wrap:anywhere; }
 .pl-subj i { flex-shrink:0; font-size:11px; font-style:normal; color:var(--muted); }
@@ -165,11 +181,11 @@ body { background:var(--canvas); }
 .tk-sub i { color:var(--muted); font-size:11px; font-weight:400; font-style:normal; }
 .tk-sub i::before { content:'·'; margin-right:4px; }
 .tk-step { display:inline-flex; align-items:center; justify-content:center; width:max-content; min-height:20px; padding:1px 6px; border-radius:4px; background:#edf3ff; color:#315eac; font-size:11px; font-weight:500; line-height:1.5; white-space:nowrap; }
-.pl-line .tk-step { margin:0; }
+.pl-card .tk-step { margin:0; }
 button.pl-tt { border:0; padding:0; background:transparent; font-family:inherit; text-align:left; cursor:pointer; }
 button.pl-tt:hover { color:var(--accent); }
 button.pl-tt:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
-.pl-line .tk-step.ph { min-height:0; margin:0; padding:0; background:transparent; }
+.pl-card .tk-step.ph { min-height:0; margin:0; padding:0; background:transparent; }
 .tk-row .tk-title { margin-top:5px; color:#39465c; font-size:14px; line-height:1.7; }
 .tk-row:hover .tk-title { color:var(--accent); }
 .tk-row .tk-rowunf { margin-left:auto; padding:3px 0 3px 10px; border:0; background:transparent; color:var(--muted); font:inherit; font-size:11px; line-height:1.5; white-space:nowrap; cursor:pointer; }
@@ -201,18 +217,15 @@ button.pl-tt:focus-visible { outline:2px solid var(--accent); outline-offset:3px
 .intel-page-btn.pg-refresh:hover, .intel-page-btn.pg-refresh.spinning { color:var(--accent); background:#edf3ff; }
 .intel-page-btn.pg-refresh .r-ic { display:inline-flex; }
 .intel-page-btn.pg-refresh.spinning .r-ic { animation:intel-spin .62s linear infinite; }
-:is(.pl-ops a,.pl-ops button,.pl-more span,.pl-more button,.tk-chip,.tk-unf,.tk-rowunf,.orig-a,.intel-page-btn,.intel-back,.cfg-cell,.eb-gh,.eb-row,.rl-row,.tk-row):focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+:is(.pl-ops a,.pl-ops button,.pl-more span,.pl-more button,.tk-chip,.tk-unf,.tk-rowunf,.orig-a,.intel-page-btn,.intel-back,.cfg-cell,.eb-row,.rl-row,.tk-row):focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
 @media (max-width:1050px) {
- .pl-line { grid-template-columns:150px 50px minmax(0,1fr); gap:10px; }
- .pl-row { gap:12px; }
+ .pl-grid { gap:2px 30px; }
 }
 @media (max-width:760px) {
  .plaza { padding-inline:16px; }
- .pl-row { align-items:flex-start; gap:10px; padding-block:14px; }
- .pl-line { grid-template-columns:minmax(0,1fr) auto; gap:6px 8px; }
+ .pl-grid { grid-template-columns:minmax(0, 1fr); }
  .pl-subj { align-items:center; }
- .pl-tt { grid-column:1 / -1; }
- .pl-line .tk-step.ph { display:none; }
+ .pl-card .tk-step.ph { display:none; }
  .pl-d { padding-top:3px; }
  .pl-ops :is(a,button) { padding-inline:9px; }
  .tk-card { padding-inline:16px; }

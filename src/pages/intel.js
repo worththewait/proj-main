@@ -1620,10 +1620,7 @@ function viewEarly() {
         + '<div class="eb-tt">' + n.title + '</div>'
         + '<div class="eb-sum">' + n.summary + '</div></div>';
     }).join('');
-    return '<section class="eb-group' + (ebCollapsed[g.name] ? ' collapsed' : '') + '">'
-      + '<header class="eb-gh" data-ebg="' + g.name + '"><span class="idx">' + pad2(gi + 1) + '</span><span class="dt"></span>'
-      + '<span class="nm">' + g.name + '</span>'
-      + '<span class="chev">▼</span></header>'
+    return '<section class="eb-group">'
       + '<div class="eb-list">' + rows + '</div></section>';
   }).join('') : emptyEarly();
 
@@ -1862,21 +1859,22 @@ function plazaBody() {
   if (plazaPage >= batches.length) plazaPage = 0;
   const list = batches[plazaPage];
 
-  const rows = list.map(e => {
+  /* 两列：左侧「主体·类型 + 标题」，右侧竖排「阶段标签」与「日期 + 关注」，
+     标签在上、日期与关注在下，行高按两条文字对齐。 */
+  const rows = '<div class="pl-grid">' + list.map(e => {
     /* 广场也是「一件事一条」：标题取最近一次进展的主报道 */
     const lead = latestLead(e);
-    return '<div class="pl-row">'
-      + '<div class="pl-line">'
+    return '<article class="pl-card">'
       + '<span class="pl-subj"><b>' + e.subj.n + '</b><i>' + e.type + '</i></span>'
-      + (e.stage ? '<span class="tk-step">' + e.stage + '</span>' : '<span class="tk-step ph"></span>')
       + '<button type="button" class="pl-tt" data-plzadetail="' + e.key + '">' + lead.title + '</button>'
+      + '<div class="pl-side">'
+      + (e.stage ? '<span class="tk-step">' + e.stage + '</span>' : '<span class="tk-step ph"></span>')
+      + '<div class="pl-ops"><span class="pl-d">' + lead.d + '</span>'
+      + '<button type="button" class="pl-follow" data-plzafollow="' + e.key + '">'
+      + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>关注</button></div>'
       + '</div>'
-      + '<span class="pl-d">' + lead.d + '</span>'
-      + '<div class="pl-ops">'
-      + '<button type="button" data-plzafollow="' + e.key + '">关注</button>'
-      + '</div>'
-      + '</div>';
-  }).join('');
+      + '</article>';
+  }).join('') + '</div>';
 
   const fold = batches.length > 1
     ? '<div class="pl-more"><button type="button" id="btnPlzMore">换一换</button></div>'
