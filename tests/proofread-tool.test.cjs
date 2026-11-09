@@ -13,14 +13,14 @@ function loadTool() {
   return window.BaigeProofreadTool;
 }
 
-test("proofread tool exposes the three-column workspace hooks", () => {
+test("proofread tool exposes the document and result workspace hooks", () => {
   const js = read("src/proofread-tool.js");
-  for (const token of ["pr-rail", "pr-editor", "pr-result", "审校记录", "文件列表", "审校范围", "开始审校", "全部采纳", "全部不采纳"]) {
+  for (const token of ["pr-editor", "pr-result", "文件列表", "审校范围", "开始审校", "全部采纳", "全部不采纳"]) {
     assert.ok(js.includes(token), token);
   }
   assert.doesNotMatch(js, /返回工具目录|data-options/);
   const css = read("proofread-tool.css");
-  assert.match(css, /grid-template-columns: clamp\([^)]*\) repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(css, /\.pr-app\s*\{[^}]*grid-template-columns: minmax\(0, 1\.55fr\) minmax\(0, 1fr\)/);
   assert.match(css, /\.pr-issue/);
   assert.match(css, /\.pr-hit/);
   // 智能工具页只在纠错校对时挂载该工作台。
@@ -35,9 +35,76 @@ test("the file list opens first without showing the input or the review workspac
   assert.equal(get('[data-workbench]').hidden, true);
   assert.equal(get('[data-files-empty]').hidden, false);
   assert.ok(get('[data-upload]'));
-  assert.deepEqual(get('.wr-file-table').querySelectorAll('th').map(cell => cell.textContent), [
-    '文件名', '文件来源', '文档类型', '版本号', '创建时间', '解析状态', '涉密审查状态', '最近更新', '操作',
-  ]);
+  const writingHeaders = Array.from(
+    read('src/pages/writing.js').match(/<table class="wr-file-table is-material"><thead>(.*?)<\/thead>/)[1]
+      .matchAll(/<th>(.*?)<\/th>/g),
+    ([, header]) => header
+  );
+  const table = get('.wr-file-table.is-material');
+  assert.ok(table);
+  assert.deepEqual(table.querySelectorAll('th').map(cell => cell.textContent), writingHeaders);
+});
+
+test("file status filters and name search combine and can be reset from an empty result", () => {
+  const flow = setupFlow();
+  const submitFile = (fileName, text) => flow.store.submitFile({fileName, text, source: 'upload'});
+  submitFile('海试通知.txt', '工做');
+  const completed = submitFile('海试报告.txt', '工做');
+  const rejected = submitFile('设备台账.txt', '内部资料工做');
+  flow.tick(3000);
+  flow.store.startReview({fileId: completed.id, types: ['错别字']});
+  flow.store.audit(rejected.id, 'submitted');
+  flow.store.audit(rejected.id, 'rejected');
+  flow.tick(3000);
+  const {get} = flow.mount();
+  const filter = value => get(`[data-file-filter="${value}"]`);
+  const search = get('[data-file-search]');
+  const searchForm = get('[data-file-search-form]');
+  const names = () => get('[data-intake-table]').querySelectorAll('.wr-file-name [title]').map(cell => cell.textContent);
+
+  assert.equal(filter('all').attributes['aria-pressed'], 'true');
+  filter('ready').emit('click');
+  assert.equal(filter('all').attributes['aria-pressed'], 'false');
+  assert.equal(filter('ready').attributes['aria-pressed'], 'true');
+  assert.deepEqual(names(), ['海试通知.txt']);
+  filter('audit').emit('click');
+  assert.deepEqual(names(), ['设备台账.txt']);
+  filter('done').emit('click');
+  assert.deepEqual(names(), ['海试报告.txt']);
+
+  search.value = '海试';
+  searchForm.emit('submit');
+  assert.deepEqual(names(), ['海试报告.txt']);
+  filter('all').emit('click');
+  assert.deepEqual(names(), ['海试报告.txt', '海试通知.txt']);
+  search.value = '海试通知';
+  searchForm.emit('submit');
+  filter('done').emit('click');
+  assert.deepEqual(names(), []);
+  assert.equal(get('[data-files-empty]').hidden, false);
+
+  get('[data-file-filter-reset]').emit('click');
+  assert.equal(filter('all').attributes['aria-pressed'], 'true');
+  assert.equal(search.value, '');
+  assert.equal(get('[data-files-empty]').hidden, true);
+  assert.deepEqual(names(), ['设备台账.txt', '海试报告.txt', '海试通知.txt']);
+});
+
+test("a newly uploaded file is visible when a filter and search were active", async () => {
+  const {get} = setupFlow().mount();
+  const search = get('[data-file-search]');
+  get('[data-file-filter="ready"]').emit('click');
+  search.value = '另一个文件';
+  get('[data-file-search-form]').emit('submit');
+  const input = get('[data-file]');
+  input.files = [{name: '新上传材料.txt', size: 12, text: async () => '工做内容'}];
+  input.emit('change');
+  await new Promise(setImmediate);
+
+  assert.equal(search.value, '');
+  assert.equal(get('[data-file-filter="all"]').attributes['aria-pressed'], 'true');
+  assert.equal(get('[data-file-table]').hidden, false);
+  assert.match(get('[data-intake-table] tr').textContent, /新上传材料\.txt/);
 });
 
 function setupFlow(storage = new Map()) {
@@ -46,6 +113,18 @@ function setupFlow(storage = new Map()) {
   let nextTimeout = 0;
   const timeouts = new Map();
   let failWrites = false;
+  let allowDiscard = false;
+  const confirmations = [];
+  const downloads = [];
+  const blobs = new Map();
+  class TestURL extends URL {
+    static createObjectURL(blob) {
+      const url = 'blob:test/' + blobs.size;
+      blobs.set(url, blob);
+      return url;
+    }
+    static revokeObjectURL(url) { blobs.delete(url); }
+  }
   class Clock extends Date { static now() { return time; } }
   const window = {
     BaigeUI: {icon: () => "", escapeHtml: String},
@@ -57,8 +136,12 @@ function setupFlow(storage = new Map()) {
       },
     },
     addEventListener() {},
+    confirm(message) {
+      confirmations.push(message);
+      return allowDiscard;
+    },
   };
-  const ctx = vm.createContext({window, Date: Clock, URL, DOMException, console,
+  const ctx = vm.createContext({window, Date: Clock, URL: TestURL, Blob, DOMException, console,
     document: {currentScript: {src: 'file:///prototype/src/proofread-file.js'}},
     setInterval: callback => { interval = callback; return 1; }, clearInterval: () => { interval = null; },
     setTimeout(callback, delay) {
@@ -75,7 +158,8 @@ function setupFlow(storage = new Map()) {
   const tool = window.BaigeProofreadTool;
   store.initialize([], []);
   return {
-    store, storage, tool,
+    store, storage, tool, confirmations, downloads,
+    confirmDiscard(value) { allowDiscard = value; },
     draft(text = "工做严各") {
       const doc = store.createDraft();
       return store.saveDraft(doc.id, "测试文档", text);
@@ -84,13 +168,23 @@ function setupFlow(storage = new Map()) {
     mount() {
       const {document, Element} = require('./helpers/feature-dom.cjs')();
       document.visibilityState = 'visible';
+      const createElement = document.createElement;
+      document.createElement = tag => {
+        const element = createElement(tag);
+        if (tag === 'a') {
+          element.click = () => downloads.push({name: element.download, blob: blobs.get(element.href)});
+        }
+        return element;
+      };
       ctx.document = document;
       const root = new Element('section');
       document.append(root);
-      tool.render(root);
+      let dirty = false;
+      tool.render(root, value => { dirty = value; });
       root.querySelectorAll('input[value]').forEach(input => { input.value = input.attributes.value; });
       return {
         root, document,
+        isDirty: () => dirty,
         get: selector => root.querySelector(selector),
         advance(ms) {
           const end = time + ms;
@@ -180,8 +274,7 @@ test("submitting text locks the original and background completion does not inte
   const {get: reopened} = flow.mount();
   assert.equal(reopened('[data-draft-text]').value, '');
   reopened('[data-intake-review]').emit('click');
-  assert.equal(reopened('[data-workbench]').classList.contains('is-result-only'), true);
-  assert.equal(reopened('#proofreadRail').hidden, true);
+  assert.equal(reopened('#proofreadRail'), null);
   assert.equal(reopened('[data-run]').hidden, true);
   assert.equal(reopened('[data-original]'), null);
   const [punctuation, typo] = flow.store.read().history[0].issues;
@@ -194,8 +287,8 @@ test("submitting text locks the original and background completion does not inte
   assert.equal(reopened(`[data-hit="${typo.id}"]`).textContent, typo.word);
   const decided = flow.store.read().history[0];
   assert.equal(decided.originalText, original);
-  assert.ok(decided.accepted.includes(punctuation.id));
-  assert.ok(decided.ignored.includes(typo.id));
+  assert.equal(decided.accepted.length, 0);
+  assert.equal(decided.ignored.length, 0);
 });
 
 test("text review opens automatically after the five-second notice closes", () => {
@@ -203,14 +296,18 @@ test("text review opens automatically after the five-second notice closes", () =
   const {get, advance} = flow.mount();
   typeDraft(get, '工做');
   submitDraft(get);
-  advance(4999);
+  assert.equal(get('[data-notice-countdown]')?.textContent, '5 秒后自动关闭');
+  advance(1000);
+  assert.equal(get('[data-notice-countdown]').textContent, '4 秒后自动关闭');
+  advance(3999);
+  assert.equal(get('[data-notice-countdown]').textContent, '1 秒后自动关闭');
   assert.equal(get('[data-intake-notice]').open, true);
   assert.equal(get('[data-workbench]').hidden, true);
   assert.equal(flow.store.read().history[0].status, 'running');
   advance(1);
   assert.equal(get('[data-intake-notice]').open, false);
   assert.equal(get('[data-workbench]').hidden, false);
-  assert.equal(get('#proofreadRail').hidden, false);
+  assert.equal(get('#proofreadRail'), null);
   assert.equal(get('[data-run]').textContent, '停止审校');
   get('[data-run]').emit('click');
   advance(10000);
@@ -295,23 +392,20 @@ test("decisions are recorded without modifying original text or issue offsets", 
   assert.equal(flow.store.read().history.length, 1);
 });
 
-test("accepting a shorter replacement updates the document and can be undone after reopening", () => {
+test("accepting a shorter replacement updates the local preview and can be undone before saving", () => {
   const flow = setupFlow();
   const draft = flow.draft("计划完成，，请严各审校。");
   flow.store.startReview({fileId: draft.id, types: ["错别字", "标点"]});
   const done = flow.tick(10000).history[0];
   const [first, second] = done.issues;
-  const opened = flow.mount();
-  opened.get('[data-intake-review]').emit('click');
-  opened.get(`[data-accept="${first.id}"]`).emit('click');
-  assert.equal(opened.get(`[data-hit="${first.id}"]`).textContent, '，');
-  assert.equal(opened.get(`[data-hit="${second.id}"]`).textContent, '严各');
-  assert.equal(opened.get('[data-char]').textContent, `字数统计 ${draft.text.length - 1}`);
-  opened.get('[data-accept-all]').emit('click');
-
-  const reopened = setupFlow(flow.storage);
-  const {get} = reopened.mount();
+  const {get, isDirty} = flow.mount();
   get('[data-intake-review]').emit('click');
+  get(`[data-accept="${first.id}"]`).emit('click');
+  assert.equal(get(`[data-hit="${first.id}"]`).textContent, '，');
+  assert.equal(get(`[data-hit="${second.id}"]`).textContent, '严各');
+  assert.equal(get('[data-char]').textContent, `字数统计 ${draft.text.length - 1}`);
+  assert.equal(isDirty(), true);
+  get('[data-accept-all]').emit('click');
   assert.equal(get('[data-accept-all]').disabled, true);
   assert.equal(get(`[data-hit="${first.id}"]`).textContent, '，');
   assert.equal(get(`[data-hit="${second.id}"]`).textContent, '严格');
@@ -319,8 +413,8 @@ test("accepting a shorter replacement updates the document and can be undone aft
   assert.ok(undo, '已采纳建议应提供撤回入口');
   undo.emit('click');
 
-  const {history: [saved], records: [file]} = setupFlow(flow.storage).store.read();
-  assert.deepEqual(Array.from(saved.accepted), [second.id]);
+  const {history: [saved], records: [file]} = flow.store.read();
+  assert.equal(saved.accepted.length, 0);
   assert.equal(saved.originalText, draft.text);
   assert.equal(saved.text, draft.text);
   assert.equal(file.text, draft.text);
@@ -331,6 +425,9 @@ test("accepting a shorter replacement updates the document and can be undone aft
   assert.ok(get(`[data-ignore="${first.id}"]`));
   assert.equal(get(`[data-undo-decision="${first.id}"]`), null);
   assert.equal(get('[data-accept-all]').disabled, false);
+  assert.equal(isDirty(), true);
+  get(`[data-undo-decision="${second.id}"]`).emit('click');
+  assert.equal(isDirty(), false, '撤回全部修改后不应再提示未保存');
 });
 
 test("undoing a rejected suggestion restores its choices and leaves other decisions intact", () => {
@@ -349,14 +446,175 @@ test("undoing a rejected suggestion restores its choices and leaves other decisi
   assert.ok(undo, '未采纳建议应提供撤回入口');
   undo.emit('click');
 
-  const saved = setupFlow(flow.storage).store.read().history[0];
+  const saved = flow.store.read().history[0];
   assert.equal(saved.ignored.length, 0);
-  assert.deepEqual(Array.from(saved.accepted), [second.id]);
+  assert.equal(saved.accepted.length, 0);
   assert.equal(get(`[data-hit="${first.id}"]`).textContent, '工做');
   assert.equal(get(`[data-hit="${second.id}"]`).textContent, '严格');
   assert.ok(get(`[data-ignore="${first.id}"]`));
   get(`[data-accept="${first.id}"]`).emit('click');
   assert.equal(get(`[data-hit="${first.id}"]`).textContent, '工作');
+});
+
+test("returning from an edited result asks before discarding and reopening cannot recover unsaved edits", () => {
+  const flow = setupFlow();
+  const draft = flow.draft('工做严各。');
+  flow.store.startReview({fileId: draft.id, types: ['错别字']});
+  const {issues: [first]} = flow.tick(10000).history[0];
+  const {get, root, isDirty} = flow.mount();
+  get('[data-intake-review]').emit('click');
+  get(`[data-accept="${first.id}"]`).emit('click');
+  assert.equal(root.dataset.autosaved, 'false');
+  assert.equal(isDirty(), true);
+
+  get('[data-workbench] [data-intake-back]').emit('click');
+  assert.match(flow.confirmations[0], /未保存.*丢失/);
+  assert.equal(get('[data-workbench]').hidden, false);
+  assert.equal(get(`[data-hit="${first.id}"]`).textContent, '工作');
+  assert.equal(isDirty(), true);
+
+  flow.confirmDiscard(true);
+  get('[data-workbench] [data-intake-back]').emit('click');
+  assert.equal(get('[data-files]').hidden, false);
+  assert.equal(isDirty(), false);
+  assert.equal(root.dataset.autosaved, 'true');
+  get('[data-intake-review]').emit('click');
+  assert.equal(get(`[data-hit="${first.id}"]`).textContent, '工做');
+  get(`[data-accept="${first.id}"]`).emit('click');
+  root.remove();
+
+  const reopened = flow.mount();
+  reopened.get('[data-intake-review]').emit('click');
+  assert.equal(reopened.get(`[data-hit="${first.id}"]`).textContent, '工做');
+  assert.equal(reopened.isDirty(), false);
+});
+
+test("confirming locks the current result and exposes its separate screening in the file list", () => {
+  const flow = setupFlow();
+  const draft = flow.draft("工做严各确宝。");
+  flow.store.startReview({fileId: draft.id, types: ["错别字"]});
+  flow.tick(10000);
+  const {get, advance, isDirty} = flow.mount();
+  get('[data-intake-review]').emit('click');
+  get('[data-accept]').emit('click');
+  get('[data-ignore]').emit('click');
+  get('[data-finalize]').emit('click');
+  assert.equal(get('[data-final-dialog]').open, true);
+  assert.match(get('[data-final-summary]').textContent, /已采纳 1 条.*不采纳 1 条.*未处理 1 条/);
+  assert.equal(flow.store.read().history[0].output, undefined);
+  assert.equal(isDirty(), true);
+
+  flow.fail();
+  get('[data-final-submit]').emit('click');
+  assert.match(get('[data-status]').textContent, /存储空间不足/);
+  assert.ok(get('[data-undo-decision]'));
+  assert.equal(flow.store.read().history[0].output, undefined);
+  assert.equal(isDirty(), true);
+  flow.restore();
+
+  get('[data-finalize]').emit('click');
+  get('[data-final-submit]').emit('click');
+  assert.equal(get('[data-final-dialog]').open, false);
+  assert.equal(get('[data-intake-notice]').open, true);
+  assert.match(get('[data-notice-title]').textContent, /校对结果已送审/);
+  const {history: [saved], records: [original]} = flow.store.read();
+  assert.equal(saved.output.text, "工作严各确宝。");
+  assert.equal(saved.output.secretStatus, "detecting");
+  assert.equal(isDirty(), false);
+  assert.equal(original.text, draft.text);
+  assert.equal(original.secretStatus, "passed");
+  assert.equal(get('[data-finalize]').hidden, true);
+  assert.equal(get('[data-download]').disabled, true);
+  assert.equal(get('[data-bulk]').hidden, true);
+  assert.equal(get('[data-accept], [data-ignore], [data-undo-decision]'), null);
+  get('[data-notice-close]').emit('click');
+
+  get('[data-workbench] [data-intake-back]').emit('click');
+  get('[data-file-filter="audit"]').emit('click');
+  assert.match(get('[data-intake-table] .wr-secret-cell').textContent, /结果.*检测中/);
+  get('[data-intake-secret]').emit('click');
+  assert.match(get('[data-secret-title]').textContent, /校对结果核查/);
+  advance(3000);
+  assert.match(get('[data-secret-title]').textContent, /已通过/);
+  get('[data-secret-close]').emit('click');
+  get('[data-file-filter="done"]').emit('click');
+  get('[data-intake-review]').emit('click');
+  assert.equal(get('[data-download]').disabled, false);
+  assert.equal(get('[data-view-output-audit]').hidden, false);
+  assert.equal(get('[data-undo-decision]'), null);
+});
+
+test("download uses the same confirmation and stays blocked if the saved result is rejected", () => {
+  const flow = setupFlow();
+  const draft = flow.draft("内部资料的工做。");
+  flow.store.startReview({fileId: draft.id, types: ["错别字"]});
+  flow.tick(3000);
+  flow.store.audit(draft.id, "submitted");
+  flow.store.audit(draft.id, "passed");
+  flow.tick(5000);
+  const {get, advance} = flow.mount();
+  get('[data-intake-review]').emit('click');
+  get('[data-download]').emit('click');
+  assert.equal(get('[data-final-dialog]').open, true);
+  get('[data-final-cancel]').emit('click');
+  assert.equal(get('[data-final-dialog]').open, false);
+  assert.equal(flow.store.read().history[0].output, undefined);
+  get('[data-accept]').emit('click');
+  get('[data-download]').emit('click');
+  get('[data-final-submit]').emit('click');
+  get('[data-notice-close]').emit('click');
+  advance(3000);
+
+  get('[data-view-output-audit]').emit('click');
+  assert.match(get('[data-secret-title]').textContent, /校对结果核查.*涉密可疑/);
+  get('[data-secret-submit]').emit('click');
+  assert.equal(get('[data-download]').disabled, true);
+  get('[data-secret-reject]').emit('click');
+  assert.match(get('[data-secret-title]').textContent, /校对结果核查.*已驳回/);
+  assert.match(get('[data-secret-body]').textContent, /人工审核未通过/);
+  assert.equal(get('[data-download]').disabled, true);
+  assert.equal(get('[data-undo-decision]'), null);
+  const {history: [saved], records: [original]} = flow.store.read();
+  assert.equal(saved.output.secretStatus, "rejected");
+  assert.equal(original.secretStatus, "passed");
+  assert.equal(flow.downloads.length, 0);
+});
+
+test("download saves unsaved choices and waits for approval, then downloads the saved result once", async () => {
+  const flow = setupFlow();
+  const draft = flow.draft('工做严各。');
+  flow.store.startReview({fileId: draft.id, types: ['错别字']});
+  flow.tick(10000);
+  const {get, advance, isDirty} = flow.mount();
+  get('[data-intake-review]').emit('click');
+  get('[data-accept]').emit('click');
+  get('[data-download]').emit('click');
+  assert.equal(get('[data-final-dialog]').open, true);
+  assert.match(get('[data-final-title]').textContent, /保存后下载/);
+  assert.match(get('[data-final-text]').textContent, /核查通过后会自动下载/);
+  assert.equal(flow.store.read().history[0].output, undefined);
+  get('[data-final-submit]').emit('click');
+  assert.equal(flow.store.read().history[0].output.secretStatus, 'detecting');
+  assert.equal(isDirty(), false);
+  assert.equal(get('[data-download]').disabled, true);
+  assert.equal(flow.downloads.length, 0);
+  advance(1000);
+  assert.equal(flow.downloads.length, 0, '核查结束前不能下载');
+  advance(6000);
+  assert.equal(flow.store.read().history[0].output.secretStatus, 'passed');
+  assert.equal(get('[data-download]').disabled, false);
+  assert.equal(flow.downloads.length, 1);
+  assert.match(get('[data-status]').textContent, /已发起.*下载/);
+  assert.equal(flow.downloads[0].name, '测试文档.txt');
+  assert.equal(await flow.downloads[0].blob.text(), '工作严各。');
+  advance(1000);
+  assert.equal(flow.downloads.length, 1, '自动下载只发起一次');
+
+  get('[data-download]').emit('click');
+  assert.equal(get('[data-final-dialog]').open, false);
+  assert.equal(get('[data-intake-notice]').open, false);
+  assert.equal(flow.downloads.length, 2);
+  assert.equal(await flow.downloads[1].blob.text(), '工作严各。');
 });
 
 test("empty submissions and failed saves never create partial or duplicated tasks", () => {
@@ -377,7 +635,9 @@ test("uploaded files pass screening before manual review and can reopen the resu
   get('[data-file]').emit('change');
   await new Promise(setImmediate);
   assert.equal(get('[data-intake-notice]').open, true);
+  assert.match(get('[data-notice-countdown]').textContent, /5\s*秒后自动关闭/);
   assert.equal(flow.store.read().records[0].secretStatus, 'detecting');
+  assert.equal(get('[data-intake-table] tr').children.length, 6);
   assert.equal(flow.store.read().history.length, 0);
   assert.equal(get('[data-intake-start]'), null);
   get('[data-notice-close]').emit('click');
@@ -390,17 +650,19 @@ test("uploaded files pass screening before manual review and can reopen the resu
   assert.equal(get('[data-dialog]').open, true);
   get('[data-confirm]').emit('click');
   assert.equal(get('[data-workbench]').hidden, false);
-  assert.equal(get('#proofreadRail').hidden, false);
-  assert.equal(get('[data-workbench]').classList.contains('is-result-only'), false);
+  assert.deepEqual(get('.pr-app').children.map(column => column.className), ['pr-editor', 'pr-result']);
   assert.equal(flow.store.read().history[0].status, 'running');
+  get('[data-workbench] [data-intake-back]').emit('click');
+  get('[data-intake-review]').emit('click');
+  assert.equal(get('.pr-app').children.length, 2);
+  assert.equal(get('[data-run]').hidden, false);
   advance(4000);
   get('[data-workbench] [data-intake-back]').emit('click');
   const viewResult = get('[data-intake-review]');
   assert.equal(viewResult.textContent, '查看结果');
   viewResult.emit('click');
   assert.equal(get('[data-workbench]').hidden, false);
-  assert.equal(get('#proofreadRail').hidden, true);
-  assert.equal(get('[data-workbench]').classList.contains('is-result-only'), true);
+  assert.equal(get('.pr-app').children.length, 2);
   assert.match(get('[data-doc]').textContent, /工做/);
   assert.ok(get('[data-accept]'));
 });

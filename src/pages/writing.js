@@ -9,8 +9,12 @@
   const secretDetailDialog = document.querySelector("#secretDetailDialog");
   const composeDialog = document.querySelector("#composeDialog");
   const toastEl = document.querySelector("#writingToast");
+  const MATERIAL_FILTERS = { all: "全部文件", ready: "可选用", audit: "涉密核查" };
+  const AUDIT_ACTIONS = { detecting: "查看核查", hit: "提交审核", submitted: "查看审核", rejected: "查看原因" };
 
   let view = "templates";
+  let materialFilter = "all";
+  let materialQuery = "";
   let templateTab = "personal";
   let activeTemplate = null;
   let outline = [];
@@ -39,7 +43,6 @@
   function parseLabel(status) { return { unparsed: "未解析", parsing: "解析中", parsed: "已解析", failed: "解析失败" }[status] || "未解析"; }
   function parseHtml(status) { return `<span class="wr-tag parse-${escape(status || "unparsed")}">${parseLabel(status)}</span>`; }
   function secretTagHtml(status) { return `<span class="wr-tag secret-${escape(status)}">${statusLabel(status)}</span>`; }
-  function fileType(item) { return String(item.type || "").toLowerCase() === "pdf" ? "PDF" : "DOC"; }
   const filePicker = document.createElement("input");
   filePicker.type = "file";
   filePicker.multiple = true;
@@ -55,6 +58,7 @@
     if (invalid) { toast(`${invalid.name} 格式或大小不符合要求。`); return; }
     const count = store.addUploads(files);
     if (!count) { toast("最多只能上传 5 个文件。"); return; }
+    resetMaterialFilters();
     toast(count < files.length ? `已上传 ${count} 个文件，其余文件超过数量上限。` : `已上传 ${count} 个文件，正在检测涉密内容`);
   });
   function openFilePicker() {
@@ -171,23 +175,79 @@
   }
 
   function renderMaterials() {
-    root.innerHTML = `<header class="wr-head wr-materials-head"><div><h1 tabindex="-1">素材管理</h1><p>上传文件并查看涉密审核状态。审核通过的文件可供个人模板和公共模板选用。</p></div><div class="wr-head-actions"><button class="wr-btn" type="button" data-writing-back>返回模板</button><button class="wr-btn is-primary" type="button" data-wr-material-upload>上传文件</button></div></header>
-      <section aria-label="写作素材文件" data-wr-material-table></section>`;
+    materialFilter = "all";
+    materialQuery = "";
+    root.innerHTML = `<header class="wr-head wr-materials-head">
+        <div><h1 tabindex="-1">素材管理</h1><p>通过涉密核查的文件可供个人模板和公共模板选用。</p></div>
+        <div class="wr-file-entry">
+          <div class="wr-head-actions">
+            <button class="wr-btn" type="button" data-writing-back>返回模板</button>
+            <button class="wr-btn is-primary" type="button" data-wr-material-upload aria-describedby="wrMaterialFormats">${icon("upload")}上传文件</button>
+          </div>
+          <p class="wr-file-formats" id="wrMaterialFormats">支持 PDF、Word、PPT</p>
+        </div>
+      </header>
+      <section class="wr-file-list" aria-label="写作素材文件">
+        <div class="wr-file-toolbar">
+          <div class="wr-file-filters" role="group" aria-label="按文件状态筛选">
+            ${Object.entries(MATERIAL_FILTERS).map(([filter, label]) => `
+              <button type="button" data-wr-file-filter="${filter}" aria-pressed="${filter === "all"}">${label}<span data-file-count>0</span></button>
+            `).join("")}
+          </div>
+          <form class="wr-file-search" data-wr-file-search-form role="search" aria-label="搜索写作素材">
+            <label class="search-field wr-file-search-input">${icon("search")}<input type="search" data-wr-file-search aria-label="搜索文件名" placeholder="搜索文件名" /></label>
+            <button class="secondary-button" type="submit">搜索</button>
+          </form>
+        </div>
+        <p class="sr-only" data-wr-file-summary aria-live="polite"></p>
+        <div data-wr-material-table></div>
+      </section>`;
     renderMaterialTable();
     root.querySelector("h1")?.focus();
   }
+
+  function resetMaterialFilters() {
+    materialFilter = "all";
+    materialQuery = "";
+    root.querySelector("[data-wr-file-search]").value = "";
+    renderMaterialTable();
+  }
+
   function renderMaterialTable() {
-    const uploads = store.uploads();
-    root.querySelector("[data-wr-material-table]").innerHTML = uploadTableHtml(uploads);
+    const uploads = store.uploads().reverse();
+    const ready = uploads.filter(item => item.status === "passed").length;
+    const counts = { all: uploads.length, ready, audit: uploads.length - ready };
+    const query = materialQuery;
+    const filtered = uploads.filter(item => {
+      const category = item.status === "passed" ? "ready" : "audit";
+      return (materialFilter === "all" || materialFilter === category) && item.name.toLowerCase().includes(query);
+    });
+    for (const button of root.querySelectorAll("[data-wr-file-filter]")) {
+      const filter = button.dataset.wrFileFilter;
+      button.setAttribute("aria-pressed", String(filter === materialFilter));
+      button.querySelector("[data-file-count]").textContent = counts[filter];
+    }
+    const summary = root.querySelector("[data-wr-file-summary]");
+    const message = `显示 ${filtered.length} 个文件`;
+    if (summary.textContent !== message) summary.textContent = message;
+    const empty = query ? "没有找到匹配的文件。" : materialFilter !== "all"
+      ? "这个分类暂时没有文件。" : "还没有写作素材。点击「上传文件」添加。";
+    root.querySelector("[data-wr-material-table]").innerHTML = filtered.length ? uploadTableHtml(filtered) : `
+      <div class="wr-file-empty"><p>${empty}</p>
+        ${query || materialFilter !== "all" ? '<button type="button" class="wr-file-reset" data-wr-file-filter-reset>清除筛选</button>' : ""}
+      </div>`;
   }
   function uploadTableHtml(uploads) {
-    if (!uploads.length) return '<p class="wr-material-empty">还没有写作素材。点击「上传文件」添加。</p>';
     const rows = uploads.map((item) => {
       const passed = item.status === "passed";
+      const id = html(item.id);
+      const name = html(item.name);
       const eye = `<button class="wr-eye" type="button" data-wr-secret="${html(item.id)}" title="查看涉密检测详情" aria-label="查看${html(item.name)}的涉密检测详情">${icon("eye")}</button>`;
-      /* 操作只保留预览与删除：预览要审核通过才可用，删除不受状态限制。 */
-      const actions = `<div class="wr-file-actions">${passed ? `<button type="button" data-wr-file-action="preview" data-wr-file-id="${html(item.id)}" title="预览文档" aria-label="预览${html(item.name)}">${icon("file")}</button>` : ""}<button class="is-danger" type="button" data-wr-file-action="delete" data-wr-file-id="${html(item.id)}" title="删除文件" aria-label="删除${html(item.name)}">${icon("trash")}</button></div>`;
-      return `<tr class="${passed ? "" : "is-locked"}"><td><div class="wr-file-name"><span class="wr-file-icon is-${html(fileType(item).toLowerCase())}">${fileType(item)}</span><span title="${html(item.name)}">${html(item.name)}</span></div></td><td>${html(item.createdAt || "-")}</td><td>${parseHtml(item.parseStatus)}</td><td><div class="wr-secret-cell">${secretTagHtml(item.status)}${eye}</div></td><td>${html(item.updatedAt || "-")}</td><td>${actions}</td></tr>`;
+      const next = passed
+        ? `<button class="wr-file-action-label" type="button" data-wr-file-action="preview" data-wr-file-id="${id}">预览文档</button>`
+        : `<button class="wr-file-action-label" type="button" data-wr-secret="${id}">${AUDIT_ACTIONS[item.status] || "查看核查"}</button>`;
+      const actions = `<div class="wr-file-actions">${next}<button class="is-danger" type="button" data-wr-file-action="delete" data-wr-file-id="${id}" title="删除文件" aria-label="删除${name}">${icon("trash")}</button></div>`;
+      return `<tr class="${passed ? "" : "is-locked"}"><td><div class="wr-file-name"><span title="${name}">${name}</span></div></td><td>${html(item.createdAt || "-")}</td><td>${parseHtml(item.parseStatus)}</td><td><div class="wr-secret-cell">${secretTagHtml(item.status)}${eye}</div></td><td>${html(item.updatedAt || "-")}</td><td>${actions}</td></tr>`;
     }).join("");
     return `<div class="wr-file-table-wrap" tabindex="0" role="region" aria-label="素材文件列表"><table class="wr-file-table is-material"><thead><tr><th>文件名</th><th>创建时间</th><th>解析状态</th><th>涉密审查状态</th><th>最近更新</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
@@ -397,6 +457,13 @@
     if (tab) { templateTab = tab.dataset.templateTab; renderTemplates(); return; }
     if (event.target.closest("[data-wr-manage-materials]")) { view = "materials"; render(); return; }
     if (event.target.closest("[data-wr-material-upload]")) { openFilePicker(); return; }
+    const fileFilter = event.target.closest("[data-wr-file-filter]");
+    if (fileFilter) { materialFilter = fileFilter.dataset.wrFileFilter; renderMaterialTable(); return; }
+    if (event.target.closest("[data-wr-file-filter-reset]")) {
+      resetMaterialFilters();
+      root.querySelector("[data-wr-file-search]").focus();
+      return;
+    }
     if (event.target.closest("[data-wr-wizard-next]")) {
       if (wizardStep === 1) {
         const title = root.querySelector("#wrWizardTitle")?.value.trim() || "";
@@ -533,6 +600,16 @@
 
   root.addEventListener("input", (event) => {
     if (event.target.id === "wrWizardTitle") wizardState.title = event.target.value;
+    if (event.target.matches("[data-wr-file-search]") && !event.target.value && materialQuery) {
+      materialQuery = "";
+      renderMaterialTable();
+    }
+  });
+  root.addEventListener("submit", (event) => {
+    if (!event.target.matches("[data-wr-file-search-form]")) return;
+    event.preventDefault();
+    materialQuery = event.target.querySelector("[data-wr-file-search]").value.trim().toLowerCase();
+    renderMaterialTable();
   });
   root.addEventListener("change", (event) => {
     if (event.target.matches("[data-wr-wizard-knowledge]")) wizardState.knowledge = event.target.checked;

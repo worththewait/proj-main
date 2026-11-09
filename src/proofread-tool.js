@@ -36,6 +36,8 @@
   ].join('\n');
 
   const TYPES = ['错别字', '标点', '语法'];
+  const FILE_FILTERS = {all: '全部文件', ready: '可校对', audit: '涉密核查', done: '已完成'};
+  const AUDIT_ACTIONS = {detecting: '查看核查', hit: '提交审核', submitted: '查看审核', rejected: '查看原因'};
 
   /* 与百舸文库后台一致的四档审查状态。 */
   const SECRET_META = {
@@ -61,7 +63,8 @@
   const state = {
     records: [],
     screen: 'files',
-    resultOnly: false,
+    fileFilter: 'all',
+    fileQuery: '',
     rangeTarget: null,
     noticeTimer: null,
     history: [],
@@ -69,11 +72,15 @@
     issues: [],
     ignored: new Set(),
     accepted: new Set(),
+    decisionDraft: null,
+    downloadOnSave: false,
+    pendingDownload: '',
     status: 'idle',
     progress: 0,
     timer: null,
     seq: 0,
     secretId: '',
+    secretReviewId: '',
     removeId: '',
     selection: null,
     followReview: '',
@@ -145,80 +152,83 @@
   }
 
   function renderIntake() {
-    dom.fileRows.innerHTML = state.records.map(file => {
-      const review = state.history.find(item => item.id === file.id);
-      const result = state.history.find(item => item.id === file.id && item.status === 'done');
+    const reviews = new Map();
+    const results = new Map();
+    for (const review of state.history) {
+      if (!reviews.has(review.id)) reviews.set(review.id, review);
+      if (review.status === 'done' && !results.has(review.id)) results.set(review.id, review);
+    }
+    const counts = {all: state.records.length, ready: 0, audit: 0, done: 0};
+    const query = state.fileQuery;
+    const entries = [];
+    for (const file of state.records) {
+      const review = reviews.get(file.id);
+      const result = results.get(file.id);
+      const fileName = file.fileName || file.name;
+      let category;
+      if (AUDIT_ACTIONS[result?.output?.secretStatus || file.secretStatus]) category = 'audit';
+      else if (file.secretStatus === 'passed' && result) category = 'done';
+      else if (file.secretStatus === 'passed' && !review) category = 'ready';
+      if (category) counts[category]++;
+      if (state.fileFilter !== 'all' && state.fileFilter !== category) continue;
+      if (!fileName.toLowerCase().includes(query)) continue;
+      entries.push({file, review, result, fileName});
+    }
+    for (const button of dom.fileFilters) {
+      const filter = button.dataset.fileFilter;
+      button.setAttribute('aria-pressed', String(filter === state.fileFilter));
+      button.querySelector('[data-file-count]').textContent = counts[filter];
+    }
+    const summary = `显示 ${entries.length} 个文件`;
+    if (dom.fileListSummary.textContent !== summary) dom.fileListSummary.textContent = summary;
+    dom.fileRows.innerHTML = entries.map(({file, review, result, fileName}) => {
       const id = escape(file.id);
       const approved = file.secretStatus === 'passed';
-      const fileName = file.fileName || file.name;
       const name = escape(fileName);
-      const format = files.extension(fileName);
-      const type = format.toUpperCase() || 'TXT';
-      const fileIcon = format === 'pdf' ? 'pdf' : (format === 'xls' || format === 'xlsx' ? 'sheet' : 'doc');
-      const secret = SECRET_META[file.secretStatus] || SECRET_META.detecting;
+      const output = result?.output;
+      const auditStatus = output?.secretStatus || file.secretStatus;
+      const secret = SECRET_META[auditStatus] || SECRET_META.detecting;
+      const auditLabel = output ? '校对结果核查详情' : '涉密核查详情';
+      const outputTarget = output ? ` data-output-audit="${escape(result.reviewId)}"` : '';
       const updated = Math.max(file.uploadedAt || 0, file.updated || 0, file.reviewedAt || 0,
-        file.auditedAt || 0, review?.checkedAt || 0, review?.finishedAt || 0);
+        file.auditedAt || 0, review?.checkedAt || 0, review?.finishedAt || 0, output?.updated || 0);
       let action = '';
       if (approved && result) {
-        action = `<button type="button" class="pr-material-action" data-intake-review="${escape(result.reviewId)}">查看结果</button>`;
+        action = `<button type="button" class="wr-file-action-label" data-intake-review="${escape(result.reviewId)}">查看结果</button>`;
       } else if (approved && review) {
-        const label = review.status === 'running' ? '查看校对进度' : '查看状态';
-        action = `<button type="button" class="pr-material-action" data-intake-review="${escape(review.reviewId)}">${label}</button>`;
+        const label = review.status === 'running' ? '查看进度' : '查看状态';
+        action = `<button type="button" class="wr-file-action-label" data-intake-review="${escape(review.reviewId)}">${label}</button>`;
       } else if (approved || file.secretStatus === 'draft') {
         const label = approved ? '开始校对' : '提交校对';
-        action = `<button type="button" class="pr-material-action" data-intake-start="${id}">${label}</button>`;
+        action = `<button type="button" class="wr-file-action-label is-start" data-intake-start="${id}">${label}</button>`;
+      } else if (AUDIT_ACTIONS[file.secretStatus]) {
+        action = `<button type="button" class="wr-file-action-label" data-intake-secret="${id}">${AUDIT_ACTIONS[file.secretStatus]}</button>`;
       }
       return `<tr class="${approved ? '' : 'is-locked'}">
-        <td><div class="wr-file-name"><span class="wr-file-icon is-${fileIcon}">${escape(type)}</span><span title="${name}">${name}</span></div></td>
-        <td>${file.source === 'upload' ? '本地上传' : '文字录入'}</td><td>校对文档</td><td>V${file.version || 1}.0.0</td>
+        <td><div class="wr-file-name"><span title="${name}">${name}</span></div></td>
         <td>${tableTime(file.uploadedAt)}</td><td><span class="wr-tag parse-${file.secretStatus === 'draft' ? 'unparsed' : 'parsed'}">${file.secretStatus === 'draft' ? '未解析' : '已解析'}</span></td>
-        <td><div class="wr-secret-cell"><span class="wr-tag secret-${escape(file.secretStatus)}">${escape(secret.label)}</span>
-          <button type="button" class="wr-eye" data-intake-secret="${id}" title="查看涉密核查详情" aria-label="查看 ${name} 的涉密核查详情">${icon('eye')}</button></div></td>
+        <td><div class="wr-secret-cell"><span class="wr-tag secret-${escape(auditStatus)}">${output ? '结果 · ' : ''}${escape(secret.label)}</span>
+          <button type="button" class="wr-eye" data-intake-secret="${id}"${outputTarget} title="查看${auditLabel}" aria-label="查看 ${name} 的${auditLabel}">${icon('eye')}</button></div></td>
         <td>${tableTime(updated)}</td><td><div class="wr-file-actions">${action}
           <button type="button" class="is-danger" data-delete="${id}" title="删除文件" aria-label="删除 ${name}">${icon('trash')}</button></div></td>
       </tr>`;
     }).join('');
-    dom.fileTable.hidden = state.records.length === 0;
-    dom.filesEmpty.hidden = state.records.length > 0;
+    dom.fileTable.hidden = entries.length === 0;
+    dom.filesEmpty.hidden = entries.length > 0;
+    dom.filesEmptyMessage.textContent = query
+      ? '没有找到匹配的文件。'
+      : state.fileFilter !== 'all' ? '这个分类暂时没有文件。' : '还没有校对文件。上传文件或录入文字即可开始。';
+    dom.fileFilterReset.hidden = !query && state.fileFilter === 'all';
   }
 
-  function renderDocs() {
-    const keyword = dom.search.value.trim();
-    const entries = state.history.filter(item => item.name.includes(keyword) || item.fileName?.includes(keyword));
-    dom.list.innerHTML = entries.length ? entries.map(item => {
-      const active = state.session?.reviewId === item.reviewId;
-      const {label, tone} = REVIEW_META[item.status];
-      return `<li class="pr-doc-row"><button type="button" class="pr-doc${active ? ' is-active' : ''}" data-review="${escape(item.reviewId)}" aria-current="${active}" title="${escape(item.name)}">
-        <span class="pr-doc-icon is-upload">${icon('history')}</span>
-        <span class="pr-doc-body"><span class="pr-doc-name">${escape(item.name)}${item.version > 1 ? ` · V${item.version}` : ''}${item.unread ? '<i class="pr-unread" aria-label="新结果"></i>' : ''}</span>
-          <span class="pr-doc-meta is-${tone}"><i class="pr-dot is-${tone}" aria-hidden="true"></i>${label}<b>·</b>${clockOf(item.checkedAt, true)}</span></span>
-      </button></li>`;
-    }).join('') : `<li class="pr-list-empty">${keyword ? '没有匹配的记录' : '还没有审校记录'}</li>`;
-    dom.end.hidden = entries.length === 0;
+  function resetFileFilters() {
+    state.fileFilter = 'all';
+    state.fileQuery = '';
+    dom.fileSearch.value = '';
+    renderIntake();
   }
 
   /* ---------- 渲染：文档区与拦截态 ---------- */
-  function documentParts(record) {
-    // 以原文和原文位置为准，采纳长度变化时不移动后续建议的位置。
-    const original = record.originalText ?? record.text;
-    const parts = [];
-    let cursor = 0;
-    for (const issue of state.issues) {
-      if (issue.start < cursor) continue;
-      const accepted = state.accepted.has(issue.id);
-      const tone = accepted ? ' is-accepted' : state.ignored.has(issue.id) ? ' is-ignored' : '';
-      parts.push({text: original.slice(cursor, issue.start)});
-      parts.push({
-        id: issue.id,
-        text: accepted ? issue.suggestion : original.slice(issue.start, issue.end),
-        tone,
-      });
-      cursor = issue.end;
-    }
-    parts.push({text: original.slice(cursor)});
-    return parts;
-  }
-
   function renderPage() {
     if (!dom) return;
     const record = activeRecord();
@@ -237,7 +247,7 @@
       return;
     }
     dom.guard.hidden = true;
-    const parts = documentParts(record);
+    const parts = store.documentParts({...record, accepted: state.accepted, ignored: state.ignored});
     dom.page.innerHTML = parts.map(({id, text, tone}) => id
       ? `<span class="pr-hit${tone}" data-hit="${id}">${escape(text)}</span>`
       : escape(text)).join('');
@@ -246,7 +256,7 @@
 
   function guardBody(record) {
     if (record.secretStatus === 'detecting') {
-      return `<div class="pr-guard-box"><span class="pr-spinner" aria-hidden="true"></span><h3>正在检测涉密内容</h3><p>检测完成前文档不会载入编辑区，通常只需几秒。</p></div>`;
+      return `<div class="pr-guard-box"><span class="pr-spinner" aria-hidden="true"></span><h3>正在检测涉密内容</h3><p>检测完成前文档不会载入预览区，通常只需几秒。</p></div>`;
     }
     if (record.secretStatus === 'hit') {
       return `<div class="pr-guard-box is-alert"><span class="pr-guard-mark" aria-hidden="true">!</span><h3>未通过涉密检测</h3><p>命中关键词：${record.keywords.map((word) => `<b>${escape(word)}</b>`).join('、')}。文档已暂停载入。</p><button class="pr-guard-btn" type="button" data-guard-detail>查看涉密检测详情</button></div>`;
@@ -259,7 +269,7 @@
     const record = activeRecord();
     const running = state.status === 'running';
     dom.run.hidden = !running;
-    dom.download.disabled = !record || isBlocked(record);
+    renderOutputActions(record);
     dom.resultFile.textContent = REVIEW_META[state.status]?.label || '等待校对';
     dom.resultFile.title = dom.resultFile.textContent;
 
@@ -267,7 +277,8 @@
     const hasIssues = state.issues.length > 0;
     dom.summary.hidden = !hasIssues;
     dom.count.textContent = `共 ${state.issues.length} 个事项`;
-    dom.bulk.hidden = !hasIssues || running;
+    const locked = Boolean(record?.output);
+    dom.bulk.hidden = !hasIssues || running || locked;
     dom.bulk.querySelectorAll('button').forEach(button => { button.disabled = remaining.length === 0; });
 
     if (running) {
@@ -275,7 +286,7 @@
       return;
     }
     if (isBlocked(record)) {
-      const copy = state.status === 'stopped' ? '本轮任务已取消，文档审核仍可从详情中查看。' : record.secretStatus === 'detecting' ? '正在进行涉密检测，审核通过后自动审校。可关闭窗口，稍后从审校记录查看。' : record.secretStatus === 'submitted' ? '等待管理员审核，通过后自动继续审校。' : record.secretStatus === 'rejected' ? '人工审核已驳回，请查看审核详情。' : '检测到涉密可疑内容，请查看详情并提交人工审核。';
+      const copy = state.status === 'stopped' ? '本轮任务已取消，文档审核仍可从详情中查看。' : record.secretStatus === 'detecting' ? '正在进行涉密检测，审核通过后自动审校。可关闭窗口，稍后从文件列表查看。' : record.secretStatus === 'submitted' ? '等待管理员审核，通过后自动继续审校。' : record.secretStatus === 'rejected' ? '人工审核已驳回，请查看审核详情。' : '检测到涉密可疑内容，请查看详情并提交人工审核。';
       dom.groups.innerHTML = `<p class="pr-review-hint">${copy}</p>`;
       return;
     }
@@ -308,44 +319,72 @@
               <span class="pr-issue-num">${issue.no}</span>
               <div class="pr-diff"><del>${escape(issue.word)}</del><span class="arrow">→</span><ins>${escape(issue.suggestion)}</ins></div>
               <p class="pr-issue-type">错误类型：${escape(issue.type)}${done ? ' · 已采纳' : ignored ? ' · 未采纳' : ''}</p>
-              <div class="pr-issue-actions">${actions}</div>
+              ${locked ? '' : `<div class="pr-issue-actions">${actions}</div>`}
             </article>`;
           })
           .join('')}`
       )
       .join('');
-    if (!remaining.length) dom.count.textContent = `共 ${state.issues.length} 个事项 · 全部处理完成`;
+    if (locked) dom.count.textContent = `共 ${state.issues.length} 个事项 · 结果已锁定`;
+    else if (!remaining.length) dom.count.textContent = `共 ${state.issues.length} 个事项 · 全部处理完成`;
+  }
+
+  function renderOutputActions(record) {
+    const done = record?.status === 'done' && !isBlocked(record);
+    const output = record?.output;
+    const meta = output ? SECRET_META[output.secretStatus] : null;
+    dom.outputActions.hidden = !done;
+    dom.finalize.hidden = Boolean(output);
+    dom.outputAudit.hidden = !output;
+    const unsaved = Boolean(state.decisionDraft && !output);
+    dom.outputStatus.hidden = !output && !unsaved;
+    dom.outputStatus.textContent = meta ? `结果 · ${meta.label}` : unsaved ? '修改未保存' : '';
+    dom.outputStatus.className = meta ? `wr-tag secret-${output.secretStatus}` : unsaved ? 'wr-tag secret-hit' : 'wr-tag';
+    const cleared = output?.secretStatus === 'passed';
+    dom.download.disabled = !done || Boolean(output && !cleared);
+    dom.download.title = output?.secretStatus === 'rejected' ? '结果未通过核查，无法下载'
+      : dom.download.disabled ? '结果核查通过后可下载' : '';
+    dom.download.classList.toggle('primary-button', cleared);
+    dom.download.classList.toggle('secondary-button', !cleared);
   }
 
   function renderAll() {
     renderIntake();
-    renderDocs();
     renderPage();
     renderResult();
   }
 
   /* ---------- 涉密检测详情弹窗 ---------- */
-  function openSecret(id) {
-    const record = state.records.find((item) => item.id === id);
+  function secretRecord(id, reviewId) {
+    if (reviewId) return state.history.find(item => item.id === id && item.reviewId === reviewId)?.output;
+    return state.records.find(item => item.id === id);
+  }
+
+  function openSecret(id, reviewId = '') {
+    const record = secretRecord(id, reviewId);
     if (!record) return;
     state.secretId = id;
+    state.secretReviewId = reviewId;
     renderSecret(record);
     dom.secret.showModal();
   }
 
   function renderSecret(record) {
     const meta = SECRET_META[record.secretStatus] || SECRET_META.detecting;
-    dom.secretTitle.textContent = `涉密检测详情 — ${meta.label}`;
+    dom.secretTitle.textContent = `${record.source === 'result' ? '校对结果核查' : '涉密检测详情'} — ${meta.label}`;
     dom.secretBody.innerHTML = secretBody(record);
     dom.secretFoot.innerHTML = secretFoot(record);
   }
 
   function secretBody(record) {
     const risky = record.secretStatus === 'hit' || record.secretStatus === 'submitted';
+    const isResult = record.source === 'result';
     let html = '';
     if (record.secretStatus === 'detecting') {
       const task = state.history.find(item => item.id === record.id && item.status === 'detecting');
-      html += `<div class="pr-secret-loading" role="status"><span class="pr-spinner" aria-hidden="true"></span><h3>正在上传并审核</h3><p>${task ? '正在进行涉密核查，通过后开始校对。关闭窗口后可在文件列表查看进度。' : '正在进行涉密核查，通过后可从文件列表开始校对。'}</p></div>`;
+      const message = isResult ? '正在核查已确认的正文，通过后可下载。'
+        : task ? '正在进行涉密核查，通过后开始校对。关闭窗口后可在文件列表查看进度。' : '正在进行涉密核查，通过后可从文件列表开始校对。';
+      html += `<div class="pr-secret-loading" role="status"><span class="pr-spinner" aria-hidden="true"></span><h3>正在进行涉密核查</h3><p>${message}</p></div>`;
     }
     if (risky) {
       html += `<div class="pr-alert">
@@ -358,12 +397,14 @@
       </div>`;
     }
     if (record.secretStatus === 'rejected') {
-      html += `<div class="pr-alert"><div><strong>人工审核未通过</strong><p>${escape(record.auditReason || '该文档未获准进入审校。')}</p></div></div>`;
+      const reason = record.auditReason ? `<p>${escape(record.auditReason)}</p>` : '';
+      const next = isResult ? '该校对结果无法下载。' : '该文档未获准进入审校。';
+      html += `<div class="pr-alert"><div><strong>人工审核未通过</strong>${reason}<p>${next}</p></div></div>`;
     }
     html += `<dl class="pr-facts">
       <div><dt>文件名</dt><dd>${escape(record.fileName || record.name)}</dd></div>
-      <div><dt>来源</dt><dd>${record.source === 'upload' ? '本地上传' : '新建审校'} · V${record.version || 1} · ${charCount(record.text)} 字</dd></div>
-      <div><dt>上传时间</dt><dd>${clockOf(record.uploadedAt)}</dd></div>
+      <div><dt>来源</dt><dd>${isResult ? '校对结果' : record.source === 'upload' ? '本地上传' : '文字录入'} · V${record.version || 1}.0.0 · ${charCount(record.text)} 字</dd></div>
+      <div><dt>${isResult ? '确认时间' : '上传时间'}</dt><dd>${clockOf(record.uploadedAt)}</dd></div>
       <div><dt>涉密审查状态</dt><dd>${statusTag(record.secretStatus)}</dd></div>
     </dl>
     <h3 class="pr-timeline-title">流转记录</h3>
@@ -372,15 +413,16 @@
   }
 
   function timeline(record) {
+    const isResult = record.source === 'result';
     const rows = [
-      `<li class="is-done"><i aria-hidden="true"></i><div><p>用户发起上传</p><span>${clockOf(record.uploadedAt)}</span></div></li>`,
+      `<li class="is-done"><i aria-hidden="true"></i><div><p>${isResult ? '确认并保存校对结果' : '用户发起上传'}</p><span>${clockOf(record.uploadedAt)}</span></div></li>`,
     ];
     if (record.secretStatus === 'draft') {
       rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>待提交审核</p><span>文件仅保存在本地，点击「开始审校」后上传</span></div></li>`);
       return rows.join('');
     }
     if (record.secretStatus === 'detecting') {
-      rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>系统涉密检测中</p><span>检测完成前文档不会载入编辑区</span></div></li>`);
+      rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>系统涉密检测中</p><span>${isResult ? '检测通过后可下载' : '检测完成前文档不会载入预览区'}</span></div></li>`);
       return rows.join('');
     }
     const kw = record.keywords.length ? `命中关键词：${record.keywords.join('、')}` : '未命中敏感关键词';
@@ -388,11 +430,11 @@
       `<li class="${record.keywords.length ? 'is-warn' : 'is-done'}"><i aria-hidden="true"></i><div><p>${record.keywords.length ? '系统检测到涉密内容' : '系统涉密检测通过'}</p><span>${clockOf(record.reviewedAt)} · ${kw}</span></div></li>`
     );
     if (record.secretStatus === 'hit') {
-      rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>涉密可疑，等待处理</p><span>可取消上传，或提交管理员审核</span></div></li>`);
+      rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>涉密可疑，等待处理</p><span>可提交管理员审核</span></div></li>`);
     } else if (record.secretStatus === 'submitted') {
-      rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>已提交管理员审核</p><span>审核通过后可预览并开始审校</span></div></li>`);
+      rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>已提交管理员审核</p><span>${isResult ? '审核通过后可下载' : '审核通过后可预览并开始审校'}</span></div></li>`);
     } else if (record.secretStatus === 'passed') {
-      rows.push(`<li class="is-done"><i aria-hidden="true"></i><div><p>允许预览与审校</p><span>可打开文档查看原文</span></div></li>`);
+      rows.push(`<li class="is-done"><i aria-hidden="true"></i><div><p>${isResult ? '校对结果核查通过' : '允许预览与审校'}</p><span>${isResult ? '可返回校对结果下载文档' : '可打开文档查看原文'}</span></div></li>`);
     }
     return rows.join('');
   }
@@ -407,7 +449,7 @@
     if (record.secretStatus === 'submitted') {
       return `<span class="pr-demo-hint">人工审核演示</span><button type="button" class="is-ghost" data-secret-close>关闭</button><button type="button" class="is-ghost" data-secret-reject>模拟驳回</button><button type="button" class="is-primary" data-secret-approve>模拟审核通过</button>`;
     }
-    if (record.secretStatus === 'rejected') return '<p class="pr-demo-hint">人工审核未通过，当前文档无法进入审校。</p><button type="button" class="is-ghost" data-secret-close>关闭</button>';
+    if (record.secretStatus === 'rejected') return '<button type="button" class="is-ghost" data-secret-close>关闭</button>';
     return '<button type="button" class="is-primary" data-secret-close>关闭</button>';
   }
 
@@ -423,9 +465,6 @@
     dom.files.hidden = screen !== 'files';
     dom.draft.hidden = screen !== 'text';
     dom.workbench.hidden = screen !== 'workbench';
-    dom.workbench.classList.toggle('is-result-only', state.resultOnly);
-    dom.rail.hidden = state.resultOnly || dom.app.classList.contains('is-rail-collapsed');
-    dom.railToggle.hidden = state.resultOnly;
   }
 
   function sync(data = store.read()) {
@@ -436,11 +475,13 @@
     state.session = record ? {...record, secretStatus: file?.secretStatus || record.secretStatus} : null;
     state.status = record?.status || 'idle';
     state.issues = record?.issues || [];
-    state.accepted = new Set(record?.accepted || []);
-    state.ignored = new Set(record?.ignored || []);
+    if (state.decisionDraft?.reviewId !== record?.reviewId || record?.output) state.decisionDraft = null;
+    state.accepted = new Set(state.decisionDraft?.accepted || record?.accepted || []);
+    state.ignored = new Set(state.decisionDraft?.ignored || record?.ignored || []);
     state.progress = state.status === 'running'
       ? Math.min(99, Math.max(0, Math.floor((Date.now() - record.startedAt) / store.REVIEW_MS * 100))) : 0;
     state.snapshot = window.localStorage.getItem(store.KEY);
+    updateUnsaved();
   }
 
   function refresh(data) {
@@ -449,12 +490,13 @@
     if (state.screen === 'workbench' && !state.session) showScreen('files');
     renderAll();
     if (dom.secret.open) {
-      const file = state.records.find(item => item.id === state.secretId);
+      const file = secretRecord(state.secretId, state.secretReviewId);
       const following = state.history.find(item => item.reviewId === state.followReview);
-      if (!file || (file.secretStatus === 'passed' && following?.id === file.id)) dom.secret.close();
+      if (!file || (!state.secretReviewId && file.secretStatus === 'passed' && following?.id === file.id)) dom.secret.close();
       else renderSecret(file);
     }
     followSubmission();
+    downloadWhenApproved();
   }
 
   function perform(action) {
@@ -479,7 +521,10 @@
       const data = store.advance(scanSecret, detect);
       if (force || window.localStorage.getItem(store.KEY) !== state.snapshot) refresh(data);
       else if (state.screen === 'workbench' && state.status === 'running' && visible()) { sync(data); renderResult(); }
-      else followSubmission();
+      else {
+        followSubmission();
+        downloadWhenApproved();
+      }
     } catch (error) { hint(error.message || '进度更新失败，可稍后重试。'); }
   }
 
@@ -487,7 +532,11 @@
     const count = charCount(dom.draftText.value);
     dom.draftCount.textContent = `${count} 字`;
     dom.draftSubmit.disabled = count === 0;
-    const dirty = count > 0 || Boolean(dom.draftTitle.value.trim());
+    updateUnsaved();
+  }
+
+  function updateUnsaved() {
+    const dirty = Boolean(state.decisionDraft || dom.draftText.value.trim() || dom.draftTitle.value.trim());
     dom.root.dataset.autosaved = String(!dirty);
     state.onDirty(dirty);
   }
@@ -500,20 +549,25 @@
   }
 
   function backToFiles() {
+    if (state.screen === 'workbench' && state.decisionDraft) {
+      if (!window.confirm('当前有未保存的校对修改，离开后将丢失。确定返回文件列表吗？')) return;
+      state.decisionDraft = null;
+      sync();
+    }
+    state.pendingDownload = '';
     state.followReview = '';
     showScreen('files');
     hint('');
     dom.uploadButton.focus();
   }
 
-  function openReview(id, resultOnly = false) {
+  function openReview(id) {
     const review = state.history.find(item => item.reviewId === id);
     const file = state.records.find(item => item.id === review?.id);
     if (!review || !file) return;
     if (isBlocked(file)) { openSecret(file.id); return; }
     state.followReview = '';
     state.selection = id;
-    state.resultOnly = resultOnly;
     showScreen('workbench');
     if (review.unread) perform(() => store.markRead(id));
     sync();
@@ -530,11 +584,29 @@
     }
   }
 
-  function showIntakeNotice() {
+  function showIntakeNotice(isResult = false) {
     clearTimeout(state.noticeTimer);
     if (!visible()) return;
-    dom.intakeNotice.showModal();
-    state.noticeTimer = setTimeout(() => dom.intakeNotice.close(), 5000);
+    const {intakeNotice, noticeCountdown} = dom;
+    dom.noticeTitle.textContent = isResult ? '校对结果已送审' : '文件录入须知';
+    dom.noticeBody.textContent = isResult
+      ? (state.pendingDownload
+        ? '结果已保存并锁定，核查通过后将在当前页面自动下载。离开后可回到校对结果手动下载。'
+        : '校对结果已保存并锁定。核查会在后台继续，通过后可下载文档；发现疑似涉密内容时，可从核查详情提交人工审核。')
+      : '严禁录入或上传涉密文档。提交后，系统将进行涉密核查。发现疑似涉密内容时，须经专人审核通过后，方可入库并开始校对。';
+    intakeNotice.showModal();
+    const closesAt = Date.now() + 5000;
+    function updateCountdown() {
+      if (dom.intakeNotice !== intakeNotice || !intakeNotice.open) return;
+      const remaining = closesAt - Date.now();
+      if (remaining <= 0) {
+        intakeNotice.close();
+        return;
+      }
+      noticeCountdown.textContent = `${Math.ceil(remaining / 1000)} 秒后自动关闭`;
+      state.noticeTimer = setTimeout(updateCountdown, remaining % 1000 || 1000);
+    }
+    updateCountdown();
   }
 
   function upload() {
@@ -555,7 +627,10 @@
       if (dom !== target) return;
       target.intakeStatus.textContent = '';
       const saved = perform(() => store.submitFile({fileName: file.name, text, source: 'upload'}));
-      if (saved && state.screen === 'files') showIntakeNotice();
+      if (saved && state.screen === 'files') {
+        resetFileFilters();
+        showIntakeNotice();
+      }
     } catch (error) {
       if (dom === target) {
         target.intakeStatus.textContent = error instanceof DOMException
@@ -576,6 +651,7 @@
       dom.draftTitle.value = '';
       dom.draftText.value = '';
       updateDraft();
+      resetFileFilters();
     }
     if (review.secretStatus === 'passed') {
       openReview(review.reviewId);
@@ -598,10 +674,94 @@
     dom.dialog.showModal();
   }
 
-  function acceptIssue(id) { perform(() => store.decide(state.session.reviewId, id, true)); }
-  function ignoreIssue(id) { perform(() => store.decide(state.session.reviewId, id, false)); }
+  function changeDecision(id, decision) {
+    const record = activeRecord();
+    if (record?.status !== 'done' || record.output || isBlocked(record)) return false;
+    const issues = id === 'all' ? state.issues : state.issues.filter(issue => issue.id === id);
+    for (const issue of issues) {
+      const issueId = issue.id;
+      if (decision === 'undo') {
+        state.accepted.delete(issueId);
+        state.ignored.delete(issueId);
+      } else if (!state.accepted.has(issueId) && !state.ignored.has(issueId)) {
+        (decision === 'accept' ? state.accepted : state.ignored).add(issueId);
+      }
+    }
+    const sameAsSaved = (current, saved = []) => current.size === saved.length && saved.every(issueId => current.has(issueId));
+    state.decisionDraft = sameAsSaved(state.accepted, record.accepted) && sameAsSaved(state.ignored, record.ignored)
+      ? null
+      : {reviewId: record.reviewId, accepted: [...state.accepted], ignored: [...state.ignored]};
+    updateUnsaved();
+    renderPage();
+    renderResult();
+    return true;
+  }
+
+  function acceptIssue(id) { changeDecision(id, 'accept'); }
+  function ignoreIssue(id) { changeDecision(id, 'ignore'); }
   function acceptAll() { acceptIssue('all'); }
   function ignoreAll() { ignoreIssue('all'); }
+
+  function openResultConfirmation(downloadAfterSave = false) {
+    const record = activeRecord();
+    if (record?.status !== 'done' || record.output || isBlocked(record)) return;
+    const pending = state.issues.length - state.accepted.size - state.ignored.size;
+    state.downloadOnSave = downloadAfterSave;
+    dom.finalTitle.textContent = downloadAfterSave ? '保存后下载' : '确认校对结果';
+    dom.finalText.textContent = downloadAfterSave
+      ? '先保存并锁定当前结果。留在本页，涉密核查通过后会自动下载。未处理的建议保留原文。'
+      : '确认后将保存并锁定当前正文，未处理的建议保留原文。结果通过涉密核查后可下载。';
+    dom.finalSummary.textContent = `已采纳 ${state.accepted.size} 条 · 不采纳 ${state.ignored.size} 条 · 未处理 ${pending} 条`;
+    dom.finalDialog.showModal();
+  }
+
+  function confirmResult() {
+    const id = activeRecord()?.reviewId;
+    dom.finalDialog.close();
+    if (!id) return;
+    hint('');
+    const decisions = {accepted: [...state.accepted], ignored: [...state.ignored]};
+    const saved = perform(() => store.confirmResult(id, decisions));
+    if (!saved) return;
+    if (state.downloadOnSave) state.pendingDownload = id;
+    if (saved.secretStatus === 'detecting') showIntakeNotice(true);
+    downloadWhenApproved();
+  }
+
+  function downloadResult() {
+    const record = activeRecord();
+    if (record?.status !== 'done' || isBlocked(record)) return;
+    if (!record.output) {
+      openResultConfirmation(true);
+      return;
+    }
+    if (record.output.secretStatus !== 'passed') return;
+    state.pendingDownload = '';
+    exportResult(record.output);
+  }
+
+  function downloadWhenApproved() {
+    const record = activeRecord();
+    if (!state.pendingDownload || state.pendingDownload !== record?.reviewId || !visible()
+      || state.screen !== 'workbench' || dom.intakeNotice.open || dom.secret.open) return;
+    if (record.output?.secretStatus === 'passed') {
+      state.pendingDownload = '';
+      exportResult(record.output);
+    } else if (record.output?.secretStatus === 'rejected') {
+      state.pendingDownload = '';
+      hint('结果未通过核查，无法下载。');
+    }
+  }
+
+  function exportResult(output) {
+    const blob = new Blob([output.text], {type: 'text/plain;charset=utf-8'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = output.fileName;
+    link.click();
+    URL.revokeObjectURL(link.href);
+    hint('已发起校对结果下载。');
+  }
 
   function askDelete(id) {
     const file = state.records.find(item => item.id === id);
@@ -624,9 +784,10 @@
     }
   }
 
-  function submitAudit(id) { perform(() => store.audit(id, 'submitted')); }
-  function approveAudit(id) { perform(() => store.audit(id, 'passed')); tick(); }
-  function rejectAudit(id) { perform(() => store.audit(id, 'rejected')); }
+  function updateAudit(status) {
+    perform(() => store.audit(state.secretId, status, state.secretReviewId));
+    if (status === 'passed') tick();
+  }
   function closeSecret() { dom.secret.close(); }
 
   function build(root) {
@@ -634,21 +795,39 @@
     root.innerHTML = `
       <section class="pr-intake" data-intake aria-labelledby="prIntakeTitle">
         <header class="pr-intake-head">
-          <div><h1 id="prIntakeTitle">纠错校对</h1><p>上传本地文件，或粘贴、手动输入文字。</p></div>
-          <div class="pr-intake-actions" data-intake-actions>
-            <button type="button" class="secondary-button" data-new>${icon('pen')}粘贴或输入文字</button>
-            <button type="button" class="primary-button" data-upload>${icon('upload')}上传本地文件</button>
+          <div><h1 id="prIntakeTitle">纠错校对</h1><p>上传文件或录入文字，通过涉密核查后即可校对。</p></div>
+          <div class="wr-file-entry" data-intake-actions>
+            <div class="pr-intake-actions">
+              <button type="button" class="secondary-button" data-new>${icon('pen')}粘贴或输入文字</button>
+              <button type="button" class="primary-button" data-upload aria-describedby="prFileFormats">${icon('upload')}上传本地文件</button>
+            </div>
+            <p class="wr-file-formats" id="prFileFormats">支持 TXT、MD、PDF、Word、Excel</p>
           </div>
         </header>
-        <section class="pr-material-table" data-files aria-labelledby="prFilesTitle">
-          <div class="pr-intake-table-heading"><h2 id="prFilesTitle">文件列表</h2><span>支持 TXT、MD、PDF、Word、Excel</span></div>
+        <p class="pr-inline-status" data-intake-status role="status"></p>
+        <section class="pr-material-table wr-file-list" data-files aria-label="校对文件">
+          <div class="wr-file-toolbar">
+            <div class="wr-file-filters" role="group" aria-label="按文件状态筛选">
+              ${Object.entries(FILE_FILTERS).map(([filter, label]) => `
+                <button type="button" data-file-filter="${filter}" aria-pressed="${filter === 'all'}">${label}<span data-file-count>0</span></button>
+              `).join('')}
+            </div>
+            <form class="wr-file-search" data-file-search-form role="search" aria-label="搜索校对文件">
+              <label class="search-field wr-file-search-input">${icon('search')}<input type="search" data-file-search aria-label="搜索文件名" placeholder="搜索文件名" /></label>
+              <button class="secondary-button" type="submit">搜索</button>
+            </form>
+          </div>
+          <p class="sr-only" data-file-list-summary aria-live="polite"></p>
           <div class="wr-file-table-wrap" data-file-table tabindex="0" role="region" aria-label="校对文件列表">
-            <table class="wr-file-table">
-              <thead><tr><th scope="col">文件名</th><th scope="col">文件来源</th><th scope="col">文档类型</th><th scope="col">版本号</th><th scope="col">创建时间</th><th scope="col">解析状态</th><th scope="col">涉密审查状态</th><th scope="col">最近更新</th><th scope="col">操作</th></tr></thead>
+            <table class="wr-file-table is-material">
+              <thead><tr><th scope="col">文件名</th><th scope="col">创建时间</th><th scope="col">解析状态</th><th scope="col">涉密审查状态</th><th scope="col">最近更新</th><th scope="col">操作</th></tr></thead>
               <tbody data-intake-table></tbody>
             </table>
           </div>
-          <p class="pr-intake-empty" data-files-empty hidden>还没有校对文件</p>
+          <div class="wr-file-empty" data-files-empty hidden>
+            <p data-files-empty-message></p>
+            <button type="button" class="wr-file-reset" data-file-filter-reset hidden>清除筛选</button>
+          </div>
         </section>
         <form class="pr-intake-card pr-intake-editor" data-intake-editor hidden>
           <header class="pr-intake-toolbar"><h2>录入正文</h2><button type="button" class="pr-intake-link" data-intake-back>返回文件列表</button></header>
@@ -658,38 +837,22 @@
           </div>
           <footer class="pr-intake-editor-foot"><span data-draft-count>0 字</span><button class="primary-button" type="submit" data-intake-submit disabled>提交校对</button></footer>
         </form>
-        <p class="pr-inline-status" data-intake-status role="status"></p>
       </section>
       <section class="pr-workbench" data-workbench hidden aria-label="校对工作区">
         <header class="pr-workbench-head">
           <button class="pr-intake-back" type="button" data-intake-back>${icon('back')}返回文件列表</button>
           <h1 data-workbench-name></h1>
+          <div class="pr-output-actions" data-output-actions hidden>
+            <span class="wr-tag" id="prOutputStatus" data-output-status role="status" hidden></span>
+            <button class="pr-intake-link" type="button" data-view-output-audit hidden>查看核查</button>
+            <button class="secondary-button" type="button" data-download aria-describedby="prOutputStatus">${icon('download')}下载文档</button>
+            <button class="primary-button" type="button" data-finalize>确认结果</button>
+          </div>
         </header>
-        <div class="pr-app tool-workspace-frame">
-        <aside class="pr-rail" id="proofreadRail" aria-label="审校记录">
-          <div class="pr-brand">
-            <span class="pr-logo" aria-hidden="true">${icon('history')}</span>
-            <div><h2>审校记录</h2><p>纠错校对</p></div>
-          </div>
-          <div class="pr-panel">
-            <label class="pr-search">${icon('search')}<input type="search" data-search aria-label="搜索审校记录" placeholder="搜索审校记录" /></label>
-            <ul class="pr-list" data-list></ul>
-            <p class="pr-end" data-end>没有更多了</p>
-          </div>
-        </aside>
-
+        <div class="pr-app">
         <section class="pr-editor" aria-label="文档预览">
-          <button class="pr-rail-toggle" type="button" data-toggle-rail aria-controls="proofreadRail" aria-expanded="true" title="收起列表" aria-label="收起列表">
-            <svg viewBox="0 0 12 36" width="12" height="36" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path class="pr-rail-grip" d="M6 5v26"/>
-              <path class="pr-rail-chevron" d="M8 5 4 18l4 13"/>
-            </svg>
-          </button>
           <header class="pr-editor-head">
             <div class="pr-document-heading"><h2>文档预览</h2></div>
-            <div class="pr-doc-actions">
-              <button class="pr-doc-action" type="button" data-download>${icon('download')}下载文档</button>
-            </div>
           </header>
           <div class="pr-canvas">
             <div class="pr-page" data-doc role="region" aria-label="文档正文" tabindex="0" contenteditable="false"></div>
@@ -718,13 +881,25 @@
       </section>
 
       <dialog class="pr-dialog" data-intake-notice aria-labelledby="prNoticeTitle">
-        <h2 id="prNoticeTitle">文件录入须知</h2>
+        <h2 id="prNoticeTitle" data-notice-title>文件录入须知</h2>
         <div class="pr-dialog-body">
-          <p>严禁录入或上传涉密文档。提交后，系统将进行涉密核查。发现疑似涉密内容时，须经专人审核通过后，方可入库并开始校对。</p>
+          <p data-notice-body></p>
         </div>
         <div class="pr-dialog-foot">
-          <span class="pr-demo-hint">5 秒后自动关闭</span>
+          <span class="pr-demo-hint" data-notice-countdown role="timer"></span>
           <button type="button" class="is-primary" data-notice-close>关闭</button>
+        </div>
+      </dialog>
+
+      <dialog class="pr-dialog pr-confirm" data-final-dialog aria-labelledby="prFinalTitle">
+        <h2 id="prFinalTitle" data-final-title>确认校对结果</h2>
+        <div class="pr-dialog-body">
+          <p class="pr-final-summary" data-final-summary></p>
+          <p class="pr-confirm-text" data-final-text></p>
+        </div>
+        <div class="pr-dialog-foot">
+          <button type="button" class="secondary-button" data-final-cancel autofocus>继续校对</button>
+          <button type="button" class="primary-button" data-final-submit>确认并送审</button>
         </div>
       </dialog>
 
@@ -767,17 +942,23 @@
       intake: root.querySelector('[data-intake]'),
       intakeActions: root.querySelector('[data-intake-actions]'),
       files: root.querySelector('[data-files]'),
+      fileFilters: root.querySelectorAll('[data-file-filter]'),
+      fileSearch: root.querySelector('[data-file-search]'),
+      fileSearchForm: root.querySelector('[data-file-search-form]'),
+      fileFilterReset: root.querySelector('[data-file-filter-reset]'),
+      fileListSummary: root.querySelector('[data-file-list-summary]'),
       fileRows: root.querySelector('[data-intake-table]'),
       fileTable: root.querySelector('[data-file-table]'),
       filesEmpty: root.querySelector('[data-files-empty]'),
+      filesEmptyMessage: root.querySelector('[data-files-empty-message]'),
       intakeStatus: root.querySelector('[data-intake-status]'),
       intakeNotice: root.querySelector('[data-intake-notice]'),
+      noticeTitle: root.querySelector('[data-notice-title]'),
+      noticeBody: root.querySelector('[data-notice-body]'),
+      noticeCountdown: root.querySelector('[data-notice-countdown]'),
       workbench: root.querySelector('[data-workbench]'),
-      app: root.querySelector('.pr-app'),
       workbenchName: root.querySelector('[data-workbench-name]'),
       workbenchBack: root.querySelector('[data-workbench] [data-intake-back]'),
-      rail: root.querySelector('#proofreadRail'),
-      railToggle: root.querySelector('[data-toggle-rail]'),
       page: root.querySelector('[data-doc]'),
       draft: root.querySelector('[data-intake-editor]'),
       draftTitle: root.querySelector('[data-draft-title]'),
@@ -786,10 +967,15 @@
       draftSubmit: root.querySelector('[data-intake-submit]'),
       guard: root.querySelector('[data-guard]'),
       uploadButton: root.querySelector('[data-upload]'),
+      outputActions: root.querySelector('[data-output-actions]'),
+      outputStatus: root.querySelector('[data-output-status]'),
+      outputAudit: root.querySelector('[data-view-output-audit]'),
+      finalize: root.querySelector('[data-finalize]'),
+      finalDialog: root.querySelector('[data-final-dialog]'),
+      finalTitle: root.querySelector('[data-final-title]'),
+      finalText: root.querySelector('[data-final-text]'),
+      finalSummary: root.querySelector('[data-final-summary]'),
       download: root.querySelector('[data-download]'),
-      list: root.querySelector('[data-list]'),
-      search: root.querySelector('[data-search]'),
-      end: root.querySelector('[data-end]'),
       run: root.querySelector('[data-run]'),
       resultFile: root.querySelector('[data-result-file]'),
       summary: root.querySelector('[data-summary]'),
@@ -812,6 +998,24 @@
   function bind() {
     dom.root.querySelector('[data-new]').addEventListener('click', newDraft);
     dom.root.querySelectorAll('[data-intake-back]').forEach(button => button.addEventListener('click', backToFiles));
+    dom.fileFilters.forEach(button => button.addEventListener('click', () => {
+      state.fileFilter = button.dataset.fileFilter;
+      renderIntake();
+    }));
+    dom.fileSearchForm.addEventListener('submit', event => {
+      event.preventDefault();
+      state.fileQuery = dom.fileSearch.value.trim().toLowerCase();
+      renderIntake();
+    });
+    dom.fileSearch.addEventListener('input', () => {
+      if (dom.fileSearch.value || !state.fileQuery) return;
+      state.fileQuery = '';
+      renderIntake();
+    });
+    dom.fileFilterReset.addEventListener('click', () => {
+      resetFileFilters();
+      dom.fileSearch.focus();
+    });
     dom.draft.addEventListener('input', updateDraft);
     dom.draft.addEventListener('submit', event => {
       event.preventDefault();
@@ -819,20 +1023,13 @@
       const document = {name: dom.draftTitle.value, text: dom.draftText.value, source: 'text'};
       openDialog({document});
     });
-    dom.intakeNotice.querySelector('[data-notice-close]').addEventListener('click', () => dom.intakeNotice.close());
-    dom.intakeNotice.addEventListener('close', () => { clearTimeout(state.noticeTimer); followSubmission(); });
-    dom.railToggle.addEventListener('click', () => {
-      const open = dom.rail.hidden;
-      dom.rail.hidden = !open;
-      dom.app.classList.toggle('is-rail-collapsed', !open);
-      dom.railToggle.setAttribute('aria-expanded', String(open));
-      dom.railToggle.setAttribute('aria-label', open ? '收起列表' : '展开列表');
-      dom.railToggle.title = open ? '收起列表' : '展开列表';
-    });
-    dom.search.addEventListener('input', renderDocs);
-    dom.list.addEventListener('click', event => {
-      const button = event.target.closest('[data-review]');
-      if (button) openReview(button.dataset.review);
+    const notice = dom.intakeNotice;
+    notice.querySelector('[data-notice-close]').addEventListener('click', () => notice.close());
+    notice.addEventListener('close', () => {
+      if (dom.intakeNotice !== notice || notice.open) return;
+      clearTimeout(state.noticeTimer);
+      followSubmission();
+      downloadWhenApproved();
     });
     dom.fileRows.addEventListener('click', event => {
       const button = event.target.closest('button');
@@ -842,10 +1039,9 @@
         state.followReview = '';
         openDialog({fileId: intakeStart});
       } else if (intakeReview) {
-        const review = state.history.find(item => item.reviewId === intakeReview);
-        openReview(intakeReview, review?.status !== 'running');
+        openReview(intakeReview);
       } else if (intakeSecret) {
-        openSecret(intakeSecret);
+        openSecret(intakeSecret, button.dataset.outputAudit);
       } else if (remove) {
         askDelete(remove);
       }
@@ -859,7 +1055,7 @@
       if (undo) {
         const issueId = undo.dataset.undoDecision;
         const restoreFocus = document.activeElement === undo;
-        if (perform(() => store.undoDecision(state.session.reviewId, issueId)) && restoreFocus) {
+        if (changeDecision(issueId, 'undo') && restoreFocus) {
           dom.groups.querySelector(`[data-accept="${issueId}"]`)?.focus({preventScroll: true});
         }
         return;
@@ -892,16 +1088,13 @@
 
     dom.uploadButton.addEventListener('click', upload);
     dom.file.addEventListener('change', onFile);
-    dom.root.querySelector('[data-download]').addEventListener('click', () => {
+    dom.download.addEventListener('click', downloadResult);
+    dom.finalize.addEventListener('click', () => openResultConfirmation());
+    dom.finalDialog.querySelector('[data-final-cancel]').addEventListener('click', () => dom.finalDialog.close());
+    dom.finalDialog.querySelector('[data-final-submit]').addEventListener('click', confirmResult);
+    dom.outputAudit.addEventListener('click', () => {
       const record = activeRecord();
-      if (!record || isBlocked(record)) return;
-      const text = documentParts(record).map(part => part.text).join('');
-      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `${record.name || '校对文档'}.txt`;
-      link.click();
-      URL.revokeObjectURL(link.href);
+      if (record?.output) openSecret(record.id, record.reviewId);
     });
 
     const confirmOptions = dom.dialog.querySelector('[data-confirm]');
@@ -923,23 +1116,22 @@
     dom.confirmDelete.querySelector('[data-delete-ok]').addEventListener('click', removeFile);
     dom.confirmDelete.addEventListener('cancel', () => { state.removeId = ''; });
 
-    dom.secret.addEventListener('close', followSubmission);
+    dom.secret.addEventListener('close', () => { followSubmission(); downloadWhenApproved(); });
     dom.secret.addEventListener('click', (event) => {
-      const id = state.secretId;
       if (event.target.closest('[data-secret-x]') || event.target.closest('[data-secret-close]') || event.target === dom.secret) {
         closeSecret();
         return;
       }
       if (event.target.closest('[data-secret-submit]')) {
-        submitAudit(id);
+        updateAudit('submitted');
         return;
       }
       if (event.target.closest('[data-secret-approve]')) {
-        approveAudit(id);
+        updateAudit('passed');
         return;
       }
       if (event.target.closest('[data-secret-reject]')) {
-        rejectAudit(id);
+        updateAudit('rejected');
         return;
       }
     });
@@ -952,9 +1144,12 @@
     clearInterval(state.timer);
     clearTimeout(state.noticeTimer);
     state.rangeTarget = null;
-    state.resultOnly = false;
+    state.fileFilter = 'all';
+    state.fileQuery = '';
     state.followReview = '';
     state.selection = null;
+    state.decisionDraft = null;
+    state.pendingDownload = '';
     state.foreground = true;
     showScreen('files');
     const now = Date.now();
@@ -993,11 +1188,13 @@
   function deactivate() {
     state.foreground = false;
     state.followReview = '';
+    state.pendingDownload = '';
     state.rangeTarget = null;
     clearTimeout(state.noticeTimer);
     dom?.intakeNotice.close();
     dom?.secret.close();
     dom?.dialog.close();
+    dom?.finalDialog.close();
     dom?.confirmDelete.close();
   }
 

@@ -1,31 +1,28 @@
 /* 素材管理与纠错校对共用的文件列表。 */
 .wr-file-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .wr-file-table { width: 100%; min-width: 900px; border-collapse: collapse; }
-/* 写作素材只有六列，不需要校对九列的宽度；按内容分配列宽，
-   文件名吸收剩余空间，时间/状态/操作各给定宽，避免平均分配后状态列空荡。 */
-.wr-file-table.is-material { min-width: 680px; table-layout: fixed; }
+/* 六列文件列表：文件名吸收剩余空间，时间、状态、操作列按内容定宽。 */
+.wr-file-table.is-material { min-width: 780px; table-layout: fixed; }
 .wr-file-table.is-material th:nth-child(2),
 .wr-file-table.is-material th:nth-child(5) { width: 148px; }
-.wr-file-table.is-material th:nth-child(3) { width: 112px; }
-.wr-file-table.is-material th:nth-child(4) { width: 132px; }
-.wr-file-table.is-material th:last-child { width: 88px; }
+.wr-file-table.is-material th:nth-child(3) { width: 104px; }
+.wr-file-table.is-material th:nth-child(4) { width: 148px; }
+.wr-file-table.is-material th:last-child { width: 124px; }
 .wr-file-table.is-material .wr-file-actions { gap: 5px; }
 /* 操作与查看图标沿用平台的线性图标，尺寸压到按钮内。 */
 .wr-file-actions .icon,
 .wr-eye .icon { width: 14px; height: 14px; }
-.wr-file-table.is-material .wr-file-name { max-width: 100%; }
-.wr-file-table th { padding: 10px 8px; border-bottom: 1px solid var(--line); background: var(--surface-subtle); color: var(--muted); font-size: 12px; font-weight: 500; text-align: left; white-space: nowrap; }
-.wr-file-table td { padding: 8px; border-bottom: 1px solid var(--line); color: var(--ink); font-size: 12px; line-height: 1.5; white-space: nowrap; }
+.wr-file-table th { padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--wr-file-heading, var(--canvas)); color: var(--muted); font-size: 12px; font-weight: 500; text-align: left; white-space: nowrap; }
+.wr-file-table td { padding: 12px 14px; border-bottom: 1px solid var(--line); color: var(--ink); font-size: 12px; line-height: 1.5; white-space: nowrap; }
+.wr-file-table td:nth-child(2), .wr-file-table td:nth-child(5) { color: var(--muted); font-variant-numeric: tabular-nums; }
 .wr-file-table tr:last-child td { border-bottom: 0; }
-.wr-file-table tr.is-locked { background: #fcfdff; }
-.wr-file-name { display: flex; align-items: center; gap: 7px; max-width: 230px; color: #33445e; }
-.wr-file-name > span:last-child { overflow: hidden; text-overflow: ellipsis; }
-.wr-file-icon { display: grid; place-items: center; width: 25px; height: 25px; flex: none; border-radius: 5px; color: #fff; font-size: 8px; font-weight: 700; }
-.wr-file-icon.is-pdf { background: #e85d5d; }
-.wr-file-icon.is-doc { background: #5b8def; }
+.wr-file-table tbody tr:hover td { background: color-mix(in srgb, var(--canvas) 55%, var(--surface)); }
+.wr-file-name { color: var(--ink); font-size: 13px; font-weight: 550; }
+.wr-file-name > span { display: block; overflow: hidden; text-overflow: ellipsis; }
 .wr-tag { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 4px; font-size: 10px; white-space: nowrap; }
-.wr-tag.parse-unparsed, .wr-tag.parse-parsing { background: #eef3ff; color: #2f5fc4; }
-.wr-tag.parse-parsed { background: #edf8f1; color: #1f7a4c; }
+.wr-file-table .wr-tag { font-size: 11px; }
+.wr-tag.parse-unparsed, .wr-tag.parse-parsed { background: var(--canvas); color: var(--muted); }
+.wr-tag.parse-parsing { background: var(--accent-soft); color: var(--accent-hover); }
 .wr-tag.parse-failed { background: #fdeeee; color: #b23a3a; }
 .wr-tag.secret-detecting { background: #eef3ff; color: #2f5fc4; }
 .wr-tag.secret-passed { background: #edf8f1; color: #1f7a4c; }
@@ -38,4 +35,48 @@
 .wr-file-actions button { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #6d7c91; font-size: 11px; cursor: pointer; }
 .wr-file-actions button:hover { background: #eef3ff; color: #245BFF; }
 .wr-file-actions button.is-danger:hover { background: #fdeeee; color: #b4232c; }
+.wr-file-actions .wr-file-action-label { width: auto; padding: 0 6px; color: var(--accent-hover); font-size: 12px; }
 .wr-file-table .wr-upload-empty { padding: 28px; }
+
+.wr-file-list { min-width: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.wr-file-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0 16px; padding: 0 14px; }
+.wr-file-filters { display: flex; align-items: stretch; flex-wrap: wrap; gap: 0 20px; }
+.wr-file-filters button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 52px;
+  padding: 0 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.wr-file-filters button:hover { color: var(--ink); }
+.wr-file-filters button[aria-pressed="true"] { border-bottom-color: var(--accent); color: var(--accent-hover); font-weight: 600; }
+.wr-file-filters button:focus-visible { outline-offset: -3px; border-radius: 4px 4px 0 0; }
+.wr-file-filters [data-file-count] { min-width: 20px; padding: 1px 5px; border-radius: 999px; background: var(--surface-subtle); color: var(--muted); font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; text-align: center; }
+.wr-file-filters button[aria-pressed="true"] [data-file-count] { background: var(--accent-soft); color: var(--accent-hover); }
+.wr-file-search { display: flex; align-items: center; gap: 6px; width: min(272px, 100%); min-width: 0; margin-block: 8px; }
+:is([data-page="smart-tools"], [data-page="writing"]) .wr-file-search-input { flex: 1 1 auto; width: auto; min-width: 0; min-height: 34px; padding-inline: 10px; border-radius: 7px; }
+:is([data-page="smart-tools"], [data-page="writing"]) .wr-file-search-input input { min-height: 32px; font-size: 13px; }
+.wr-file-search button { flex: none; min-height: 34px; padding: 0 12px; border-color: var(--line-strong); color: var(--accent-hover); border-radius: 7px; }
+.wr-file-list .wr-file-table-wrap { border: 0; border-top: 1px solid var(--line); border-radius: 0 0 11px 11px; }
+.wr-file-list .wr-file-table-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.wr-file-empty { display: grid; justify-items: center; gap: 8px; padding: 32px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.6; text-align: center; }
+.wr-file-empty p { margin: 0; }
+.wr-file-reset { min-height: 32px; padding: 4px 6px; border: 0; border-radius: 6px; background: transparent; color: var(--accent-hover); font-size: 13px; }
+.wr-file-reset:hover { background: var(--accent-soft); }
+.wr-file-entry { display: grid; justify-items: end; gap: 6px; }
+.wr-file-entry .wr-file-formats { margin: 0; color: var(--muted); font-size: 12px; }
+.wr-file-entry button .icon { width: 16px; height: 16px; }
+.wr-file-list [hidden] { display: none; }
+
+@media (max-width: 1050px) {
+  .wr-file-list .wr-file-table :is(th, td):last-child { position: sticky; right: 0; border-inline-start: 1px solid var(--line); }
+  .wr-file-list .wr-file-table th:last-child { background: var(--wr-file-heading, var(--canvas)); }
+  .wr-file-list .wr-file-table td:last-child { background: var(--surface); }
+}

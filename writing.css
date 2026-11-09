@@ -278,4 +278,3 @@ body[data-page="writing"] { --wr-accent: #1f5eff; --wr-ink: #1f2d3d; --wr-muted:
   font-size: 13px;
   line-height: 1.6;
 }
-[data-wr-material-table] .wr-material-empty { padding: 32px 16px; text-align: center; }

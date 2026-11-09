@@ -23,7 +23,29 @@ function setup() {
   const context = { window, console, CustomEvent: class { constructor(type, options) { this.type = type; this.detail = options?.detail; } } };
   vm.createContext(context);
   vm.runInContext(read("src/writing-store.js"), context);
-  return { store: window.BaigeWritingStore, timers };
+  return { store: window.BaigeWritingStore, timers, context };
+}
+
+function setupMaterialList() {
+  const { store, context } = setup();
+  const { document, Element } = require("./helpers/feature-dom.cjs")();
+  document.body = new Element("body");
+  document.append(document.body);
+  document.body.innerHTML = read("pages/writing.html").match(/<body[^>]*>([\s\S]*)<\/body>/)[1];
+  const toast = document.querySelector("#writingToast");
+  Object.defineProperty(toast, "classList", { value: { add() {}, remove() {} } });
+  context.window.BaigeUI = { escapeHtml: String, icon: () => "" };
+  Object.assign(context, { document, setTimeout() {}, clearTimeout() {} });
+  vm.runInContext(read("src/pages/writing.js"), context);
+  const get = (selector) => document.querySelector(selector);
+  get("[data-wr-manage-materials]").emit("click");
+  return {
+    store,
+    get,
+    filter: (value) => get(`[data-wr-file-filter="${value}"]`),
+    names: () => get("[data-wr-material-table]").querySelectorAll(".wr-file-name [title]").map(cell => cell.textContent),
+    picker: document.querySelectorAll("input").find(input => input.type === "file"),
+  };
 }
 
 test("writing templates seed personal and public templates", () => {
@@ -53,6 +75,66 @@ test("uploaded documents stay unselectable until secret review passes", () => {
   assert.equal(store.selectableUploads().some((item) => item.id === pending.id), false);
   store.reviewUpload(pending.id, "passed");
   assert.equal(store.selectableUploads().some((item) => item.id === pending.id), true);
+});
+
+test("material search filters after submission, clears with the input, and survives audit updates", () => {
+  const { store, get, filter, names } = setupMaterialList();
+  const passed = store.uploads().find(item => item.status === "passed");
+  const flagged = store.uploads().find(item => item.status === "hit");
+  const search = get("[data-wr-file-search]");
+  const searchForm = get("form[data-wr-file-search-form]");
+  assert.ok(searchForm?.contains(search), "filename search has a form for click and Enter submission");
+  assert.equal(searchForm.querySelector('button[type="submit"]')?.textContent.trim(), "搜索");
+  assert.equal(filter("all").attributes["aria-pressed"], "true");
+
+  filter("ready").emit("click");
+  assert.deepEqual(names(), [passed.name]);
+  search.value = flagged.name.toUpperCase();
+  search.emit("input");
+  assert.deepEqual(names(), [passed.name]);
+  assert.equal(searchForm.emit("submit").defaultPrevented, true);
+  assert.deepEqual(names(), []);
+
+  search.value = "";
+  search.emit("input");
+  assert.deepEqual(names(), [passed.name]);
+  assert.equal(filter("ready").attributes["aria-pressed"], "true");
+
+  search.value = flagged.name.toUpperCase();
+  search.emit("input");
+  searchForm.emit("submit");
+  filter("audit").emit("click");
+  assert.equal(filter("audit").attributes["aria-pressed"], "true");
+  assert.deepEqual(names(), [flagged.name]);
+  assert.equal(get('[data-wr-file-action="preview"]'), null);
+
+  store.reviewUpload(flagged.id, "passed");
+  assert.equal(get("[data-wr-file-search]"), search);
+  assert.equal(search.value, flagged.name.toUpperCase());
+  assert.deepEqual(names(), []);
+
+  get("[data-wr-file-filter-reset]").emit("click");
+  assert.equal(filter("all").attributes["aria-pressed"], "true");
+  assert.equal(search.value, "");
+  assert.deepEqual(names().sort(), [passed.name, flagged.name].sort());
+});
+
+test("successful material uploads clear filters so the new file is visible", () => {
+  const { get, filter, names, picker } = setupMaterialList();
+  const search = get("[data-wr-file-search]");
+  assert.ok(search, "the material list exposes filename search");
+  filter("ready").emit("click");
+  search.value = "未找到的文件";
+  search.emit("input");
+  get("[data-wr-file-search-form]").emit("submit");
+  assert.deepEqual(names(), []);
+
+  picker.files = [{ name: "新上传素材.pdf", size: 512 }];
+  picker.emit("change");
+
+  assert.equal(filter("all").attributes["aria-pressed"], "true");
+  assert.equal(search.value, "");
+  assert.ok(names().includes("新上传素材.pdf"));
 });
 
 test("writing page exposes the complete template-to-upload flow", () => {

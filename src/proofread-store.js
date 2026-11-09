@@ -5,6 +5,7 @@
   const TYPES = ['错别字', '标点', '语法'];
   const DETECT_MS = 2600;
   const REVIEW_MS = 3000;
+  const FILE_EXTENSION = /\.(txt|md|pdf|docx?|xlsx?)$/i;
   const pending = ['detecting', 'hit', 'submitted', 'running'];
   const copy = value => JSON.parse(JSON.stringify(value));
   const uid = prefix => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -14,12 +15,34 @@
     // 旧记录按原文顺序存放问题，只有前方采纳的修改会移动后续位置。
     const accepted = new Set(review.accepted);
     let shift = 0;
-    for (const issue of review.issues) {
+    for (const issue of review.issues || []) {
       issue.start -= shift;
       issue.end -= shift;
       if (accepted.has(issue.id)) shift += issue.suggestion.length - (issue.end - issue.start);
     }
     review.text = review.originalText;
+  }
+
+  function documentParts(review) {
+    // 所有位置以原文为准，采纳前文的修改不会移动后面的建议。
+    const original = review.originalText ?? review.text ?? '';
+    const accepted = new Set(review.accepted);
+    const ignored = new Set(review.ignored);
+    const parts = [];
+    let cursor = 0;
+    for (const issue of review.issues || []) {
+      if (issue.start < cursor) continue;
+      const applied = accepted.has(issue.id);
+      parts.push({text: original.slice(cursor, issue.start)});
+      parts.push({
+        id: issue.id,
+        text: applied ? issue.suggestion : original.slice(issue.start, issue.end),
+        tone: applied ? ' is-accepted' : ignored.has(issue.id) ? ' is-ignored' : '',
+      });
+      cursor = issue.end;
+    }
+    parts.push({text: original.slice(cursor)});
+    return parts;
   }
 
   function read() {
@@ -87,7 +110,7 @@
     if (typeof text !== 'string' || !text.trim()) throw new Error('请先输入需要审校的正文。');
     if (typeof name !== 'string' || typeof fileName !== 'string' || !['text', 'upload'].includes(source)
       || (source === 'upload' && !fileName.trim())) throw new Error('文档信息不完整，请重新提交。');
-    const title = name.trim() || fileName.replace(/\.(txt|md|pdf|docx?|xlsx?)$/i, '').trim() || text.trim().split(/\r?\n/)[0].slice(0, 24);
+    const title = name.trim() || fileName.replace(FILE_EXTENSION, '').trim() || text.trim().split(/\r?\n/)[0].slice(0, 24);
     return {
       id: uid('doc'), name: title, fileName: fileName || `${title}.txt`, text, source,
       secretStatus: 'draft', keywords: [], version: 1, uploadedAt: Date.now(),
@@ -140,18 +163,59 @@
     });
   }
 
+  function confirmResult(reviewId, decisions) {
+    return change(data => {
+      const review = data.history.find(item => item.reviewId === reviewId);
+      if (review?.status !== 'done') throw new Error('请在校对完成后确认结果。');
+      const file = data.records.find(item => item.id === review.id);
+      if (file?.secretStatus !== 'passed') throw new Error('请先完成原文的涉密核查。');
+      if (review.output) return review.output;
+
+      if (decisions !== undefined) {
+        const {accepted, ignored} = decisions ?? {};
+        if (!Array.isArray(accepted) || !Array.isArray(ignored)) throw new Error('审校选择无效，请重新确认。');
+        const ids = [...accepted, ...ignored];
+        const validIds = new Set((review.issues || []).map(issue => issue.id));
+        if (new Set(ids).size !== ids.length || ids.some(id => !validIds.has(id))) {
+          throw new Error('审校选择无效，请重新确认。');
+        }
+        review.accepted = [...accepted];
+        review.ignored = [...ignored];
+      }
+
+      const name = (review.name || file.name || file.fileName || '').replace(FILE_EXTENSION, '').trim() || '校对文档';
+      const now = Date.now();
+      const output = {
+        name, fileName: `${name}.txt`, text: documentParts(review).map(part => part.text).join(''),
+        source: 'result', uploadedAt: now, updated: now,
+        version: review.version || file.version || 1, keywords: [],
+      };
+      beginDetection(output);
+      review.output = output;
+      return output;
+    });
+  }
+
+  function completeDetection(file, scanSecret, now) {
+    if (file.secretStatus !== 'detecting' || file.detectAt > now) return false;
+    file.keywords = scanSecret(file.fileName, file.text);
+    file.secretStatus = file.keywords.length ? 'hit' : 'passed';
+    file.reviewedAt = file.detectAt;
+    return true;
+  }
+
   // 演示任务以持久化的阶段时间恢复，页面关闭期间无需依赖活动计时器。
   function advance(scanSecret, detect, now = Date.now()) {
     const data = read();
     let changed = false;
     for (const file of data.records) {
-      if (file.secretStatus !== 'detecting' || file.detectAt > now) continue;
-      file.keywords = scanSecret(file.fileName, file.text);
-      file.secretStatus = file.keywords.length ? 'hit' : 'passed';
-      file.reviewedAt = file.detectAt;
-      changed = true;
+      if (completeDetection(file, scanSecret, now)) changed = true;
     }
     for (const review of data.history) {
+      if (review.output && completeDetection(review.output, scanSecret, now)) {
+        review.output.updated = review.output.reviewedAt;
+        changed = true;
+      }
       const file = data.records.find(item => item.id === review.id);
       if (['detecting', 'hit', 'submitted'].includes(review.status) && file) {
         if (file.secretStatus !== review.secretStatus) {
@@ -187,13 +251,16 @@
     });
   }
 
-  function audit(id, status) {
+  function audit(id, status, reviewId = '') {
     return change(data => {
-      const file = data.records.find(item => item.id === id);
+      const file = reviewId
+        ? data.history.find(item => item.id === id && item.reviewId === reviewId)?.output
+        : data.records.find(item => item.id === id);
       const allowed = file?.secretStatus === 'hit' ? ['submitted'] : file?.secretStatus === 'submitted' ? ['passed', 'rejected'] : [];
       if (!allowed.includes(status)) throw new Error('当前文档的审核状态已更新，请重新查看。');
       file.secretStatus = status;
       file.auditedAt = Date.now();
+      if (reviewId) file.updated = file.auditedAt;
       if (status === 'rejected') file.auditReason = '模拟人工审核未通过，请核对文档保密范围。';
       return file;
     });
@@ -203,6 +270,7 @@
     return change(data => {
       const review = data.history.find(item => item.reviewId === reviewId);
       if (review?.status !== 'done') return review;
+      if (review.output) throw new Error('校对结果已确认，不能再修改。');
       const issues = issueId === 'all' ? review.issues : review.issues.filter(item => item.id === issueId);
       for (const issue of issues) {
         if (review.accepted.includes(issue.id) || review.ignored.includes(issue.id)) continue;
@@ -217,6 +285,7 @@
     return change(data => {
       const review = data.history.find(item => item.reviewId === reviewId);
       if (review?.status !== 'done') return null;
+      if (review.output) throw new Error('校对结果已确认，不能再修改。');
       const decisions = review.accepted.includes(issueId) ? review.accepted : review.ignored;
       const index = decisions.indexOf(issueId);
       if (index === -1) return null;
@@ -245,6 +314,6 @@
 
   window.BaigeProofreadStore = Object.freeze({
     KEY, read, initialize, createDraft, saveDraft, addUpload, submitFile, startReview,
-    advance, stopReview, audit, decide, undoDecision, remove, markRead, REVIEW_MS,
+    documentParts, confirmResult, advance, stopReview, audit, decide, undoDecision, remove, markRead, REVIEW_MS,
   });
 })();
