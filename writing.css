@@ -243,22 +243,7 @@ body[data-page="writing"] { --wr-accent: #1f5eff; --wr-ink: #1f2d3d; --wr-muted:
 .wr-materials-head .wr-btn.is-primary { border-color: var(--accent); background: var(--accent); color: var(--surface); }
 .wr-materials-head .wr-btn.is-primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
 
-.wr-materials-help {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  margin: 0 0 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-subtle);
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-.wr-materials-help > span { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
 .wr-material-choices { display: grid; gap: 6px; min-width: 0; margin: 0; padding: 0; list-style: none; }
 .wr-material-choices li { min-width: 0; }
 .wr-material-choice {

@@ -1,6 +1,19 @@
 /* 素材管理与纠错校对共用的文件列表。 */
 .wr-file-table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .wr-file-table { width: 100%; min-width: 900px; border-collapse: collapse; }
+/* 写作素材只有六列，不需要校对九列的宽度；按内容分配列宽，
+   文件名吸收剩余空间，时间/状态/操作各给定宽，避免平均分配后状态列空荡。 */
+.wr-file-table.is-material { min-width: 680px; table-layout: fixed; }
+.wr-file-table.is-material th:nth-child(2),
+.wr-file-table.is-material th:nth-child(5) { width: 148px; }
+.wr-file-table.is-material th:nth-child(3) { width: 112px; }
+.wr-file-table.is-material th:nth-child(4) { width: 132px; }
+.wr-file-table.is-material th:last-child { width: 88px; }
+.wr-file-table.is-material .wr-file-actions { gap: 5px; }
+/* 操作与查看图标沿用平台的线性图标，尺寸压到按钮内。 */
+.wr-file-actions .icon,
+.wr-eye .icon { width: 14px; height: 14px; }
+.wr-file-table.is-material .wr-file-name { max-width: 100%; }
 .wr-file-table th { padding: 10px 8px; border-bottom: 1px solid var(--line); background: var(--surface-subtle); color: var(--muted); font-size: 12px; font-weight: 500; text-align: left; white-space: nowrap; }
 .wr-file-table td { padding: 8px; border-bottom: 1px solid var(--line); color: var(--ink); font-size: 12px; line-height: 1.5; white-space: nowrap; }
 .wr-file-table tr:last-child td { border-bottom: 0; }
@@ -25,5 +38,4 @@
 .wr-file-actions button { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #6d7c91; font-size: 11px; cursor: pointer; }
 .wr-file-actions button:hover { background: #eef3ff; color: #245BFF; }
 .wr-file-actions button.is-danger:hover { background: #fdeeee; color: #b4232c; }
-.wr-file-muted { color: #b1bccb; }
 .wr-file-table .wr-upload-empty { padding: 28px; }

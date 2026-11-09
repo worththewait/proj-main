@@ -3,7 +3,7 @@
 
   const store = window.BaigeWritingStore;
   if (!store) return;
-  const { escapeHtml: escape } = window.BaigeUI;
+  const { escapeHtml: escape, icon } = window.BaigeUI;
   const root = document.querySelector("#writingApp");
   const chapterDialog = document.querySelector("#chapterDialog");
   const secretDetailDialog = document.querySelector("#secretDetailDialog");
@@ -172,27 +172,24 @@
 
   function renderMaterials() {
     root.innerHTML = `<header class="wr-head wr-materials-head"><div><h1 tabindex="-1">素材管理</h1><p>上传文件并查看涉密审核状态。审核通过的文件可供个人模板和公共模板选用。</p></div><div class="wr-head-actions"><button class="wr-btn" type="button" data-writing-back>返回模板</button><button class="wr-btn is-primary" type="button" data-wr-material-upload>上传文件</button></div></header>
-      <p class="wr-materials-help">支持 PDF、Word、PPT，单个文件不超过 200 MB。<span data-wr-material-count></span></p>
       <section aria-label="写作素材文件" data-wr-material-table></section>`;
     renderMaterialTable();
     root.querySelector("h1")?.focus();
   }
   function renderMaterialTable() {
     const uploads = store.uploads();
-    root.querySelector("[data-wr-material-count]").textContent = `已上传 ${uploads.length} / 5 个文件`;
     root.querySelector("[data-wr-material-table]").innerHTML = uploadTableHtml(uploads);
   }
   function uploadTableHtml(uploads) {
     if (!uploads.length) return '<p class="wr-material-empty">还没有写作素材。点击「上传文件」添加。</p>';
     const rows = uploads.map((item) => {
       const passed = item.status === "passed";
-      const eye = `<button class="wr-eye" type="button" data-wr-secret="${html(item.id)}" title="查看涉密检测详情" aria-label="查看${html(item.name)}的涉密检测详情">👁</button>`;
-      const actions = passed
-        ? `<div class="wr-file-actions"><button type="button" data-wr-file-action="preview" data-wr-file-id="${html(item.id)}" title="预览文档">📄</button><button type="button" data-wr-file-action="download" data-wr-file-id="${html(item.id)}" title="下载文件">⬇</button><button type="button" data-wr-file-action="refresh" data-wr-file-id="${html(item.id)}" title="刷新状态">🔄</button><button type="button" data-wr-file-action="edit" data-wr-file-id="${html(item.id)}" title="编辑信息">✏</button><button class="is-danger" type="button" data-wr-file-action="delete" data-wr-file-id="${html(item.id)}" title="删除文件">🗑</button></div>`
-        : '<span class="wr-file-muted">—</span>';
-      return `<tr class="${passed ? "" : "is-locked"}"><td><div class="wr-file-name"><span class="wr-file-icon is-${html(fileType(item).toLowerCase())}">${fileType(item)}</span><span title="${html(item.name)}">${html(item.name)}</span></div></td><td>${html(item.source || "本地上传")}</td><td>${html(item.category || "写作素材")}</td><td>${html(item.version || "V1.0.0")}</td><td>${html(item.createdAt || "-")}</td><td>${parseHtml(item.parseStatus)}</td><td><div class="wr-secret-cell">${secretTagHtml(item.status)}${eye}</div></td><td>${html(item.updatedAt || "-")}</td><td>${actions}</td></tr>`;
+      const eye = `<button class="wr-eye" type="button" data-wr-secret="${html(item.id)}" title="查看涉密检测详情" aria-label="查看${html(item.name)}的涉密检测详情">${icon("eye")}</button>`;
+      /* 操作只保留预览与删除：预览要审核通过才可用，删除不受状态限制。 */
+      const actions = `<div class="wr-file-actions">${passed ? `<button type="button" data-wr-file-action="preview" data-wr-file-id="${html(item.id)}" title="预览文档" aria-label="预览${html(item.name)}">${icon("file")}</button>` : ""}<button class="is-danger" type="button" data-wr-file-action="delete" data-wr-file-id="${html(item.id)}" title="删除文件" aria-label="删除${html(item.name)}">${icon("trash")}</button></div>`;
+      return `<tr class="${passed ? "" : "is-locked"}"><td><div class="wr-file-name"><span class="wr-file-icon is-${html(fileType(item).toLowerCase())}">${fileType(item)}</span><span title="${html(item.name)}">${html(item.name)}</span></div></td><td>${html(item.createdAt || "-")}</td><td>${parseHtml(item.parseStatus)}</td><td><div class="wr-secret-cell">${secretTagHtml(item.status)}${eye}</div></td><td>${html(item.updatedAt || "-")}</td><td>${actions}</td></tr>`;
     }).join("");
-    return `<div class="wr-file-table-wrap" tabindex="0" role="region" aria-label="素材文件列表"><table class="wr-file-table"><thead><tr><th>文件名</th><th>文件来源</th><th>文档类型</th><th>版本号</th><th>创建时间</th><th>解析状态</th><th>涉密审查状态</th><th>最近更新</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<div class="wr-file-table-wrap" tabindex="0" role="region" aria-label="素材文件列表"><table class="wr-file-table is-material"><thead><tr><th>文件名</th><th>创建时间</th><th>解析状态</th><th>涉密审查状态</th><th>最近更新</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
   function materialPickerHtml(attribute, selected) {
     const files = store.selectableUploads();
@@ -221,7 +218,7 @@
       : item.status === "rejected"
         ? `<button class="wr-btn" type="button" data-wr-secret-close>关闭</button><button class="wr-btn is-primary" type="button" data-wr-secret-reupload>重新上传</button>`
         : '<button class="wr-btn" type="button" data-wr-secret-close>关闭</button>';
-    secretDetailDialog.innerHTML = `<header class="wr-dialog-head"><h2 id="secretDetailTitle">涉密检测详情 — ${statusLabel(item.status)}</h2><button class="wr-dialog-close" type="button" data-wr-secret-close>×</button></header><div class="wr-dialog-body">${danger ? `<div class="wr-secret-alert"><span>⚠</span><div><strong>检测到涉密内容</strong><p>${html(item.message || "系统检测到该文件包含敏感关键词。")}</p>${kws ? `<div class="wr-kw-row"><b>命中关键词</b>${kws}</div>` : ""}</div></div>` : ""}<div class="wr-file-meta"><div><span>文件名</span><strong>${html(item.name)}</strong></div><div><span>版本号</span><strong>${html(item.version || "V1.0.0")}</strong></div><div><span>文件来源</span><strong>${html(item.source || "本地上传")}</strong></div><div><span>文档类型</span><strong>${html(item.category || "写作素材")}</strong></div><div><span>创建时间</span><strong>${html(item.createdAt || "-")}</strong></div><div><span>解析状态</span><strong>${parseLabel(item.parseStatus)}</strong></div><div><span>涉密审查状态</span><strong>${statusLabel(item.status)}</strong></div><div><span>最近更新</span><strong>${html(item.updatedAt || "-")}</strong></div></div><div class="wr-section-title" style="margin-top:20px"><span>流转记录</span></div>${secretTimeline(item)}</div><footer class="wr-dialog-foot">${footer}</footer>`;
+    secretDetailDialog.innerHTML = `<header class="wr-dialog-head"><h2 id="secretDetailTitle">涉密检测详情 — ${statusLabel(item.status)}</h2><button class="wr-dialog-close" type="button" data-wr-secret-close>×</button></header><div class="wr-dialog-body">${danger ? `<div class="wr-secret-alert"><span>⚠</span><div><strong>检测到涉密内容</strong><p>${html(item.message || "系统检测到该文件包含敏感关键词。")}</p>${kws ? `<div class="wr-kw-row"><b>命中关键词</b>${kws}</div>` : ""}</div></div>` : ""}<div class="wr-file-meta"><div><span>文件名</span><strong>${html(item.name)}</strong></div><div><span>创建时间</span><strong>${html(item.createdAt || "-")}</strong></div><div><span>解析状态</span><strong>${parseLabel(item.parseStatus)}</strong></div><div><span>涉密审查状态</span><strong>${statusLabel(item.status)}</strong></div><div><span>最近更新</span><strong>${html(item.updatedAt || "-")}</strong></div></div><div class="wr-section-title" style="margin-top:20px"><span>流转记录</span></div>${secretTimeline(item)}</div><footer class="wr-dialog-foot">${footer}</footer>`;
     secretDetailDialog.showModal();
   }
   function openComposeDialog() {
@@ -500,15 +497,7 @@
         toast(`已删除《${item.name}》`);
         return;
       }
-      if (action.dataset.wrFileAction === "refresh") {
-        const sensitive = /机密|秘密|涉密|内部|敏感/.test(item.name);
-        store.reviewUpload(id, sensitive ? "hit" : "passed", sensitive ? "命中涉密关键词" : "未命中涉密内容，检测通过");
-        toast(`已刷新《${item.name}》状态`);
-        return;
-      }
       if (action.dataset.wrFileAction === "preview") { toast("文档预览待接入文件服务"); return; }
-      if (action.dataset.wrFileAction === "download") { toast("文档下载待接入文件服务"); return; }
-      if (action.dataset.wrFileAction === "edit") { toast("文件信息编辑功能待接入"); return; }
     }
     if (event.target.closest("[data-wr-secret-close]")) { secretDetailDialog.close(); return; }
     const submit = event.target.closest("[data-wr-secret-submit]");
