@@ -4,6 +4,7 @@
   const { icon, escapeHtml: escape } = window.BaigeUI;
   const store = window.BaigeProofreadStore;
   const files = window.BaigeProofreadFile;
+  const fileCache = window.BaigeLocalFiles;
 
   /* ---------- 演示词库：真实审校由后端模型完成，这里用规则模拟 ---------- */
   const DICT = [
@@ -204,12 +205,15 @@
       } else if (AUDIT_ACTIONS[file.secretStatus]) {
         action = `<button type="button" class="wr-file-action-label" data-intake-secret="${id}">${AUDIT_ACTIONS[file.secretStatus]}</button>`;
       }
+      const downloadLabel = !result ? '下载原文' : output && output.secretStatus !== 'passed'
+        ? '查看结果核查，核查通过后可下载' : '下载校对结果';
+      const download = approved ? `<button type="button" data-intake-download="${id}" title="${downloadLabel}" aria-label="${downloadLabel}：${name}">${icon('download')}</button>` : '';
       return `<tr class="${approved ? '' : 'is-locked'}">
         <td><div class="wr-file-name"><span title="${name}">${name}</span></div></td>
         <td>${tableTime(file.uploadedAt)}</td><td><span class="wr-tag parse-${file.secretStatus === 'draft' ? 'unparsed' : 'parsed'}">${file.secretStatus === 'draft' ? '未解析' : '已解析'}</span></td>
         <td><div class="wr-secret-cell"><span class="wr-tag secret-${escape(auditStatus)}">${output ? '结果 · ' : ''}${escape(secret.label)}</span>
           <button type="button" class="wr-eye" data-intake-secret="${id}"${outputTarget} title="查看${auditLabel}" aria-label="查看 ${name} 的${auditLabel}">${icon('eye')}</button></div></td>
-        <td>${tableTime(updated)}</td><td><div class="wr-file-actions">${action}
+        <td>${tableTime(updated)}</td><td><div class="wr-file-actions">${action}${download}
           <button type="button" class="is-danger" data-delete="${id}" title="删除文件" aria-label="删除 ${name}">${icon('trash')}</button></div></td>
       </tr>`;
     }).join('');
@@ -627,6 +631,9 @@
       if (dom !== target) return;
       target.intakeStatus.textContent = '';
       const saved = perform(() => store.submitFile({fileName: file.name, text, source: 'upload'}));
+      if (saved) fileCache?.save(`proofread:${saved.id}`, file).catch(() => {
+        if (dom === target) hint('原文件未能保存到当前浏览器，仍可下载提取的文本。');
+      });
       if (saved && state.screen === 'files') {
         resetFileFilters();
         showIntakeNotice();
@@ -754,13 +761,46 @@
   }
 
   function exportResult(output) {
-    const blob = new Blob([output.text], {type: 'text/plain;charset=utf-8'});
+    exportFile(new Blob([output.text], {type: 'text/plain;charset=utf-8'}), output.fileName);
+    hint('已发起校对结果下载。');
+  }
+
+  function exportFile(blob, fileName) {
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = output.fileName;
+    link.download = fileName;
     link.click();
     URL.revokeObjectURL(link.href);
-    hint('已发起校对结果下载。');
+  }
+
+  async function downloadFromList(id) {
+    const data = store.read();
+    const file = data.records.find(item => item.id === id);
+    if (file?.secretStatus !== 'passed') return;
+    const result = data.history.find(item => item.id === id && item.status === 'done');
+    if (result) {
+      if (result.output?.secretStatus === 'passed') exportResult(result.output);
+      else {
+        sync(data);
+        if (result.output) openSecret(id, result.reviewId);
+        else {
+          openReview(result.reviewId);
+          downloadResult();
+        }
+      }
+      return;
+    }
+    let blob;
+    try { blob = await fileCache?.read(`proofread:${id}`); } catch { /* 可下载已保存的正文文本 */ }
+    if (!store.read().records.some(item => item.id === id && item.secretStatus === 'passed')) return;
+    if (blob) {
+      exportFile(blob, file.fileName || file.name);
+      hint('已发起原文下载。');
+    } else {
+      const name = (file.name || '校对文档').replace(/\.(txt|md|pdf|docx?|xlsx?)$/i, '');
+      exportFile(new Blob([file.text], {type: 'text/plain;charset=utf-8'}), `${name}.txt`);
+      hint('已发起原文文本下载（TXT）。');
+    }
   }
 
   function askDelete(id) {
@@ -779,6 +819,7 @@
     state.removeId = '';
     dom.confirmDelete.close();
     if (id && perform(() => store.remove(id))) {
+      fileCache?.remove(`proofread:${id}`).catch(() => {});
       hint('已删除该文件。');
       dom.uploadButton.focus();
     }
@@ -1034,7 +1075,7 @@
     dom.fileRows.addEventListener('click', event => {
       const button = event.target.closest('button');
       if (!button) return;
-      const {intakeStart, intakeReview, intakeSecret, delete: remove} = button.dataset;
+      const {intakeStart, intakeReview, intakeSecret, intakeDownload, delete: remove} = button.dataset;
       if (intakeStart) {
         state.followReview = '';
         openDialog({fileId: intakeStart});
@@ -1042,6 +1083,8 @@
         openReview(intakeReview);
       } else if (intakeSecret) {
         openSecret(intakeSecret, button.dataset.outputAudit);
+      } else if (intakeDownload) {
+        downloadFromList(intakeDownload);
       } else if (remove) {
         askDelete(remove);
       }

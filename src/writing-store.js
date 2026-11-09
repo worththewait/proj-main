@@ -134,7 +134,7 @@
   function templates() { return clone(read().templates); }
   function template(id) { return clone(read().templates.find((item) => item.id === id) || null); }
   function uploads() { return clone(read().uploads); }
-  function addUploads(files) {
+  function addUploadRecords(files) {
     const value = read();
     const room = Math.max(0, 5 - value.uploads.length);
     const accepted = Array.from(files || []).slice(0, room).map((file) => normalizeUpload({
@@ -187,8 +187,9 @@
         }
       }, 900);
     });
-    return accepted.length;
+    return clone(accepted);
   }
+  function addUploads(files) { return addUploadRecords(files).length; }
   function reviewUpload(id, status, message = "") {
     const value = read();
     const item = value.uploads.find((entry) => entry.id === id);
@@ -244,5 +245,5 @@
     return clone(value);
   }
 
-  window.BaigeWritingStore = Object.freeze({ KEY, templates, template, uploads, upload, addUploads, reviewUpload, submitUpload, removeUpload, selectableUploads, saveDocument, subscribe, read, reset });
+  window.BaigeWritingStore = Object.freeze({ KEY, templates, template, uploads, upload, addUploads, addUploadRecords, reviewUpload, submitUpload, removeUpload, selectableUploads, saveDocument, subscribe, read, reset });
 })();

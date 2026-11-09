@@ -4,6 +4,7 @@
   const store = window.BaigeWritingStore;
   if (!store) return;
   const { escapeHtml: escape, icon } = window.BaigeUI;
+  const fileCache = window.BaigeLocalFiles;
   const root = document.querySelector("#writingApp");
   const chapterDialog = document.querySelector("#chapterDialog");
   const secretDetailDialog = document.querySelector("#secretDetailDialog");
@@ -56,11 +57,39 @@
     const allowed = /\.(pdf|doc|docx|ppt|pptx)$/i;
     const invalid = files.find((file) => !allowed.test(file.name) || file.size > 200 * 1024 * 1024);
     if (invalid) { toast(`${invalid.name} 格式或大小不符合要求。`); return; }
-    const count = store.addUploads(files);
+    const accepted = store.addUploadRecords(files);
+    const count = accepted.length;
     if (!count) { toast("最多只能上传 5 个文件。"); return; }
     resetMaterialFilters();
     toast(count < files.length ? `已上传 ${count} 个文件，其余文件超过数量上限。` : `已上传 ${count} 个文件，正在检测涉密内容`);
+    accepted.forEach((item, index) => {
+      fileCache?.save(`writing:${item.id}`, files[index]).catch(() => toast(`《${item.name}》原文件未能保存到当前浏览器。`));
+    });
   });
+
+  async function downloadMaterial(item) {
+    if (item.status !== "passed") return;
+    try {
+      const blob = await fileCache?.read(`writing:${item.id}`);
+      if (store.upload(item.id)?.status !== "passed") return;
+      if (!blob) { toast("当前浏览器没有这份原文件，请重新上传后下载。"); return; }
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = item.name;
+      link.click();
+      URL.revokeObjectURL(link.href);
+      toast("已发起文件下载。");
+    } catch {
+      toast("无法读取原文件，请稍后重试。");
+    }
+  }
+
+  function removeMaterial(id) {
+    store.removeUpload(id);
+    fileCache?.remove(`writing:${id}`).catch(() => {});
+    composeState.uploads.delete(id);
+    wizardState.uploads.delete(id);
+  }
   function openFilePicker() {
     if (view !== "materials") return;
     if (store.uploads().length >= 5) { toast("最多只能上传 5 个文件。"); return; }
@@ -244,9 +273,10 @@
       const name = html(item.name);
       const eye = `<button class="wr-eye" type="button" data-wr-secret="${html(item.id)}" title="查看涉密检测详情" aria-label="查看${html(item.name)}的涉密检测详情">${icon("eye")}</button>`;
       const next = passed
-        ? `<button class="wr-file-action-label" type="button" data-wr-file-action="preview" data-wr-file-id="${id}">预览文档</button>`
+        ? `<button type="button" data-wr-file-action="preview" data-wr-file-id="${id}" title="预览文档" aria-label="预览 ${name}">${icon("file")}</button>`
         : `<button class="wr-file-action-label" type="button" data-wr-secret="${id}">${AUDIT_ACTIONS[item.status] || "查看核查"}</button>`;
-      const actions = `<div class="wr-file-actions">${next}<button class="is-danger" type="button" data-wr-file-action="delete" data-wr-file-id="${id}" title="删除文件" aria-label="删除${name}">${icon("trash")}</button></div>`;
+      const download = passed ? `<button type="button" data-wr-file-action="download" data-wr-file-id="${id}" title="下载原文件" aria-label="下载${name}">${icon("download")}</button>` : "";
+      const actions = `<div class="wr-file-actions">${next}${download}<button class="is-danger" type="button" data-wr-file-action="delete" data-wr-file-id="${id}" title="删除文件" aria-label="删除${name}">${icon("trash")}</button></div>`;
       return `<tr class="${passed ? "" : "is-locked"}"><td><div class="wr-file-name"><span title="${name}">${name}</span></div></td><td>${html(item.createdAt || "-")}</td><td>${parseHtml(item.parseStatus)}</td><td><div class="wr-secret-cell">${secretTagHtml(item.status)}${eye}</div></td><td>${html(item.updatedAt || "-")}</td><td>${actions}</td></tr>`;
     }).join("");
     return `<div class="wr-file-table-wrap" tabindex="0" role="region" aria-label="素材文件列表"><table class="wr-file-table is-material"><thead><tr><th>文件名</th><th>创建时间</th><th>解析状态</th><th>涉密审查状态</th><th>最近更新</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
@@ -558,13 +588,12 @@
       if (!item) return;
       if (action.dataset.wrFileAction === "delete") {
         if (!window.confirm(`删除《${item.name}》？`)) return;
-        store.removeUpload(id);
-        composeState.uploads.delete(id);
-        wizardState.uploads.delete(id);
+        removeMaterial(id);
         toast(`已删除《${item.name}》`);
         return;
       }
-      if (action.dataset.wrFileAction === "preview") { toast("文档预览待接入文件服务"); return; }
+      if (action.dataset.wrFileAction === "preview" && item.status === "passed") { toast("文档预览待接入文件服务"); return; }
+      if (action.dataset.wrFileAction === "download") { downloadMaterial(item); return; }
     }
     if (event.target.closest("[data-wr-secret-close]")) { secretDetailDialog.close(); return; }
     const submit = event.target.closest("[data-wr-secret-submit]");
@@ -578,9 +607,7 @@
     const cancel = event.target.closest("[data-wr-secret-cancel]");
     if (cancel) {
       const item = store.upload(cancel.dataset.wrSecretCancel);
-      store.removeUpload(cancel.dataset.wrSecretCancel);
-      composeState.uploads.delete(cancel.dataset.wrSecretCancel);
-      wizardState.uploads.delete(cancel.dataset.wrSecretCancel);
+      removeMaterial(cancel.dataset.wrSecretCancel);
       secretDetailDialog.close();
       toast(`《${item?.name || "文件"}》已取消上传`);
       return;

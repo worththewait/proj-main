@@ -7,7 +7,7 @@
 .wr-file-table.is-material th:nth-child(5) { width: 148px; }
 .wr-file-table.is-material th:nth-child(3) { width: 104px; }
 .wr-file-table.is-material th:nth-child(4) { width: 148px; }
-.wr-file-table.is-material th:last-child { width: 124px; }
+.wr-file-table.is-material th:last-child { width: 150px; text-align: center; }
 .wr-file-table.is-material .wr-file-actions { gap: 5px; }
 /* 操作与查看图标沿用平台的线性图标，尺寸压到按钮内。 */
 .wr-file-actions .icon,
@@ -31,7 +31,7 @@
 .wr-secret-cell { display: flex; align-items: center; gap: 4px; }
 .wr-eye { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #6d7c91; font-size: 12px; cursor: pointer; }
 .wr-eye:hover { background: #eef3ff; color: #245BFF; }
-.wr-file-actions { display: flex; align-items: center; gap: 1px; }
+.wr-file-actions { display: flex; align-items: center; justify-content: center; gap: 1px; }
 .wr-file-actions button { display: grid; place-items: center; width: 23px; height: 23px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #6d7c91; font-size: 11px; cursor: pointer; }
 .wr-file-actions button:hover { background: #eef3ff; color: #245BFF; }
 .wr-file-actions button.is-danger:hover { background: #fdeeee; color: #b4232c; }
