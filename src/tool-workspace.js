@@ -58,9 +58,12 @@
       this.pages.set(key, page);
       panel.addEventListener("focusin", (event) => { page.focused = event.target; });
       if (tool) {
-        panel.addEventListener("input", () => this.setDirty(key, panel.dataset.autosaved !== "true"));
-        panel.addEventListener("change", () => this.setDirty(key, panel.dataset.autosaved !== "true"));
         this.renderTool(tool, panel);
+        if (panel.dataset.managesDirty !== "true") {
+          const markDirty = () => this.setDirty(key, panel.dataset.autosaved !== "true");
+          panel.addEventListener("input", markDirty);
+          panel.addEventListener("change", markDirty);
+        }
       } else this.renderCatalog(panel);
       return page;
     }

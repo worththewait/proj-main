@@ -28,13 +28,20 @@ function setup(values = {}, {readFails = false, writeFails = false} = {}) {
 test('defaults keep all distinct destinations, both taxonomy scopes, and only existing popular illustrations', () => {
   const {model} = setup();
   const entries = model.catalog();
-  assert.equal(entries.length, 25);
-  assert.equal(new Set(entries.map(item => `${item.route}:${item.child}`)).size, 25);
+  assert.equal(entries.length, 26);
+  assert.equal(new Set(entries.map(item => `${item.route}:${item.child}`)).size, 26);
   assert.equal(entries.filter(item => item.homeCategory === 'knowledge-research').length, 7);
-  assert.equal(entries.filter(item => item.isTool).length, 9);
+  assert.equal(entries.filter(item => item.isTool).length, 10);
   assert.equal(entries.filter(item => item.usesImage).length, 3);
   assert.equal(entries.filter(item => item.image).length, 3);
   assert.equal(model.get('tool:提示词生成').icon, 'bulb');
+  const flowchart = model.get('tool:流程图生成');
+  assert.equal(flowchart.toolCategory, 'research');
+  assert.equal(flowchart.homeCategory, 'tools-platforms');
+  assert.equal(flowchart.icon, 'flowchart');
+  assert.ok(model.iconOptions.some(option => option.id === flowchart.icon));
+  assert.notEqual(model.iconMarkup(flowchart), model.iconMarkup(model.get('tool:思维导图生成')));
+  assert.notEqual(model.iconMarkup(flowchart), model.iconMarkup({icon: 'file'}));
   assert.equal(model.get('tool:OCR识别').image, 'assets/document-layers.svg');
   assert.equal(model.get('route:digital:标准编制').toolCategory, '');
   assert.equal(model.idFor('qa', '对话'), 'route:qa');
@@ -108,15 +115,35 @@ test('new categories can be assigned and occupied deletion migrates every member
   model.deleteCategory('tools', 'documents', created.id);
   assert.equal(model.catalog().filter(item => item.toolCategory === created.id).length, 4);
   assert.ok(!model.read().categories.tools.some(item => item.id === 'documents'));
-  assert.equal(model.catalog().length, 25);
+  assert.equal(model.catalog().length, 26);
   assert.equal(model.get('tool:OCR识别').route, 'smart-tools');
+});
+
+test('the new tool is available without resetting older snapshots that removed its default categories', () => {
+  const {model} = setup();
+  model.deleteCategory('home', 'tools-platforms', 'knowledge-research');
+  model.deleteCategory('tools', 'research', 'documents');
+  model.saveFeature('tool:思维导图生成', {description: '自定义导图描述', iconImage: raster});
+  const previous = model.read();
+  delete previous.features['tool:流程图生成'];
+  const stored = JSON.stringify(previous);
+  const {model: restored, storage} = setup({[key]: stored});
+
+  const flowchart = restored.get('tool:流程图生成');
+  assert.equal(flowchart.homeCategory, 'knowledge-research');
+  assert.equal(flowchart.toolCategory, 'documents');
+  assert.equal(restored.get('tool:思维导图生成').description, '自定义导图描述');
+  assert.equal(restored.get('tool:思维导图生成').iconImage, raster);
+  assert.equal(storage.get(key), stored);
+  restored.saveFeature(flowchart.id, {description: '自定义流程图描述'});
+  assert.equal(restored.get(flowchart.id).description, '自定义流程图描述');
 });
 
 test('home-category migration never changes tool-category membership', () => {
   const {model} = setup();
   model.deleteCategory('home', 'tools-platforms', 'knowledge-research');
   assert.equal(model.read().categories.home.length, 1);
-  assert.equal(model.catalog().filter(item => item.homeCategory === 'knowledge-research').length, 25);
+  assert.equal(model.catalog().filter(item => item.homeCategory === 'knowledge-research').length, 26);
   assert.equal(model.get('tool:文档翻译').toolCategory, 'documents');
   assert.throws(() => model.deleteCategory('home', 'knowledge-research'), /至少|最后/);
 });
@@ -158,7 +185,7 @@ test('only whitelisted icons, local raster images and approved default assets ca
 test('malformed saved configuration falls back safely and reads return detached values', () => {
   for (const stored of ['{bad', JSON.stringify({version: 99}), JSON.stringify({version:1,categories:{home:[],tools:[]},features:{}})]) {
     const {model, storage} = setup({[key]: stored});
-    assert.equal(model.catalog().length, 25);
+    assert.equal(model.catalog().length, 26);
     assert.equal(model.read().categories.home.length, 2);
     assert.equal(storage.get(key), stored, 'reading must not rewrite corrupt user data');
     const copy = model.read();
@@ -172,7 +199,7 @@ test('malformed saved configuration falls back safely and reads return detached 
 test('write and read storage failures report failure rather than pretending changes were saved', () => {
   for (const options of [{writeFails: true}, {readFails: true}]) {
     const {model, storage} = setup({}, options);
-    assert.equal(model.catalog().length, 25);
+    assert.equal(model.catalog().length, 26);
     assert.throws(() => model.saveFeature('route:qa', {icon: 'book'}), /未能|存储|保存/);
     assert.equal(storage.size, 0);
   }

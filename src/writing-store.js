@@ -10,6 +10,8 @@
   };
   const clone = (value) => JSON.parse(JSON.stringify(value));
   const uid = (prefix) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
+  const uploadStatuses = ["detecting", "passed", "hit", "submitted", "approved", "stored", "rejected", "failed"];
+  const canUseUpload = status => ["passed", "approved", "stored"].includes(status);
 
   function node(title, requirements, children = []) {
     return { id: uid("n"), title, type: "chapter", generate: true, requirements, children };
@@ -85,10 +87,11 @@
   }
   function normalizeUpload(item) {
     const type = item.type || /\.([^.]+)$/.exec(item.name || "")?.[1]?.toLowerCase() || "file";
-    const status = ["detecting", "passed", "hit", "submitted", "rejected"].includes(item.status) ? item.status : "detecting";
+    const status = canUseUpload(item.status) && item.parseStatus === "failed" ? "failed"
+      : uploadStatuses.includes(item.status) ? item.status : "detecting";
     const parseStatus = ["unparsed", "parsing", "parsed", "failed"].includes(item.parseStatus)
       ? item.parseStatus
-      : status === "passed" ? "parsed" : "unparsed";
+      : canUseUpload(status) ? "parsed" : "unparsed";
     return {
       id: item.id || uid("up"),
       name: item.name || "未命名文件",
@@ -100,7 +103,10 @@
       status,
       parseStatus,
       keywords: Array.isArray(item.keywords) ? item.keywords : [],
-      message: item.message || (status === "passed" ? "未命中涉密内容，检测通过" : status === "hit" ? "命中涉密关键词" : "正在检测涉密内容"),
+      message: item.message || ({
+        passed: "未命中涉密内容，检测通过", hit: "命中涉密关键词", submitted: "已提交管理员审核",
+        approved: "已通过人工审核", stored: "文档已入库", rejected: "管理员审核驳回", failed: "文档处理失败",
+      }[status] || "正在检测涉密内容"),
       createdAt: item.createdAt || now(),
       updatedAt: item.updatedAt || item.createdAt || now(),
     };
@@ -160,7 +166,7 @@
       window.setTimeout(() => {
         const current = read();
         const target = current.uploads.find((entry) => entry.id === item.id);
-        if (!target) return;
+        if (target?.status !== "detecting") return;
         target.updatedAt = now();
         if (sensitive) {
           target.status = "hit";
@@ -194,11 +200,15 @@
     const value = read();
     const item = value.uploads.find((entry) => entry.id === id);
     if (!item) return false;
-    item.status = ["detecting", "passed", "hit", "submitted", "rejected"].includes(status) ? status : "detecting";
+    if (!uploadStatuses.includes(status)) return false;
+    item.status = status === "passed" && item.status === "submitted" ? "approved" : status;
     item.updatedAt = now();
     if (item.status === "passed") {
       item.parseStatus = "parsing";
       item.message = message || "未命中涉密内容，检测通过";
+    } else if (item.status === "approved" || item.status === "stored") {
+      item.parseStatus = "parsed";
+      item.message = message || (item.status === "approved" ? "已通过人工审核" : "文档已入库");
     } else if (item.status === "hit") {
       item.parseStatus = "unparsed";
       item.message = message || "命中涉密关键词";
@@ -208,6 +218,9 @@
     } else if (item.status === "rejected") {
       item.parseStatus = "unparsed";
       item.message = message || "管理员审核驳回";
+    } else if (item.status === "failed") {
+      item.parseStatus = "failed";
+      item.message = message || "文档处理失败";
     } else {
       item.message = message || "正在检测涉密内容";
     }
@@ -225,7 +238,7 @@
     return value.uploads.length !== before;
   }
   function upload(id) { return clone(read().uploads.find((item) => item.id === id) || null); }
-  function selectableUploads() { return uploads().filter((item) => item.status === "passed"); }
+  function selectableUploads() { return uploads().filter((item) => canUseUpload(item.status)); }
   function saveDocument(document) {
     const value = read();
     const record = { id: uid("doc"), createdAt: now(), ...document };

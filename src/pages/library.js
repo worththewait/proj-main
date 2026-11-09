@@ -3,7 +3,7 @@
 
   const { categories, content } = window.BaigeLibraryData;
   const store = window.BaigeLibraryStore;
-  const docs = store.loadDocs().map((doc) => ({
+  const docs = store.loadDocs().filter((doc) => window.BaigeSecretFileList.canView(doc.secretStatus) && doc.parseStatus !== "failed").map((doc) => ({
     t: doc.title, cat: doc.category, org: doc.org, date: doc.date, hot: doc.hot,
     author: doc.author, type: doc.docType, abstract: doc.abstract,
     permissions: doc.permissions, permissionExpiry: doc.permissionExpiry,

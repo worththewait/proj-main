@@ -12,7 +12,7 @@
 <button id="tabUpdates" type="button" role="tab" tabindex="-1" aria-selected="false" aria-controls="panelUpdates" data-admin-tab="Updates">产品动态</button></div>
 <p id="adminNotice" class="admin-notice" role="status"></p>
 <section class="admin-panel" id="panelRecommendations" role="tabpanel" aria-labelledby="tabRecommendations">
-<div class="admin-section-heading"><div><h2>推荐功能</h2><p>从平台的 25 项功能中选择，最多推荐 4 项；保存后展示在首页「推荐」中。</p></div><span class="admin-count" id="recommendCount" role="status">已选 0 / 4 项</span></div>
+<div class="admin-section-heading"><div><h2>推荐功能</h2><p>从平台的 26 项功能中选择，最多推荐 4 项；保存后展示在首页「推荐」中。</p></div><span class="admin-count" id="recommendCount" role="status">已选 0 / 4 项</span></div>
 <div class="admin-selected" id="recommendSelected" aria-label="已选推荐功能"></div>
 <div class="admin-toolbar"><div class="admin-filters" id="recommendFilters" role="group" aria-label="功能分类"><button type="button" data-rec-group="all" aria-pressed="true">全部功能 <span>27</span></button><button type="button" data-rec-group="知识与研究" aria-pressed="false">知识与研究</button><button type="button" data-rec-group="工具与平台" aria-pressed="false">工具与平台</button></div><label class="admin-search"><span data-icon="search" aria-hidden="true"></span><input type="search" id="recommendSearch" aria-label="搜索推荐功能" placeholder="搜索功能名称或用途"></label></div>
 <div class="admin-options" id="recommendOptions" aria-label="可选推荐功能"></div>
@@ -55,8 +55,8 @@
 </section></div></div></main>
 <dialog id="deleteUpdateDialog" class="admin-delete-dialog" aria-labelledby="deleteUpdateTitle"><h2 id="deleteUpdateTitle">删除这条动态？</h2><p id="deleteUpdateDescription"></p><p class="admin-feedback" id="deleteUpdateFeedback" role="status"></p><footer><button class="secondary-button" id="cancelDeleteUpdate" type="button">取消</button><button class="admin-danger-button" id="confirmDeleteUpdate" type="button">删除动态</button></footer></dialog>
 <div class="admin-toast" id="adminToast" role="status" aria-live="polite" aria-atomic="true"></div>
-<script src="../src/data.js?v=20261029-remove-writing"></script><script src="../src/ui.js"></script><script src="../src/page-bridge.js?v=20261026-lifecycle"></script>
-<script src="../src/home-card-images.js?v=20261030-functions"></script><script src="../src/home-directory-icons.js?v=20261024-directory"></script><script src="../src/feature-config.js?v=20261030-functions"></script><script src="../src/home-carousel-model.js?v=20261027-management"></script><script src="../src/home-config.js?v=20261030-functions"></script><script src="../src/pages/home-carousel.js?v=20261027-management"></script><script src="../src/pages/home-carousel-editor.js?v=20261026-carousel"></script><script src="../src/pages/home-admin.js?v=20261030-functions"></script>
+<script src="../src/data.js?v=20261109-diagram-tools"></script><script src="../src/ui.js?v=20261109-diagram-tools"></script><script src="../src/page-bridge.js?v=20261026-lifecycle"></script>
+<script src="../src/home-card-images.js?v=20261030-functions"></script><script src="../src/home-directory-icons.js?v=20261109-diagram-tools"></script><script src="../src/feature-config.js?v=20261109-diagram-tools"></script><script src="../src/home-carousel-model.js?v=20261027-management"></script><script src="../src/home-config.js?v=20261030-functions"></script><script src="../src/pages/home-carousel.js?v=20261027-management"></script><script src="../src/pages/home-carousel-editor.js?v=20261026-carousel"></script><script src="../src/pages/home-admin.js?v=20261030-functions"></script>
 <script>
 if (new URLSearchParams(location.search).get('embed') === 'admin') {
   const homeLink = document.querySelector('[data-route="home"]');

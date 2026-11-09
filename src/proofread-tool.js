@@ -5,6 +5,7 @@
   const store = window.BaigeProofreadStore;
   const files = window.BaigeProofreadFile;
   const fileCache = window.BaigeLocalFiles;
+  const fileList = window.BaigeSecretFileList;
 
   /* ---------- 演示词库：真实审校由后端模型完成，这里用规则模拟 ---------- */
   const DICT = [
@@ -38,16 +39,18 @@
 
   const TYPES = ['错别字', '标点', '语法'];
   const FILE_FILTERS = {all: '全部文件', ready: '可校对', audit: '涉密核查', done: '已完成'};
-  const AUDIT_ACTIONS = {detecting: '查看核查', hit: '提交审核', submitted: '查看审核', rejected: '查看原因'};
+  const AUDIT_PENDING = new Set(['detecting', 'hit', 'submitted', 'rejected', 'failed']);
 
-  /* 与百舸文库后台一致的四档审查状态。 */
+  /* 核查详情及校对结果沿用统一的状态名称。 */
   const SECRET_META = {
     draft: { label: '未提交', tone: 'muted' },
     detecting: { label: '检测中', tone: 'info' },
     passed: { label: '已通过', tone: 'success' },
+    approved: { label: '审核通过', tone: 'success' },
     hit: { label: '涉密可疑', tone: 'warning' },
     submitted: { label: '审核中', tone: 'warning' },
     rejected: { label: '已驳回', tone: 'danger' },
+    failed: { label: '失败', tone: 'danger' },
   };
 
   const REVIEW_META = {
@@ -148,8 +151,8 @@
     return `<span class="pr-tag is-${meta.tone}"><i aria-hidden="true"></i>${escape(meta.label)}</span>`;
   }
 
-  function tableTime(value) {
-    return value ? `${new Date(value).getFullYear()}-${clockOf(value, true)}` : '—';
+  function auditCode(record) {
+    return record.secretStatus === 'passed' && record.auditedAt ? 'approved' : record.secretStatus;
   }
 
   function renderIntake() {
@@ -167,7 +170,7 @@
       const result = results.get(file.id);
       const fileName = file.fileName || file.name;
       let category;
-      if (AUDIT_ACTIONS[result?.output?.secretStatus || file.secretStatus]) category = 'audit';
+      if (AUDIT_PENDING.has(result?.output?.secretStatus || file.secretStatus)) category = 'audit';
       else if (file.secretStatus === 'passed' && result) category = 'done';
       else if (file.secretStatus === 'passed' && !review) category = 'ready';
       if (category) counts[category]++;
@@ -184,37 +187,30 @@
     if (dom.fileListSummary.textContent !== summary) dom.fileListSummary.textContent = summary;
     dom.fileRows.innerHTML = entries.map(({file, review, result, fileName}) => {
       const id = escape(file.id);
-      const approved = file.secretStatus === 'passed';
       const name = escape(fileName);
       const output = result?.output;
-      const auditStatus = output?.secretStatus || file.secretStatus;
-      const secret = SECRET_META[auditStatus] || SECRET_META.detecting;
+      const status = auditCode(output || file);
+      const approved = fileList.canView(auditCode(file)) && fileList.canView(status);
       const auditLabel = output ? '校对结果核查详情' : '涉密核查详情';
       const outputTarget = output ? ` data-output-audit="${escape(result.reviewId)}"` : '';
-      const updated = Math.max(file.uploadedAt || 0, file.updated || 0, file.reviewedAt || 0,
-        file.auditedAt || 0, review?.checkedAt || 0, review?.finishedAt || 0, output?.updated || 0);
-      let action = '';
-      if (approved && result) {
-        action = `<button type="button" class="wr-file-action-label" data-intake-review="${escape(result.reviewId)}">查看结果</button>`;
-      } else if (approved && review) {
-        const label = review.status === 'running' ? '查看进度' : '查看状态';
-        action = `<button type="button" class="wr-file-action-label" data-intake-review="${escape(review.reviewId)}">${label}</button>`;
-      } else if (approved || file.secretStatus === 'draft') {
+      const eye = `<button type="button" class="secret-file-icon" data-intake-secret="${id}"${outputTarget} title="查看${auditLabel}" aria-label="查看 ${name} 的${auditLabel}">${icon('eye')}</button>`;
+      const currentReview = result || review;
+      const viewLabel = result ? '查看结果' : review?.status === 'running' ? '查看进度' : review ? '查看状态' : '查看文件';
+      const viewTarget = currentReview ? `data-intake-review="${escape(currentReview.reviewId)}"` : `data-intake-view="${id}"`;
+      const view = approved ? `<button type="button" class="secret-file-icon" ${viewTarget} title="${viewLabel}" aria-label="${viewLabel}：${name}">${icon('file')}</button>` : '';
+      const downloadLabel = result ? '下载校对结果' : '下载原文';
+      const download = approved ? `<button type="button" class="secret-file-icon" data-intake-download="${id}" title="${downloadLabel}" aria-label="${downloadLabel}：${name}">${icon('download')}</button>` : '';
+      let fileNameContent = `<span title="${name}">${name}</span>`;
+      if (!currentReview && (approved || file.secretStatus === 'draft')) {
         const label = approved ? '开始校对' : '提交校对';
-        action = `<button type="button" class="wr-file-action-label is-start" data-intake-start="${id}">${label}</button>`;
-      } else if (AUDIT_ACTIONS[file.secretStatus]) {
-        action = `<button type="button" class="wr-file-action-label" data-intake-secret="${id}">${AUDIT_ACTIONS[file.secretStatus]}</button>`;
+        fileNameContent = `<button class="pr-file-entry" type="button" data-intake-start="${id}" aria-label="${label}：${name}" title="${label}">${fileNameContent}</button>`;
       }
-      const downloadLabel = !result ? '下载原文' : output && output.secretStatus !== 'passed'
-        ? '查看结果核查，核查通过后可下载' : '下载校对结果';
-      const download = approved ? `<button type="button" data-intake-download="${id}" title="${downloadLabel}" aria-label="${downloadLabel}：${name}">${icon('download')}</button>` : '';
-      return `<tr class="${approved ? '' : 'is-locked'}">
-        <td><div class="wr-file-name"><span title="${name}">${name}</span></div></td>
-        <td>${tableTime(file.uploadedAt)}</td><td><span class="wr-tag parse-${file.secretStatus === 'draft' ? 'unparsed' : 'parsed'}">${file.secretStatus === 'draft' ? '未解析' : '已解析'}</span></td>
-        <td><div class="wr-secret-cell"><span class="wr-tag secret-${escape(auditStatus)}">${output ? '结果 · ' : ''}${escape(secret.label)}</span>
-          <button type="button" class="wr-eye" data-intake-secret="${id}"${outputTarget} title="查看${auditLabel}" aria-label="查看 ${name} 的${auditLabel}">${icon('eye')}</button></div></td>
-        <td>${tableTime(updated)}</td><td><div class="wr-file-actions">${action}${download}
-          <button type="button" class="is-danger" data-delete="${id}" title="删除文件" aria-label="删除 ${name}">${icon('trash')}</button></div></td>
+      return `<tr>
+        <td><div class="wr-file-name">${fileNameContent}</div></td>
+        <td>${fileList.time(file.uploadedAt)}</td>
+        <td>${fileList.status(status, eye)}</td>
+        <td><div class="secret-file-actions">${view}${download}
+          <button type="button" class="secret-file-icon is-danger" data-delete="${id}" title="删除文件" aria-label="删除 ${name}">${icon('trash')}</button></div></td>
       </tr>`;
     }).join('');
     dom.fileTable.hidden = entries.length === 0;
@@ -336,7 +332,7 @@
   function renderOutputActions(record) {
     const done = record?.status === 'done' && !isBlocked(record);
     const output = record?.output;
-    const meta = output ? SECRET_META[output.secretStatus] : null;
+    const meta = output ? SECRET_META[auditCode(output)] : null;
     dom.outputActions.hidden = !done;
     dom.finalize.hidden = Boolean(output);
     dom.outputAudit.hidden = !output;
@@ -374,7 +370,7 @@
   }
 
   function renderSecret(record) {
-    const meta = SECRET_META[record.secretStatus] || SECRET_META.detecting;
+    const meta = SECRET_META[auditCode(record)] || SECRET_META.detecting;
     dom.secretTitle.textContent = `${record.source === 'result' ? '校对结果核查' : '涉密检测详情'} — ${meta.label}`;
     dom.secretBody.innerHTML = secretBody(record);
     dom.secretFoot.innerHTML = secretFoot(record);
@@ -405,11 +401,14 @@
       const next = isResult ? '该校对结果无法下载。' : '该文档未获准进入审校。';
       html += `<div class="pr-alert"><div><strong>人工审核未通过</strong>${reason}<p>${next}</p></div></div>`;
     }
+    if (record.secretStatus === 'failed') {
+      html += `<div class="pr-alert"><div><strong>无法读取文件</strong><p>${escape(record.auditReason || '请检查文件后重新上传。')}</p></div></div>`;
+    }
     html += `<dl class="pr-facts">
       <div><dt>文件名</dt><dd>${escape(record.fileName || record.name)}</dd></div>
       <div><dt>来源</dt><dd>${isResult ? '校对结果' : record.source === 'upload' ? '本地上传' : '文字录入'} · V${record.version || 1}.0.0 · ${charCount(record.text)} 字</dd></div>
       <div><dt>${isResult ? '确认时间' : '上传时间'}</dt><dd>${clockOf(record.uploadedAt)}</dd></div>
-      <div><dt>涉密审查状态</dt><dd>${statusTag(record.secretStatus)}</dd></div>
+      <div><dt>涉密审查状态</dt><dd>${statusTag(auditCode(record))}</dd></div>
     </dl>
     <h3 class="pr-timeline-title">流转记录</h3>
     <ol class="pr-timeline">${timeline(record)}</ol>`;
@@ -427,6 +426,10 @@
     }
     if (record.secretStatus === 'detecting') {
       rows.push(`<li class="is-doing"><i aria-hidden="true"></i><div><p>系统涉密检测中</p><span>${isResult ? '检测通过后可下载' : '检测完成前文档不会载入预览区'}</span></div></li>`);
+      return rows.join('');
+    }
+    if (record.secretStatus === 'failed') {
+      rows.push('<li class="is-warn"><i aria-hidden="true"></i><div><p>文件读取失败</p><span>未进入涉密检测</span></div></li>');
       return rows.join('');
     }
     const kw = record.keywords.length ? `命中关键词：${record.keywords.join('、')}` : '未命中敏感关键词';
@@ -493,6 +496,8 @@
     if (!dom?.root.isConnected) return;
     if (state.screen === 'workbench' && !state.session) showScreen('files');
     renderAll();
+    if (dom.preview.open && !state.records.some(file => file.id === dom.previewStart.dataset.fileId
+      && fileList.canView(auditCode(file)))) dom.preview.close();
     if (dom.secret.open) {
       const file = secretRecord(state.secretId, state.secretReviewId);
       const following = state.history.find(item => item.reviewId === state.followReview);
@@ -570,6 +575,7 @@
     const file = state.records.find(item => item.id === review?.id);
     if (!review || !file) return;
     if (isBlocked(file)) { openSecret(file.id); return; }
+    if (review.output && !fileList.canView(auditCode(review.output))) { openSecret(file.id, id); return; }
     state.followReview = '';
     state.selection = id;
     showScreen('workbench');
@@ -577,6 +583,15 @@
     sync();
     renderAll();
     dom.workbenchBack.focus();
+  }
+
+  function openFilePreview(id) {
+    const file = store.read().records.find(item => item.id === id);
+    if (!file || !fileList.canView(auditCode(file))) return;
+    dom.previewTitle.textContent = file.fileName || file.name;
+    dom.previewText.textContent = file.text;
+    dom.previewStart.dataset.fileId = id;
+    dom.preview.showModal();
   }
 
   function followSubmission() {
@@ -626,25 +641,31 @@
     state.followReview = '';
     target.uploadButton.disabled = true;
     target.intakeStatus.textContent = '正在读取文件正文…';
+    let text;
     try {
-      const text = await files.read(file);
-      if (dom !== target) return;
-      target.intakeStatus.textContent = '';
-      const saved = perform(() => store.submitFile({fileName: file.name, text, source: 'upload'}));
-      if (saved) fileCache?.save(`proofread:${saved.id}`, file).catch(() => {
-        if (dom === target) hint('原文件未能保存到当前浏览器，仍可下载提取的文本。');
-      });
-      if (saved && state.screen === 'files') {
-        resetFileFilters();
-        showIntakeNotice();
-      }
+      text = await files.read(file);
     } catch (error) {
       if (dom === target) {
-        target.intakeStatus.textContent = error instanceof DOMException
+        const reason = error instanceof DOMException
           ? '文件读取失败，请重新上传。' : error.message || '文件读取失败，请重新上传。';
+        if (perform(() => store.failFile(file.name, reason))) {
+          if (state.screen === 'files') resetFileFilters();
+          target.intakeStatus.textContent = reason;
+        }
       }
+      return;
     } finally {
       target.uploadButton.disabled = false;
+    }
+    if (dom !== target) return;
+    target.intakeStatus.textContent = '';
+    const saved = perform(() => store.submitFile({fileName: file.name, text, source: 'upload'}));
+    if (saved) fileCache?.save(`proofread:${saved.id}`, file).catch(() => {
+      if (dom === target) hint('原文件未能保存到当前浏览器，仍可下载提取的文本。');
+    });
+    if (saved && state.screen === 'files') {
+      resetFileFilters();
+      showIntakeNotice();
     }
   }
 
@@ -859,9 +880,9 @@
             </form>
           </div>
           <p class="sr-only" data-file-list-summary aria-live="polite"></p>
-          <div class="wr-file-table-wrap" data-file-table tabindex="0" role="region" aria-label="校对文件列表">
-            <table class="wr-file-table is-material">
-              <thead><tr><th scope="col">文件名</th><th scope="col">创建时间</th><th scope="col">解析状态</th><th scope="col">涉密审查状态</th><th scope="col">最近更新</th><th scope="col">操作</th></tr></thead>
+          <div class="secret-file-table-wrap" data-file-table tabindex="0" role="region" aria-label="校对文件列表">
+            <table class="secret-file-table">
+              ${fileList.head}
               <tbody data-intake-table></tbody>
             </table>
           </div>
@@ -975,6 +996,15 @@
         <footer class="pr-secret-foot" data-secret-foot></footer>
       </dialog>
 
+      <dialog class="pr-dialog pr-file-preview" data-file-preview aria-labelledby="prFilePreviewTitle">
+        <h2 id="prFilePreviewTitle" data-preview-title></h2>
+        <div class="pr-dialog-body"><pre data-preview-text></pre></div>
+        <div class="pr-dialog-foot">
+          <button type="button" class="secondary-button" data-preview-close>关闭</button>
+          <button type="button" class="primary-button" data-preview-start>开始校对</button>
+        </div>
+      </dialog>
+
       <input type="file" accept="${files.accept}" hidden data-file />
     `;
 
@@ -990,6 +1020,10 @@
       fileListSummary: root.querySelector('[data-file-list-summary]'),
       fileRows: root.querySelector('[data-intake-table]'),
       fileTable: root.querySelector('[data-file-table]'),
+      preview: root.querySelector('[data-file-preview]'),
+      previewTitle: root.querySelector('[data-preview-title]'),
+      previewText: root.querySelector('[data-preview-text]'),
+      previewStart: root.querySelector('[data-preview-start]'),
       filesEmpty: root.querySelector('[data-files-empty]'),
       filesEmptyMessage: root.querySelector('[data-files-empty-message]'),
       intakeStatus: root.querySelector('[data-intake-status]'),
@@ -1024,7 +1058,7 @@
       bulk: root.querySelector('[data-bulk]'),
       groups: root.querySelector('[data-groups]'),
       charCount: root.querySelector('[data-char]'),
-      status: root.querySelector('[data-status]'),
+      status: root.querySelector('[data-workbench] [data-status]'),
       dialog: root.querySelector('[data-dialog]'),
       confirmDelete: root.querySelector('[data-confirm-delete]'),
       deleteText: root.querySelector('[data-delete-text]'),
@@ -1075,12 +1109,14 @@
     dom.fileRows.addEventListener('click', event => {
       const button = event.target.closest('button');
       if (!button) return;
-      const {intakeStart, intakeReview, intakeSecret, intakeDownload, delete: remove} = button.dataset;
+      const {intakeStart, intakeReview, intakeView, intakeSecret, intakeDownload, delete: remove} = button.dataset;
       if (intakeStart) {
         state.followReview = '';
         openDialog({fileId: intakeStart});
       } else if (intakeReview) {
         openReview(intakeReview);
+      } else if (intakeView) {
+        openFilePreview(intakeView);
       } else if (intakeSecret) {
         openSecret(intakeSecret, button.dataset.outputAudit);
       } else if (intakeDownload) {
@@ -1088,6 +1124,13 @@
       } else if (remove) {
         askDelete(remove);
       }
+    });
+    dom.root.querySelector('[data-preview-close]').addEventListener('click', () => dom.preview.close());
+    dom.previewStart.addEventListener('click', () => {
+      const fileId = dom.previewStart.dataset.fileId;
+      dom.preview.close();
+      state.followReview = '';
+      openDialog({fileId});
     });
     dom.guard.addEventListener('click', event => {
       if (event.target.closest('[data-guard-detail]') && state.session) openSecret(state.session.id);
@@ -1239,6 +1282,7 @@
     dom?.dialog.close();
     dom?.finalDialog.close();
     dom?.confirmDelete.close();
+    dom?.preview.close();
   }
 
   function resume() {

@@ -36,8 +36,8 @@ function setup() {
 
 test('feature management paginates all existing functions and searching resets the page',()=>{
   const app=setup();const rows=()=>(app.get('featureTable').innerHTML.match(/<tr>/g)||[]).length;
-  assert.equal(rows(),10);assert.match(app.get('featureSummary').textContent,/25/);
-  app.action('featurePager','featurePage','3');assert.equal(rows(),5);
+  assert.equal(rows(),10);assert.match(app.get('featureSummary').textContent,/26/);
+  app.action('featurePager','featurePage','3');assert.equal(rows(),6);
   app.get('featureSearch').value='OCR';app.get('featureSearch').emit('input');
   assert.equal(rows(),1);assert.match(app.get('featureTable').innerHTML,/OCR识别/);assert.equal(app.get('featurePager').hidden,true);
 });
@@ -45,14 +45,17 @@ test('feature management paginates all existing functions and searching resets t
 test('tool-category filter excludes non-tools and keeps the full catalog intact',()=>{
   const app=setup();app.get('featureToolFilter').value='documents';app.get('featureToolFilter').emit('change');
   assert.equal((app.get('featureTable').innerHTML.match(/<tr>/g)||[]).length,4);
-  assert.doesNotMatch(app.get('featureTable').innerHTML,/百舸写作/);assert.equal(app.config.catalog().length,25);
+  assert.doesNotMatch(app.get('featureTable').innerHTML,/百舸写作/);assert.equal(app.config.catalog().length,26);
 });
 
-test('editing a feature saves its selected category through the shared model',()=>{
+test('the separate flowchart entry can be found and edited through the shared model',()=>{
   const app=setup();app.config.addCategory('home','综合服务');const category=app.config.read().categories.home.find(c=>c.label==='综合服务');
-  app.action('featureTable','editFeature','tool:OCR识别');assert.equal(app.get('featureEditor').open,true);
+  app.get('featureSearch').value='流程图';app.get('featureSearch').emit('input');
+  assert.match(app.get('featureTable').innerHTML,/流程图生成/);
+  assert.doesNotMatch(app.get('featureTable').innerHTML,/思维导图生成/);
+  app.action('featureTable','editFeature','tool:流程图生成');assert.equal(app.get('featureEditor').open,true);
   app.get('editFeatureHome').value=category.id;app.get('editFeatureHome').emit('change');app.get('featureEditorForm').emit('submit');
-  assert.equal(app.config.get('tool:OCR识别').homeCategory,category.id);assert.equal(app.config.get('tool:OCR识别').icon,'scan');assert.equal(app.get('featureEditor').open,false);
+  assert.equal(app.config.get('tool:流程图生成').homeCategory,category.id);assert.equal(app.config.get('tool:流程图生成').icon,'flowchart');assert.equal(app.get('featureEditor').open,false);
 });
 
 test('opening another feature starts at the top of its form and focuses the first classification',()=>{

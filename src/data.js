@@ -9,23 +9,24 @@ const tools = [
  {name:"公文写作",group:"写作创作",icon:"file",description:"规范公文结构与措辞，辅助起草日常材料。"},
  {name:"PPT生成",group:"写作创作",icon:"slides",description:"将主题与提纲整理为逻辑清晰的演示文稿。"},
  {name:"文献伴读",group:"研究辅助",icon:"book",description:"梳理文献重点，理解研究方法与核心结论。"},
- {name:"思维导图生成",group:"研究辅助",icon:"branch",description:"展开主题与关联，让研究思路形成清晰结构。"}
+ {name:"思维导图生成",group:"研究辅助",icon:"branch",description:"展开主题与关联，让研究思路形成清晰结构。"},
+ {name:"流程图生成",group:"研究辅助",icon:"flowchart",description:"将业务步骤和判断分支整理为清晰的流程图。"}
 ];
 const navigation = [
- {id:"home",file:"pages/home.html?v=20261028-unpublish-status",label:"首页",icon:"home"},
+ {id:"home",file:"pages/home.html?v=20261109-diagram-tools",label:"首页",icon:"home"},
  {id:"qa",file:"pages/qa.html?v=20261030-refined",label:"百舸问答",icon:"chat",children:["对话","智能问数"]},
- {id:"knowledge",file:"pages/knowledge.html?v=20261102-cards",label:"知识库",icon:"book"},
- {id:"writing",file:"pages/writing.html?v=20261103-upload-table",label:"百舸写作",icon:"pen"},
+ {id:"knowledge",file:"pages/knowledge.html?v=20261109-secret-list",label:"知识库",icon:"book"},
+ {id:"writing",file:"pages/writing.html?v=20261109-secret-list",label:"百舸写作",icon:"pen"},
  {id:"library",file:"pages/library.html",label:"百舸文库",icon:"file",children:["文库首页"],subnav:false,autoChild:false},
  {id:"intel",file:"pages/intel.html?v=20261102-tracking",label:"百舸情报",icon:"globe"},
  {id:"analysis",file:"pages/analysis.html",label:"百舸分析",icon:"chart"},
- {id:"smart-tools",file:"pages/smart-tools.html",label:"智能工具",icon:"grid"},
+ {id:"smart-tools",file:"pages/smart-tools.html?v=20261109-mindmap-layout",label:"智能工具",icon:"grid"},
  {id:"frontier",file:"pages/frontier.html",label:"前沿工具",icon:"compass",children:["全球鹰","智研通"]},
  {id:"digital",file:"pages/digital.html",label:"数智系统",icon:"layers",children:["标准编制","专利编制"],files:{"标准编制":"pages/digital-standard.html","专利编制":"pages/digital-patent.html"}},
  {id:"datasets",file:"pages/datasets.html",label:"高质量数据集",icon:"database",subnav:false,autoChild:false,children:["船海产业数据集","船舶领域标准数据集","船舶行业质量数据集","船舶行业科技成果数据","船舶行业科技文献数据","船舶行业文化传播数据","船舶行业教育培训数据","船舶行业试验测试数据"]},
  {id:"platform",file:"pages/platform.html",label:"智能开发平台",icon:"code"},
  {id:"data-platform",file:"pages/data-platform.html",label:"数据平台",icon:"server",children:["数据标注平台","爬虫平台","数据中台"]},
- {id:"home-settings",file:"pages/home-settings.html?v=20261027-management",label:"自定义首页",icon:"panel",adminOnly:true}
+ {id:"home-settings",file:"pages/home-settings.html?v=20261109-diagram-tools",label:"自定义首页",icon:"panel",adminOnly:true}
 ];
 const knowledgeScopes = ["全部","部门知识库","行业知识库","个人知识库","企业知识库"];
 // Demonstration entries for the knowledge picker; no real documents are connected.

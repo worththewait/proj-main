@@ -131,6 +131,9 @@
 .kb-table .kb-col-date { width: 20%; }
 .kb-table .kb-col-status { width: 14%; }
 .kb-table .kb-col-actions { width: 92px; text-align: right; }
+.kb-file-edit { padding: 2px 0; border: 0; background: none; color: var(--ink); font: inherit; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.kb-file-edit:hover { color: var(--accent-hover); text-decoration: underline; text-underline-offset: 3px; }
+.kb-file-edit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .kb-doc-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
 .kb-doc-icon { display: grid; place-items: center; flex: 0 0 26px; width: 26px; height: 26px; border-radius: 6px; }
 .kb-doc-icon.is-yellow { background: #fff5df; color: #b57d0a; }

@@ -34,6 +34,7 @@
     check: '<path d="m4 12 5 5L20 6 M3 22h18"/>',
     slides: '<rect x="3" y="3" width="18" height="13" rx="1"/><path d="M12 16v5 M7 22l5-3 5 3 M7 8h10 M7 11h5"/>',
     branch: '<rect x="3" y="9" width="6" height="6" rx="1"/><path d="M9 12h4 M13 5v14 M13 5h4 M13 19h4"/><rect x="17" y="2" width="5" height="6" rx="1"/><rect x="17" y="16" width="5" height="6" rx="1"/>',
+    flowchart: '<rect x="8" y="2" width="8" height="4" rx="2"/><rect x="8" y="18" width="8" height="4" rx="1"/><path d="M12 6v2 M12 16v2 M12 8l4 4-4 4-4-4Z M16 12h3a2 2 0 0 1 2 2v4 m-2-2 2 2 2-2"/>',
     standard: '<path d="M5 2h14v20H5Z M8 7h8 M8 11h8 m0 5-3 3-2-2"/>',
     ship: '<path d="M3 14h18l-2.2 4.6a3 3 0 0 1-2.7 1.4H7.9a3 3 0 0 1-2.7-1.4Z M6.5 14V9.5h11V14 M10.5 9.5V4.5h3v5"/>',
     shield: '<path d="m12 3 7 3v5.5c0 4.3-3 7.3-7 8.5-4-1.2-7-4.2-7-8.5V6Z M9 12l2 2 4-4"/>',

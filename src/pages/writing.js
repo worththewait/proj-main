@@ -4,6 +4,7 @@
   const store = window.BaigeWritingStore;
   if (!store) return;
   const { escapeHtml: escape, icon } = window.BaigeUI;
+  const secretFiles = window.BaigeSecretFileList;
   const fileCache = window.BaigeLocalFiles;
   const root = document.querySelector("#writingApp");
   const chapterDialog = document.querySelector("#chapterDialog");
@@ -11,7 +12,6 @@
   const composeDialog = document.querySelector("#composeDialog");
   const toastEl = document.querySelector("#writingToast");
   const MATERIAL_FILTERS = { all: "全部文件", ready: "可选用", audit: "涉密核查" };
-  const AUDIT_ACTIONS = { detecting: "查看核查", hit: "提交审核", submitted: "查看审核", rejected: "查看原因" };
 
   let view = "templates";
   let materialFilter = "all";
@@ -26,6 +26,7 @@
   let chapterEdit = null;
   let toastTimer = null;
   let rightTab = "thought";
+  let previewRequest = 0;
 
   function toast(text) {
     if (!toastEl) return;
@@ -40,10 +41,7 @@
     if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
     return `${Math.max(1, Math.round(bytes / 1024))} KB`;
   }
-  function statusLabel(status) { return { passed: "已通过", hit: "涉密可疑", submitted: "审核中", rejected: "已驳回", detecting: "检测中" }[status] || status; }
   function parseLabel(status) { return { unparsed: "未解析", parsing: "解析中", parsed: "已解析", failed: "解析失败" }[status] || "未解析"; }
-  function parseHtml(status) { return `<span class="wr-tag parse-${escape(status || "unparsed")}">${parseLabel(status)}</span>`; }
-  function secretTagHtml(status) { return `<span class="wr-tag secret-${escape(status)}">${statusLabel(status)}</span>`; }
   const filePicker = document.createElement("input");
   filePicker.type = "file";
   filePicker.multiple = true;
@@ -68,10 +66,10 @@
   });
 
   async function downloadMaterial(item) {
-    if (item.status !== "passed") return;
+    if (!secretFiles.canView(item.status)) return;
     try {
       const blob = await fileCache?.read(`writing:${item.id}`);
-      if (store.upload(item.id)?.status !== "passed") return;
+      if (!secretFiles.canView(store.upload(item.id)?.status)) return;
       if (!blob) { toast("当前浏览器没有这份原文件，请重新上传后下载。"); return; }
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
@@ -81,6 +79,52 @@
       toast("已发起文件下载。");
     } catch {
       toast("无法读取原文件，请稍后重试。");
+    }
+  }
+
+  async function openMaterialPreview(item) {
+    if (!secretFiles.canView(item.status)) return;
+    const request = ++previewRequest;
+    const name = html(item.name);
+    secretDetailDialog.innerHTML = `<header class="wr-dialog-head"><h2 id="secretDetailTitle">查看文件</h2>
+        <button class="wr-dialog-close" type="button" data-wr-secret-close aria-label="关闭">×</button></header>
+      <div class="wr-dialog-body"><div class="wr-file-meta">
+        <div><span>文件名</span><strong>${name}</strong></div>
+        <div><span>上传时间</span><strong>${secretFiles.time(item.createdAt)}</strong></div>
+        <div><span>文件大小</span><strong>${fileSize(item.size)}</strong></div></div>
+        <p class="wr-material-preview-note" data-wr-preview-note role="status">正在读取原文件…</p>
+        <pre class="wr-material-preview-text" data-wr-preview-text hidden></pre>
+      </div><footer class="wr-dialog-foot">
+        <button class="wr-btn" type="button" data-wr-secret-close>关闭</button>
+        <button class="wr-btn is-primary" type="button" data-wr-file-action="download" data-wr-file-id="${html(item.id)}" hidden>下载原文件</button>
+      </footer>`;
+    secretDetailDialog.showModal();
+    const note = secretDetailDialog.querySelector("[data-wr-preview-note]");
+    const body = secretDetailDialog.querySelector("[data-wr-preview-text]");
+    const download = secretDetailDialog.querySelector('[data-wr-file-action="download"]');
+    const stillOpen = () => request === previewRequest && secretDetailDialog.open && view === "materials";
+    try {
+      const blob = await fileCache?.read(`writing:${item.id}`);
+      if (!stillOpen()) return;
+      if (!secretFiles.canView(store.upload(item.id)?.status)) { secretDetailDialog.close(); return; }
+      if (!blob) {
+        note.textContent = "当前浏览器没有保存这份原文件。上传本地文件后可查看可提取的正文。";
+        return;
+      }
+      download.hidden = false;
+      if (!/\.(pdf|docx?)$/i.test(item.name)) {
+        note.textContent = "此格式支持下载原文件，请在本地打开查看。";
+        return;
+      }
+      const file = blob instanceof File ? blob : new File([blob], item.name, { type: blob.type });
+      const text = await window.BaigeProofreadFile.read(file);
+      if (!stillOpen()) return;
+      if (!secretFiles.canView(store.upload(item.id)?.status)) { secretDetailDialog.close(); return; }
+      note.textContent = "提取的正文";
+      body.textContent = text;
+      body.hidden = false;
+    } catch {
+      if (stillOpen()) note.textContent = "当前无法提取正文，可下载原文件后查看。";
     }
   }
 
@@ -244,11 +288,11 @@
 
   function renderMaterialTable() {
     const uploads = store.uploads().reverse();
-    const ready = uploads.filter(item => item.status === "passed").length;
+    const ready = uploads.filter(item => secretFiles.canView(item.status)).length;
     const counts = { all: uploads.length, ready, audit: uploads.length - ready };
     const query = materialQuery;
     const filtered = uploads.filter(item => {
-      const category = item.status === "passed" ? "ready" : "audit";
+      const category = secretFiles.canView(item.status) ? "ready" : "audit";
       return (materialFilter === "all" || materialFilter === category) && item.name.toLowerCase().includes(query);
     });
     for (const button of root.querySelectorAll("[data-wr-file-filter]")) {
@@ -268,18 +312,17 @@
   }
   function uploadTableHtml(uploads) {
     const rows = uploads.map((item) => {
-      const passed = item.status === "passed";
       const id = html(item.id);
       const name = html(item.name);
-      const eye = `<button class="wr-eye" type="button" data-wr-secret="${html(item.id)}" title="查看涉密检测详情" aria-label="查看${html(item.name)}的涉密检测详情">${icon("eye")}</button>`;
-      const next = passed
-        ? `<button type="button" data-wr-file-action="preview" data-wr-file-id="${id}" title="预览文档" aria-label="预览 ${name}">${icon("file")}</button>`
-        : `<button class="wr-file-action-label" type="button" data-wr-secret="${id}">${AUDIT_ACTIONS[item.status] || "查看核查"}</button>`;
-      const download = passed ? `<button type="button" data-wr-file-action="download" data-wr-file-id="${id}" title="下载原文件" aria-label="下载${name}">${icon("download")}</button>` : "";
-      const actions = `<div class="wr-file-actions">${next}${download}<button class="is-danger" type="button" data-wr-file-action="delete" data-wr-file-id="${id}" title="删除文件" aria-label="删除${name}">${icon("trash")}</button></div>`;
-      return `<tr class="${passed ? "" : "is-locked"}"><td><div class="wr-file-name"><span title="${name}">${name}</span></div></td><td>${html(item.createdAt || "-")}</td><td>${parseHtml(item.parseStatus)}</td><td><div class="wr-secret-cell">${secretTagHtml(item.status)}${eye}</div></td><td>${html(item.updatedAt || "-")}</td><td>${actions}</td></tr>`;
+      const eye = `<button class="secret-file-icon" type="button" data-wr-secret="${id}" title="查看涉密详情" aria-label="查看 ${name} 的涉密详情">${icon("eye")}</button>`;
+      const available = secretFiles.canView(item.status) ? `
+        <button class="secret-file-icon" type="button" data-wr-file-action="preview" data-wr-file-id="${id}" title="查看文件" aria-label="查看 ${name}">${icon("file")}</button>
+        <button class="secret-file-icon" type="button" data-wr-file-action="download" data-wr-file-id="${id}" title="下载文件" aria-label="下载 ${name}">${icon("download")}</button>` : "";
+      return `<tr><td><div class="wr-file-name"><span title="${name}">${name}</span></div></td>
+        <td>${secretFiles.time(item.createdAt)}</td><td>${secretFiles.status(item.status, eye)}</td>
+        <td><div class="secret-file-actions">${available}<button class="secret-file-icon is-danger" type="button" data-wr-file-action="delete" data-wr-file-id="${id}" title="删除文件" aria-label="删除 ${name}">${icon("trash")}</button></div></td></tr>`;
     }).join("");
-    return `<div class="wr-file-table-wrap" tabindex="0" role="region" aria-label="素材文件列表"><table class="wr-file-table is-material"><thead><tr><th>文件名</th><th>创建时间</th><th>解析状态</th><th>涉密审查状态</th><th>最近更新</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    return `<div class="secret-file-table-wrap" tabindex="0" role="region" aria-label="素材文件列表"><table class="secret-file-table">${secretFiles.head}<tbody>${rows}</tbody></table></div>`;
   }
   function materialPickerHtml(attribute, selected) {
     const files = store.selectableUploads();
@@ -295,20 +338,21 @@
     if (item.status === "hit") rows.push(`<div class="wr-tl-item"><div class="wr-tl-dot">⏳</div><div><strong>涉密可疑，等待处理</strong><small>当前</small><p>可选择取消上传，或继续上传并提交管理员审核</p></div></div>`);
     if (item.status === "submitted") rows.push(`<div class="wr-tl-item"><div class="wr-tl-dot">⏳</div><div><strong>已提交管理员审核</strong><small>${html(item.updatedAt || "-")}</small><p>审核通过后方可作为写作参考</p></div></div>`);
     if (item.status === "rejected") rows.push(`<div class="wr-tl-item"><div class="wr-tl-dot is-danger">❌</div><div><strong>管理员审核驳回</strong><small>${html(item.updatedAt || "-")}</small><p>文档未入库，不可作为写作参考</p></div></div>`);
-    if (item.status === "passed") rows.push(`<div class="wr-tl-item"><div class="wr-tl-dot is-success">✓</div><div><strong>涉密检测通过</strong><small>${html(item.updatedAt || "-")}</small><p>文档可作为写作参考</p></div></div>`);
+    if (secretFiles.canView(item.status)) rows.push(`<div class="wr-tl-item"><div class="wr-tl-dot is-success">${icon("check")}</div><div><strong>${secretFiles.label(item.status)}</strong><small>${html(item.updatedAt || "-")}</small><p>文档可作为写作参考</p></div></div>`);
     return `<div class="wr-timeline">${rows.join("")}</div>`;
   }
   function openSecretDetail(id) {
     const item = store.upload(id);
     if (!item) return;
+    previewRequest++;
     const danger = ["hit", "submitted", "rejected"].includes(item.status);
     const kws = (item.keywords || []).map((keyword) => `<span class="wr-kw">${html(keyword)}</span>`).join("");
     const footer = item.status === "hit"
       ? `<button class="wr-btn" type="button" data-wr-secret-cancel="${html(item.id)}">取消上传</button><button class="wr-btn is-primary" type="button" data-wr-secret-submit="${html(item.id)}">继续上传并提交审批</button>`
-      : item.status === "rejected"
+      : ["rejected", "failed"].includes(item.status)
         ? `<button class="wr-btn" type="button" data-wr-secret-close>关闭</button><button class="wr-btn is-primary" type="button" data-wr-secret-reupload>重新上传</button>`
         : '<button class="wr-btn" type="button" data-wr-secret-close>关闭</button>';
-    secretDetailDialog.innerHTML = `<header class="wr-dialog-head"><h2 id="secretDetailTitle">涉密检测详情 — ${statusLabel(item.status)}</h2><button class="wr-dialog-close" type="button" data-wr-secret-close>×</button></header><div class="wr-dialog-body">${danger ? `<div class="wr-secret-alert"><span>⚠</span><div><strong>检测到涉密内容</strong><p>${html(item.message || "系统检测到该文件包含敏感关键词。")}</p>${kws ? `<div class="wr-kw-row"><b>命中关键词</b>${kws}</div>` : ""}</div></div>` : ""}<div class="wr-file-meta"><div><span>文件名</span><strong>${html(item.name)}</strong></div><div><span>创建时间</span><strong>${html(item.createdAt || "-")}</strong></div><div><span>解析状态</span><strong>${parseLabel(item.parseStatus)}</strong></div><div><span>涉密审查状态</span><strong>${statusLabel(item.status)}</strong></div><div><span>最近更新</span><strong>${html(item.updatedAt || "-")}</strong></div></div><div class="wr-section-title" style="margin-top:20px"><span>流转记录</span></div>${secretTimeline(item)}</div><footer class="wr-dialog-foot">${footer}</footer>`;
+    secretDetailDialog.innerHTML = `<header class="wr-dialog-head"><h2 id="secretDetailTitle">涉密检测详情 — ${secretFiles.label(item.status)}</h2><button class="wr-dialog-close" type="button" data-wr-secret-close aria-label="关闭">×</button></header><div class="wr-dialog-body">${danger ? `<div class="wr-secret-alert"><span>${icon("shield")}</span><div><strong>发现疑似涉密内容</strong><p>${html(item.message || "系统检测到该文件包含敏感关键词。")}</p>${kws ? `<div class="wr-kw-row"><b>命中关键词</b>${kws}</div>` : ""}</div></div>` : ""}<div class="wr-file-meta"><div><span>文件名</span><strong>${html(item.name)}</strong></div><div><span>上传时间</span><strong>${secretFiles.time(item.createdAt)}</strong></div><div><span>文档状态</span><strong>${secretFiles.label(item.status)}</strong></div><div><span>解析状态</span><strong>${parseLabel(item.parseStatus)}</strong></div><div><span>最近更新</span><strong>${html(item.updatedAt || "-")}</strong></div></div><div class="wr-section-title" style="margin-top:20px"><span>流转记录</span></div>${secretTimeline(item)}</div><footer class="wr-dialog-foot">${footer}</footer>`;
     secretDetailDialog.showModal();
   }
   function openComposeDialog() {
@@ -592,7 +636,7 @@
         toast(`已删除《${item.name}》`);
         return;
       }
-      if (action.dataset.wrFileAction === "preview" && item.status === "passed") { toast("文档预览待接入文件服务"); return; }
+      if (action.dataset.wrFileAction === "preview") { openMaterialPreview(item); return; }
       if (action.dataset.wrFileAction === "download") { downloadMaterial(item); return; }
     }
     if (event.target.closest("[data-wr-secret-close]")) { secretDetailDialog.close(); return; }

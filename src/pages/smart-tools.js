@@ -89,7 +89,14 @@
   function renderToolPage(tool, root) {
     if (tool.name === "思维导图生成" && window.BaigeMindmapTool) {
       root.dataset.toolGroup = tool.group;
+      root.dataset.managesDirty = "true";
       window.BaigeMindmapTool.render(root, dirty => toolWorkspace.setDirty(tool.name, dirty));
+      return;
+    }
+    if (tool.name === "流程图生成" && window.BaigeFlowchartTool) {
+      root.dataset.toolGroup = tool.group;
+      root.dataset.managesDirty = "true";
+      window.BaigeFlowchartTool.render(root, dirty => toolWorkspace.setDirty(tool.name, dirty));
       return;
     }
     if (tool.name === "纠错校对" && window.BaigeProofreadTool) {
@@ -145,6 +152,7 @@
     toolWorkspace.closePicker();
     window.BaigeProofreadTool?.deactivate();
     window.BaigeMindmapTool?.deactivate();
+    window.BaigeFlowchartTool?.deactivate();
   });
   featureConfig?.subscribe(refreshConfiguration);
   bridge.onActivate(({ child, focusSearch }) => {
@@ -157,6 +165,8 @@
     else window.BaigeProofreadTool?.deactivate();
     if (child === "思维导图生成") window.BaigeMindmapTool?.resume();
     else window.BaigeMindmapTool?.deactivate();
+    if (child === "流程图生成") window.BaigeFlowchartTool?.resume();
+    else window.BaigeFlowchartTool?.deactivate();
     if (focusSearch) toolWorkspace.catalog.querySelector("#toolSearch").focus();
   });
 })();

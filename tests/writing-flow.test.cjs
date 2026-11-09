@@ -36,6 +36,7 @@ function setupMaterialList() {
   Object.defineProperty(toast, "classList", { value: { add() {}, remove() {} } });
   context.window.BaigeUI = { escapeHtml: String, icon: () => "" };
   Object.assign(context, { document, setTimeout() {}, clearTimeout() {} });
+  vm.runInContext(read("src/secret-file-list.js"), context);
   vm.runInContext(read("src/pages/writing.js"), context);
   const get = (selector) => document.querySelector(selector);
   get("[data-wr-manage-materials]").emit("click");
@@ -135,6 +136,29 @@ test("successful material uploads clear filters so the new file is visible", () 
   assert.equal(filter("all").attributes["aria-pressed"], "true");
   assert.equal(search.value, "");
   assert.ok(names().includes("新上传素材.pdf"));
+});
+
+test("materials share the secrecy list headers and show preview and download only after clearance", () => {
+  const { store, get } = setupMaterialList();
+  const headers = get(".secret-file-table").querySelectorAll("th").map(th => th.textContent.trim());
+  assert.deepEqual(headers, ["文件名", "上传时间", "文档状态", "操作"]);
+  const rowFor = id => get(`[data-wr-secret="${id}"]`).closest("tr");
+  const action = (row, kind) => row.querySelector(`[data-wr-file-action="${kind}"]`);
+  const flagged = store.uploads().find(item => item.status === "hit");
+  const row = rowFor(flagged.id);
+  assert.equal(row.querySelector(".secret-file-badge").textContent, "涉密可疑");
+  assert.ok(row.querySelector(".secret-file-state [data-wr-secret]"));
+  assert.ok(action(row, "delete"));
+  assert.equal(action(row, "preview"), null);
+  assert.equal(action(row, "download"), null);
+  store.submitUpload(flagged.id);
+  assert.equal(rowFor(flagged.id).querySelector(".secret-file-badge").textContent, "审核中");
+  store.reviewUpload(flagged.id, "passed");
+  const approved = rowFor(flagged.id);
+  assert.equal(approved.querySelector(".secret-file-badge").textContent, "审核通过");
+  assert.ok(action(approved, "preview"));
+  assert.ok(action(approved, "download"));
+  assert.ok(store.selectableUploads().some(item => item.id === flagged.id));
 });
 
 test("writing page exposes the complete template-to-upload flow", () => {

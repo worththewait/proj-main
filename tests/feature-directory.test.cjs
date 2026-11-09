@@ -112,10 +112,10 @@ test('category rename and deletion refresh cached directory and recover selected
   assert.match(app.get('featureGroups').textContent,/新专题/);
   assert.equal(app.items().length,1);
   managed.home.pop();managed.entries[0].homeCategory='tools-platforms';managed.change();
-  assert.equal(app.items().length,25,'a deleted selected category falls back to all');
-  app.group('tools-platforms');assert.equal(app.items().length,18);
+  assert.equal(app.items().length,26,'a deleted selected category falls back to all');
+  app.group('tools-platforms');assert.equal(app.items().length,19);
   managed.entries[0].homeCategory='knowledge-research';app.activate();
-  assert.equal(app.items().length,17,'activation rereads metadata for an already mounted page');
+  assert.equal(app.items().length,18,'activation rereads metadata for an already mounted page');
 });
 
 test('managed metadata preserves dataset resource keywords and cross-scope knowledge search',()=>{
@@ -128,20 +128,20 @@ test('managed metadata preserves dataset resource keywords and cross-scope knowl
 
 // A collapsed parent, duplicate workspace entry, or expanded dataset resources
 // would otherwise make specific functions inaccessible or repeat them.
-test('directory exposes exactly 25 unique independent destinations with real child routes', () => {
+test('directory exposes exactly 26 unique independent destinations with real child routes', () => {
   const app = setup();
-  assert.equal(app.items().length, 25);
+  assert.equal(app.items().length, 26);
   const destinations = app.items().map(item => `${item.dataset.homeRoute}:${item.dataset.homeChild}`);
-  assert.equal(new Set(destinations).size, 25);
-  for (const destination of ['qa:对话', 'qa:智能问数', 'library:', 'frontier:全球鹰', 'frontier:智研通', 'digital:标准编制', 'digital:专利编制', 'data-platform:数据标注平台', 'data-platform:爬虫平台', 'data-platform:数据中台', 'datasets:']) assert.ok(destinations.includes(destination), destination);
+  assert.equal(new Set(destinations).size, 26);
+  for (const destination of ['qa:对话', 'qa:智能问数', 'library:', 'frontier:全球鹰', 'frontier:智研通', 'digital:标准编制', 'digital:专利编制', 'data-platform:数据标注平台', 'data-platform:爬虫平台', 'data-platform:数据中台', 'datasets:', 'smart-tools:流程图生成']) assert.ok(destinations.includes(destination), destination);
   for (const duplicate of ['qa:', 'frontier:', 'digital:', 'smart-tools:', 'smart-tools:标准编制', 'smart-tools:专利编制', 'data-platform:', 'datasets:船海产业数据集']) assert.ok(!destinations.includes(duplicate), duplicate);
   app.group('knowledge-research'); assert.equal(app.items().length, 7);
-  app.group('tools-platforms'); assert.equal(app.items().length, 18);
+  app.group('tools-platforms'); assert.equal(app.items().length, 19);
 });
 
 test('available filter removes only the two denied destinations including when querying their parent', () => {
   const app = setup(); app.available(true);
-  assert.equal(app.items().length, 23);
+  assert.equal(app.items().length, 24);
   assert.ok(app.route('library'));
   assert.equal(app.route('library', '文件管理'), undefined);
   assert.equal(app.route('library', '权限管理'), undefined);
@@ -162,7 +162,8 @@ test('search matches concrete names, descriptions, parent modules and tool categ
   app.query('权限管理'); assert.equal(app.items().length, 0);
   app.query('数据平台'); assert.equal(app.items().length, 3);
   app.query('文档处理'); assert.equal(app.items().length, 4);
-  app.query('智能工具'); assert.equal(app.items().length, 9);
+  app.query('智能工具'); assert.equal(app.items().length, 10);
+  app.query('流程图'); assert.deepEqual(app.items().map(item => item.dataset.homeChild), ['流程图生成']);
   app.query(' ocr '); assert.deepEqual(app.items().map(item => item.dataset.homeChild), ['OCR识别']);
   assert.match(app.get('featureSearchSummary').textContent, /1/);
 });
@@ -174,7 +175,7 @@ test('search temporarily spans categories and clearing or Escape restores the pr
   assert.equal(app.get('featureGroups').querySelector('[data-feature-group="knowledge-research"]').attributes['aria-pressed'], 'true');
   app.query('翻译'); app.get('featureSearch').emit('keydown', {key: 'Escape'}); assert.equal(app.items().length, 7);
   assert.equal(app.document.activeElement, app.get('featureSearch'));
-  app.query('翻译'); app.group('tools-platforms'); assert.equal(app.items().length, 18);
+  app.query('翻译'); app.group('tools-platforms'); assert.equal(app.items().length, 19);
   assert.equal(app.get('featureSearch').value, '');
 });
 
@@ -182,7 +183,7 @@ test('empty state reset clears query and availability and returns every destinat
   const app = setup(); app.group('knowledge-research'); app.available(true); app.query('不存在的功能');
   assert.equal(app.items().length, 0);
   app.get('featureResults').querySelector('[data-reset-directory]').emit('click');
-  assert.equal(app.items().length, 25);
+  assert.equal(app.items().length, 26);
   assert.equal(app.get('availableOnly').checked, false);
   assert.equal(app.get('featureSearch').value, '');
   assert.equal(app.document.activeElement, app.get('featureSearch'));
@@ -190,8 +191,8 @@ test('empty state reset clears query and availability and returns every destinat
 
 test('whole-item click navigates once to its exact destination and common shortcuts retain navigation', () => {
   const app = setup();
-  app.route('data-platform', '爬虫平台').querySelector('strong').emit('click');
-  assert.equal(JSON.stringify(app.navigations), JSON.stringify([['data-platform', '爬虫平台']]));
+  app.route('smart-tools', '流程图生成').querySelector('strong').emit('click');
+  assert.equal(JSON.stringify(app.navigations), JSON.stringify([['smart-tools', '流程图生成']]));
   app.get('commonFunctions').innerHTML = '<button class="home-common-card" data-home-route="smart-tools" data-home-child="OCR识别"><span>OCR识别</span></button>';
   app.get('commonFunctions').querySelector('span').emit('click');
   assert.equal(JSON.stringify(app.navigations[1]), JSON.stringify(['smart-tools', 'OCR识别']));
@@ -218,5 +219,5 @@ test('denied child opens application, updates only that item to pending, and res
   assert.match(updated.textContent, /待审批/); assert.match(updated.textContent, /查看申请/);
   assert.match(app.route('frontier', '智研通').textContent, /需申请/);
   app.get('closeHomeAccess').emit('click'); assert.equal(app.document.activeElement, updated);
-  app.available(true); assert.equal(app.items().length, 23);
+  app.available(true); assert.equal(app.items().length, 24);
 });

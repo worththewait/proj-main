@@ -18,7 +18,7 @@ function setup(){
  const document={querySelector:s=>get(s.slice(1)),addEventListener(){},get activeElement(){return active;}};
  const window={BaigePage:{onActivate(){}},addEventListener(){}};
  const c=vm.createContext({window,document,setTimeout:()=>1,clearTimeout(){},location:{hash:''},history:{replaceState(){}},console});
- for(const f of ['src/data.js','src/ui.js','src/pages/knowledge.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',f),'utf8'),c);
+ for(const f of ['src/data.js','src/ui.js','src/secret-file-list.js','src/pages/knowledge.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..',f),'utf8'),c);
  const action=(container,key,value)=>{const el=new Element();el.dataset[key]=value;get(container).emit('click',el);};
  const search=q=>{get('kbSearchInput').value=q;get('kbSearchForm').emit('submit');};
  return {get,window,action,search,tab:key=>action('kbTabs','kbTab',key)};
@@ -40,7 +40,17 @@ test('file type control is personal-only and bases retain consistent clickable d
  const a=setup();assert.equal(a.get('kbTypeFilterField').hidden,true);
  assert.equal((a.get('kbSections').innerHTML.match(/data-kb-open=/g)||[]).length,4);
  a.tab('personal');assert.equal(a.get('kbTypeFilterField').hidden,false);
- assert.match(a.get('kbSections').innerHTML,/未标记/);assert.match(a.get('kbSections').innerHTML,/更多/);
+ assert.match(a.get('kbSections').innerHTML,/上传时间/);assert.match(a.get('kbSections').innerHTML,/涉密可疑/);
+});
+test('personal documents open secrecy details while preview stays blocked until approved',()=>{
+ const a=setup();a.tab('personal');
+ a.action('kbSections','kbPreview','personal-sensitive');
+ assert.equal(a.get('kbDocumentDialog').open,false);
+ a.action('kbSections','kbAudit','personal-sensitive');
+ assert.equal(a.get('kbDocumentDialog').open,true);
+ assert.equal(a.get('kbDocumentStatus').textContent,'涉密可疑');
+ a.action('kbSections','kbPreview','personal-writing');
+ assert.equal(a.get('kbDocumentTitle').textContent,'查看文件');
 });
 test('unconnected question entry truthfully describes the pending independent page',()=>{
  const a=setup();a.action('kbSections','kbOpen','industry-doc');

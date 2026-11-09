@@ -662,8 +662,23 @@
 .pr-material-table .wr-file-filters button { min-height: 34px; padding: 0 8px; border: 0; border-radius: 6px; }
 .pr-material-table .wr-file-filters button[aria-pressed="true"] { background: var(--accent-soft); }
 .pr-material-table .wr-file-filters button[aria-pressed="true"] [data-file-count] { background: transparent; }
-.pr-material-table .wr-file-table-wrap, .pr-material-table .wr-file-empty { border: 1px solid var(--line); border-radius: 10px; }
-.pr-material-table .wr-file-table th { padding-block: 9px; }
+.pr-material-table .secret-file-table-wrap, .pr-material-table .wr-file-empty { border: 1px solid var(--line); border-radius: 10px; }
+.pr-file-entry {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--accent-hover);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pr-file-entry span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pr-file-entry:hover { text-decoration: underline; text-underline-offset: 2px; }
+.pr-file-preview { width: 560px; }
+.pr-file-preview h2 { overflow-wrap: anywhere; }
+.pr-file-preview pre { max-height: 56vh; overflow: auto; margin: 0; color: var(--ink); font: inherit; line-height: 1.7; white-space: pre-wrap; overflow-wrap: anywhere; }
 .pr-material-table .wr-file-actions .wr-file-action-label.is-start { background: var(--accent-soft); }
 .pr-material-table .wr-file-actions .wr-file-action-label.is-start:hover { background: var(--accent); color: var(--surface); }
 .pr-intake .pr-inline-status { margin: 0; }

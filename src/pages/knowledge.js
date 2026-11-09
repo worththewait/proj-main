@@ -2,6 +2,7 @@
   "use strict";
 
   const { icon, escapeHtml } = window.BaigeUI;
+  const secretFiles = window.BaigeSecretFileList;
   const root = document.querySelector("#kbSections");
   const empty = document.querySelector("#kbEmpty");
   const emptyTitle = document.querySelector("#kbEmptyTitle");
@@ -16,8 +17,8 @@
 
   const {industryBases,enterpriseGroups,departmentGroups} = window.BaigeData.knowledgeDirectory;
   let personalDocs = [
-    { id: "personal-writing", name: "专业写作专用", type: "文档", tone: "yellow", created: "2026-09-24 18:03:04", updated: "2026-09-24 18:03:04", status: "" },
-    { id: "personal-sensitive", name: "敏感词导入模板", type: "文档", tone: "gray", created: "2026-10-15 10:05:30", updated: "2026-10-15 10:05:44", status: "涉密可疑" },
+    { id: "personal-writing", name: "专业写作专用", type: "文档", created: "2026-09-24 18:03:04", status: "passed" },
+    { id: "personal-sensitive", name: "敏感词导入模板", type: "文档", created: "2026-10-15 10:05:30", status: "hit" },
   ];
 
   // One scope visible at a time; enterprise and department keep their org grouping.
@@ -43,19 +44,12 @@
   };
 
   const plusIcon = '<svg class="kb-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16"/></svg>';
-  const editIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16-1 5 5-1L20 8l-4-4Z"/><path d="m14 6 4 4"/></svg>';
-  const trashIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 14h10l1-14M9 7V4h6v3"/></svg>';
-  const eyeIcon = '<svg class="kb-inline-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z"/><circle cx="12" cy="12" r="2.5"/></svg>';
   const chevronIcon = '<svg class="kb-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>';
 
   let toastTimer = null;
   let actionDocumentId = null;
   function restoreActionFocus() {
-    const more = actionDocumentId && root.querySelector(`[data-kb-more="${actionDocumentId}"]`);
-    (more?.querySelector("summary") || searchInput).focus({preventScroll:true});
-  }
-  function closeMenus(except) {
-    root.querySelectorAll("details.kb-more").forEach(menu=>{if(menu!==except)menu.removeAttribute("open");});
+    (root.querySelector(`[data-kb-edit="${actionDocumentId}"]`) || searchInput).focus({preventScroll:true});
   }
   function toast(message) {
     const node = document.querySelector("#kbToast");
@@ -66,7 +60,6 @@
   }
 
   const text = (value) => escapeHtml(String(value ?? ""));
-  const dateOnly = (value) => String(value ?? "").slice(0, 10);
   const groupSize = (groups) => groups.reduce((total, group) => total + group.bases.length, 0);
 
   function matchesBase(base, organization = "") {
@@ -101,7 +94,6 @@
       <span class="kb-resource-footer"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 3"/></svg><time datetime="${text(base.time.replace(" ","T"))}">${text(base.time)}</time></span></button>`;
   }
   function industryGrid(rows) {return `<div class="kb-index-list">${rows.map(base=>baseRow(base,"行业")).join("")}</div>`;}
-  function docMenu(doc) {return `<details class="kb-more" data-kb-more="${text(doc.id)}"><summary aria-label="更多${text(doc.name)}操作">更多</summary><div class="kb-more-menu"><button type="button" data-kb-edit="${text(doc.id)}" aria-label="编辑${text(doc.name)}">${editIcon}编辑</button><button type="button" data-kb-delete="${text(doc.id)}" aria-label="删除${text(doc.name)}">${trashIcon}删除</button></div></details>`;}
   function groupRows(groups, kind) {
     const scopeLabel = kind === "enterprise" ? "企业" : "部门";
     return groups.map((group) => {
@@ -135,43 +127,41 @@
   }
 
   function resultList(rows) {
-    return `<div class="kb-results">${rows.map((row) => {
-      if (row.kind === "doc") {
-        const doc = row.doc;
-        return `<div class="kb-result">
-          <span class="kb-doc-icon is-${text(doc.tone)}">${icon("file")}</span>
-          <span class="kb-result-main">
-            <strong>${text(doc.name)}</strong>
-            <small>${text(doc.type)} · 更新于 ${text(doc.updated)}</small>
-          </span>
-          <span class="kb-result-scope">${text(row.scope)}</span>
-          <span class="kb-result-actions">${docMenu(doc)}</span>
-        </div>`;
-      }
-      return baseRow(row.base,row.scope,true);
-    }).join("")}</div>`;
+    const bases = rows.filter(row => row.kind === "base");
+    const documents = rows.filter(row => row.kind === "doc").map(row => row.doc);
+    return `<div class="kb-results">${bases.map(row => baseRow(row.base, row.scope, true)).join("")}</div>${documents.length ? personalPanel(documents) : ""}`;
   }
 
   // ---- personal table ----------------------------------------------------
+
+  function docAction(doc, action, glyph, label, disabled = false) {
+    return `<button type="button" class="secret-file-icon${action === "delete" ? " is-danger" : ""}" data-kb-${action}="${text(doc.id)}" aria-label="${label} ${text(doc.name)}" title="${label}"${disabled ? " disabled" : ""}>${icon(glyph)}</button>`;
+  }
 
   function personalPanel(rows) {
     const pages = Math.max(1, Math.ceil(rows.length / state.pageSize));
     state.page = Math.min(Math.max(1, state.page), pages);
     const start = (state.page - 1) * state.pageSize;
     const visible = rows.slice(start, start + state.pageSize);
-    const body = visible.length ? visible.map((doc) => `<tr>
-      <td><div class="kb-doc-title"><span class="kb-doc-icon is-${text(doc.tone)}">${icon("file")}</span><span class="kb-doc-copy"><span class="kb-doc-name" title="${text(doc.name)}">${text(doc.name)}</span><small>${text(doc.type)}</small></span></div></td>
-      <td title="${text(doc.created)}">${text(dateOnly(doc.created))}</td>
-      <td title="${text(doc.updated)}">${text(dateOnly(doc.updated))}</td>
-      <td>${doc.status ? `<span class="kb-status">${text(doc.status)}${eyeIcon}</span>` : `<span class="kb-state-empty">未标记</span>`}</td>
-      <td><div class="kb-actions">${docMenu(doc)}</div></td>
-    </tr>`).join("") : '<tr><td class="kb-empty-cell" colspan="5">没有匹配的知识文档</td></tr>';
+    const body = visible.length ? visible.map((doc) => {
+      const allowed = secretFiles.canView(doc.status);
+      return `<tr>
+        <td><button type="button" class="kb-file-edit" data-kb-edit="${text(doc.id)}" title="编辑文件信息">${text(doc.name)}</button></td>
+        <td>${secretFiles.time(doc.created)}</td>
+        <td>${secretFiles.status(doc.status, docAction(doc, "audit", "eye", "查看涉密详情"))}</td>
+        <td><div class="secret-file-actions">
+          ${docAction(doc, "preview", "file", "查看文件", !allowed)}
+          ${docAction(doc, "download", "download", allowed ? "原文件未接入，暂不可下载" : "通过涉密审查后可下载", true)}
+          ${docAction(doc, "delete", "trash", "删除文件")}
+        </div></td>
+      </tr>`;
+    }).join("") : '<tr><td colspan="4">没有匹配的知识文档</td></tr>';
     let pageButtons = `<button class="kb-page-button" type="button" data-kb-page="${state.page - 1}" ${state.page === 1 ? "disabled" : ""} aria-label="上一页">‹</button>`;
     for (let page = 1; page <= pages; page += 1) pageButtons += `<button class="kb-page-button${page === state.page ? " is-current" : ""}" type="button" data-kb-page="${page}" ${page === state.page ? 'aria-current="page"' : ""}>${page}</button>`;
     pageButtons += `<button class="kb-page-button" type="button" data-kb-page="${state.page + 1}" ${state.page === pages ? "disabled" : ""} aria-label="下一页">›</button>`;
     return `<div class="kb-personal-panel">
-      <div class="kb-table-wrap"><table class="kb-table">
-        <thead><tr><th class="kb-col-name" scope="col">文档名称</th><th class="kb-col-date" scope="col">创建时间</th><th class="kb-col-date" scope="col">最近更新</th><th class="kb-col-status" scope="col">文档状态</th><th class="kb-col-actions" scope="col">操作</th></tr></thead>
+      <div class="secret-file-table-wrap"><table class="secret-file-table">
+        ${secretFiles.head}
         <tbody>${body}</tbody>
       </table></div>
       <footer class="kb-pager"><span>${rows.length} 条</span><div class="kb-pages">${pageButtons}</div><select data-kb-page-size aria-label="每页条数"><option value="10"${state.pageSize === 10 ? " selected" : ""}>10 条/页</option><option value="20"${state.pageSize === 20 ? " selected" : ""}>20 条/页</option><option value="50"${state.pageSize === 50 ? " selected" : ""}>50 条/页</option></select></footer>
@@ -305,7 +295,7 @@
   function openEdit(id) {
     const doc = personalDocs.find((item) => item.id === id);
     if (!doc) return;
-    state.editId = id;actionDocumentId=id;closeMenus();
+    state.editId = id;actionDocumentId=id;
     document.querySelector("#kbEditName").value = doc.name;
     document.querySelector("#kbEditType").value = doc.type;
     document.querySelector("#kbEditFeedback").textContent = "";
@@ -316,10 +306,23 @@
   function openDelete(id) {
     const doc = personalDocs.find((item) => item.id === id);
     if (!doc) return;
-    state.deleteId = id;actionDocumentId=id;closeMenus();
+    state.deleteId = id;actionDocumentId=id;
     document.querySelector("#kbDeleteName").textContent = `「${doc.name}」`;
     document.querySelector("#kbDeleteDialog").showModal();
     document.querySelector("#kbDeleteCancel").focus({ preventScroll: true });
+  }
+
+  function openDocumentDetail(id, audit) {
+    const doc = personalDocs.find(item => item.id === id);
+    if (!doc || (!audit && !secretFiles.canView(doc.status))) return;
+    actionDocumentId = id;
+    document.querySelector("#kbDocumentTitle").textContent = audit ? "涉密审查详情" : "查看文件";
+    document.querySelector("#kbDocumentName").textContent = doc.name;
+    document.querySelector("#kbDocumentStatus").textContent = secretFiles.label(doc.status);
+    document.querySelector("#kbDocumentCopy").textContent = audit
+      ? (secretFiles.canView(doc.status) ? "该文档已通过涉密审查。" : "此示例文档标记为涉密可疑，通过审查后才能查看正文。")
+      : "文档正文待接入。";
+    document.querySelector("#kbDocumentDialog").showModal();
   }
 
   // ---- events ------------------------------------------------------------
@@ -384,6 +387,10 @@
       if (event.detail === 0) root.querySelector(`[data-kb-collapse="${id}"]`)?.focus({ preventScroll: true });
       return;
     }
+    const audit = event.target.closest("[data-kb-audit]");
+    if (audit) { openDocumentDetail(audit.dataset.kbAudit, true); return; }
+    const preview = event.target.closest("[data-kb-preview]");
+    if (preview) { openDocumentDetail(preview.dataset.kbPreview, false); return; }
     const edit = event.target.closest("[data-kb-edit]");
     if (edit) { openEdit(edit.dataset.kbEdit); return; }
     const remove = event.target.closest("[data-kb-delete]");
@@ -432,12 +439,10 @@
     toast("知识文档已删除");
   });
 
-  document.addEventListener("click",event=>closeMenus(event.target.closest("details.kb-more")));
-  document.addEventListener("keydown",event=>{
-    if(event.key!=="Escape")return;
-    for(const menu of root.querySelectorAll("details.kb-more[open]")){menu.removeAttribute("open");menu.querySelector("summary")?.focus();}
-  });
-  for(const id of ["kbEditDialog","kbDeleteDialog"])document.querySelector(`#${id}`).addEventListener("close",restoreActionFocus);
+  document.querySelector("#kbDocumentClose").addEventListener("click", () => document.querySelector("#kbDocumentDialog").close());
+  for (const id of ["kbEditDialog", "kbDeleteDialog", "kbDocumentDialog"]) {
+    document.querySelector(`#${id}`).addEventListener("close", restoreActionFocus);
+  }
 
   const initialTab = decodeURIComponent(location.hash.slice(1));
   if (SCOPES.some((scope) => scope.key === initialTab)) state.tab = initialTab;

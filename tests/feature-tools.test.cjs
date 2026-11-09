@@ -6,13 +6,13 @@ const path=require('node:path');
 const createDOM=require('./helpers/feature-dom.cjs');
 const project=path.join(__dirname,'..');
 
-function setup(realModel=false){
+function setup(realModel=false, integrations={}){
   const {document,Element}=createDOM();
   document.innerHTML=fs.readFileSync(path.join(project,'pages/smart-tools.html'),'utf8').match(/<body\b[^>]*>([\s\S]*?)<\/body>/)[1];
-  let activate,change;
+  let activate,deactivate,change;
   const navigations=[];
   const storage=new Map();
-  const window={localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},addEventListener(){},confirm:()=>true,BaigePage:{onActivate(callback){activate=callback;},onDeactivate(){},navigate:(...args)=>navigations.push(args)}};
+  const window={localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},addEventListener(){},confirm:()=>true,BaigePage:{onActivate(callback){activate=callback;},onDeactivate(callback){deactivate=callback;},navigate:(...args)=>navigations.push(args)},...integrations};
   const context=vm.createContext({window,document,console});
   function load(file){vm.runInContext(fs.readFileSync(path.join(project,file),'utf8'),context,{filename:file});}
   load('src/data.js');load('src/ui.js');load('src/home-directory-icons.js');
@@ -24,7 +24,7 @@ function setup(realModel=false){
     iconMarkup:entry=>`<span data-managed-icon="${entry.icon}"></span>`,subscribe(callback){change=callback;}};
   load('src/tool-workspace.js');load('src/pages/smart-tools.js');activate({child:''});
   const get=id=>document.querySelector(`#${id}`);
-  return {get,document,Element,categories,entries,ui:window.BaigeUI,model:window.BaigeFeatureConfig,change:()=>change?.(),activate:child=>activate({child}),navigations};
+  return {get,document,Element,categories,entries,ui:window.BaigeUI,model:window.BaigeFeatureConfig,change:()=>change?.(),activate:child=>activate({child}),deactivate:()=>deactivate(),navigations};
 }
 
 function assertOutlineIcon(node){
@@ -62,7 +62,7 @@ test('tool categories include managed names and empty categories; deleted filter
   const empty=app.get('toolCategories').querySelector('[data-category="empty"]');assert.ok(empty);empty.emit('click');
   assert.match(app.get('resultCount').textContent,/显示 0 个工具/);
   app.categories.pop();app.change();
-  assert.match(app.get('resultCount').textContent,/显示 9 个工具/);
+  assert.match(app.get('resultCount').textContent,/显示 10 个工具/);
   app.categories[0].label='资料 <script>';app.change();
   assert.match(app.get('toolCategories').textContent,/资料 <script>/);
   assert.equal(app.get('toolCategories').querySelector('script'),null);
@@ -90,9 +90,9 @@ test('popular image and configured icons refresh without dropping open tool stat
   assert.ok(catalog.querySelector('.tool-entry[data-tool="OCR识别"]').querySelector('[data-managed-icon="branch"]'));
 });
 
-test('all nine tool tabs and opened-tool options use matching outline icons',()=>{
+test('all ten tool tabs and opened-tool options use matching outline icons',()=>{
   const app=setup(true);
-  assert.equal(app.entries.length,9);
+  assert.equal(app.entries.length,10);
   for(const entry of app.entries) app.activate(entry.name);
   for(const entry of app.entries){
     const tab=app.get('toolWorkspaceBar').querySelector(`[data-workspace-tab="${entry.name}"]`);
@@ -107,7 +107,8 @@ test('all nine tool tabs and opened-tool options use matching outline icons',()=
 
 test('generic tools share a workspace frame with header and content panels',()=>{
   const app=setup(true);
-  for(const entry of app.entries.filter(item=>item.name!=='纠错校对')){
+  const dedicated=['纠错校对','思维导图生成','流程图生成'];
+  for(const entry of app.entries.filter(item=>!dedicated.includes(item.name))){
     app.activate(entry.name);
     const panel=app.get('content').querySelector('.tool-workspace-panel');
     const frame=panel.querySelector('.tool-workspace-frame');
@@ -116,4 +117,29 @@ test('generic tools share a workspace frame with header and content panels',()=>
     assert.ok(frame.querySelector('header.tool-page-header'),entry.name);
     assert.ok(frame.querySelector('section.integration-panel'),entry.name);
   }
+});
+
+test('the separate flowchart workspace mounts once and keeps its state across tool switches',()=>{
+  const calls=[];
+  let markDirty;
+  const app=setup(true,{BaigeFlowchartTool:{
+    render(panel,onDirty){panel.innerHTML='<div data-flowchart-workspace></div>';markDirty=onDirty;calls.push('render');},
+    resume(){calls.push('resume');},
+    deactivate(){calls.push('deactivate');},
+  }});
+  const entry=app.get('toolResults').querySelector('[data-tool="流程图生成"]');
+  assert.equal(entry.dataset.toolGroup,'研究辅助');
+  entry.emit('click');
+  assert.deepEqual(app.navigations.at(-1),['smart-tools','流程图生成']);
+  calls.length=0;
+  app.activate('流程图生成');
+  const workspace=app.get('content').querySelector('[data-flowchart-workspace]');
+  assert.ok(workspace);
+  markDirty(true);
+  assert.ok(app.get('toolWorkspaceBar').querySelector('.unsaved-dot'));
+  app.activate('思维导图生成');
+  app.activate('流程图生成');
+  assert.equal(app.get('content').querySelector('[data-flowchart-workspace]'),workspace);
+  app.deactivate();
+  assert.deepEqual(calls,['render','resume','deactivate','resume','deactivate']);
 });

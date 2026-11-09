@@ -6,6 +6,7 @@
   <title>知识库 · 百舸数智平台</title>
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="../knowledge.css?v=20261103-visual-baseline" />
+  <link rel="stylesheet" href="../secret-file-list.css?v=20261109-secret-list" />
 </head>
 <body class="module-page" data-page="knowledge">
   <main class="module-main">
@@ -68,9 +69,20 @@
 
   <div class="kb-toast" id="kbToast" role="status" aria-live="polite"></div>
 
+  <dialog id="kbDocumentDialog" class="kb-dialog" aria-labelledby="kbDocumentTitle">
+    <div class="kb-dialog-head"><h2 id="kbDocumentTitle">涉密审查详情</h2></div>
+    <div class="kb-dialog-body">
+      <strong id="kbDocumentName"></strong>
+      <p id="kbDocumentStatus"></p>
+      <p id="kbDocumentCopy"></p>
+    </div>
+    <footer class="kb-dialog-foot"><button class="kb-secondary-button" type="button" id="kbDocumentClose">关闭</button></footer>
+  </dialog>
+
   <script src="../src/data.js?v=20261102-knowledge-cards"></script>
   <script src="../src/ui.js"></script>
+  <script src="../src/secret-file-list.js?v=20261109-secret-list"></script>
   <script src="../src/page-bridge.js"></script>
-  <script src="../src/pages/knowledge.js?v=20261102-cards"></script>
+  <script src="../src/pages/knowledge.js?v=20261109-secret-list"></script>
 </body>
 </html>

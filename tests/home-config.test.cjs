@@ -14,10 +14,10 @@ function setup(values = {}, fail = false) {
     vm.runInContext(fs.readFileSync(path.join(__dirname, '../src', file), 'utf8'), context);
   return {model: window.BaigeHomeConfig, storage};
 }
-test('catalog exposes 25 distinct real destinations, excluding settings and library administration', () => {
+test('catalog exposes 26 distinct real destinations, excluding settings and library administration', () => {
   const {model} = setup();
-  assert.equal(model.catalog.length, 25);
-  assert.equal(new Set(model.catalog.map(item => `${item.route}:${item.child}`)).size, 25);
+  assert.equal(model.catalog.length, 26);
+  assert.equal(new Set(model.catalog.map(item => `${item.route}:${item.child}`)).size, 26);
   assert.ok(model.catalog.some(item => item.name === '智能问数'));
   assert.ok(model.catalog.some(item => item.name === '数据中台'));
   assert.ok(!model.catalog.some(item => ['文件管理','权限管理','自定义首页'].includes(item.name)));
@@ -41,7 +41,10 @@ test('saving recommendations does not overwrite independently published updates 
   const {model} = setup();
   const updates = [{id:'news-1', title:'发布测试', date:'2026-10-26', body:'正文', status:'published'}];
   model.saveSection('updates', updates);
-  model.saveSection('recommendedIds', ['tool:PPT生成']);
+  const flowchart = 'tool:流程图生成';
+  assert.ok(!model.defaults().recommendedIds.includes(flowchart));
+  model.saveSection('recommendedIds', [flowchart]);
+  assert.equal(model.read().recommendedIds[0], flowchart);
   assert.equal(model.read().updates[0].title, '发布测试');
   assert.equal(model.read().recommendedIds.length, 1);
   assert.equal(model.read().slides.length, 3);

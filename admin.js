@@ -1,10 +1,10 @@
 (() => {
   "use strict";
 
-  const INTERFACE_SRC = "pages/interface-admin.html?embed=admin&v=20261102-interface";
+  const INTERFACE_SRC = "pages/interface-admin.html?embed=admin&v=20261109-diagram-tools";
   const views = {
-    files: { src: "pages/library-admin.html?embed=admin&view=files&v=20261029-person-addon", title: "文件管理" },
-    perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261029-person-addon", title: "权限管理" },
+    files: { src: "pages/library-admin.html?embed=admin&view=files&v=20261109-library-original", title: "文件管理" },
+    perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261109-library-original", title: "权限管理" },
     notices: { src: "pages/notice-admin.html?embed=admin&v=20261029-notice", title: "通知公告" },
     interface: { src: INTERFACE_SRC, title: "界面管理" },
     access: { src: "pages/permission-review.html?embed=admin&v=20261104-no-stats", title: "权限审核" },

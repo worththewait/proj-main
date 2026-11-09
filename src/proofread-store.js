@@ -45,21 +45,21 @@
     return parts;
   }
 
-  function read() {
-    const raw = window.localStorage.getItem(KEY);
+  function read(key = KEY) {
+    const raw = window.localStorage.getItem(key);
     if (!raw) return {version: 1, records: [], history: []};
     const data = JSON.parse(raw);
     if (data.version !== 1 || !Array.isArray(data.records) || !Array.isArray(data.history)) {
-      throw new Error('审校数据无法读取，请保留当前内容后重试。');
+      throw new Error(key === KEY ? '审校数据无法读取，请保留当前内容后重试。' : '文档核查数据无法读取，请重试。');
     }
     data.history.forEach(restoreOriginal);
     return data;
   }
 
-  function change(action) {
-    const data = read();
+  function change(action, key = KEY) {
+    const data = read(key);
     const result = action(data);
-    window.localStorage.setItem(KEY, JSON.stringify(data));
+    window.localStorage.setItem(key, JSON.stringify(data));
     return copy(result ?? null);
   }
 
@@ -122,13 +122,25 @@
     file.detectAt = Date.now() + DETECT_MS;
   }
 
-  function submitFile(document) {
+  function submitFile(document, key = KEY) {
     return change(data => {
       const file = prepareFile(document);
       beginDetection(file);
       data.records.unshift(file);
       return file;
-    });
+    }, key);
+  }
+
+  function failFile(fileName, reason, key = KEY) {
+    return change(data => {
+      const file = {
+        id: uid('doc'), name: fileName.replace(FILE_EXTENSION, ''), fileName,
+        text: '', source: 'upload', secretStatus: 'failed', keywords: [],
+        version: 1, uploadedAt: Date.now(), auditReason: reason,
+      };
+      data.records.unshift(file);
+      return file;
+    }, key);
   }
 
   function startReview({fileId, types, document}) {
@@ -204,13 +216,18 @@
     return true;
   }
 
+  function advanceFileAudits(records, scanSecret, now) {
+    let changed = false;
+    for (const file of records) {
+      if (completeDetection(file, scanSecret, now)) changed = true;
+    }
+    return changed;
+  }
+
   // 演示任务以持久化的阶段时间恢复，页面关闭期间无需依赖活动计时器。
   function advance(scanSecret, detect, now = Date.now()) {
     const data = read();
-    let changed = false;
-    for (const file of data.records) {
-      if (completeDetection(file, scanSecret, now)) changed = true;
-    }
+    let changed = advanceFileAudits(data.records, scanSecret, now);
     for (const review of data.history) {
       if (review.output && completeDetection(review.output, scanSecret, now)) {
         review.output.updated = review.output.reviewedAt;
@@ -251,7 +268,7 @@
     });
   }
 
-  function audit(id, status, reviewId = '') {
+  function audit(id, status, reviewId = '', key = KEY) {
     return change(data => {
       const file = reviewId
         ? data.history.find(item => item.id === id && item.reviewId === reviewId)?.output
@@ -263,7 +280,7 @@
       if (reviewId) file.updated = file.auditedAt;
       if (status === 'rejected') file.auditReason = '模拟人工审核未通过，请核对文档保密范围。';
       return file;
-    });
+    }, key);
   }
 
   function decide(reviewId, issueId, accepted) {
@@ -295,14 +312,14 @@
   }
 
   // 删除文件时连同它的审校记录一并清除，避免留下无法打开的孤儿记录。
-  function remove(id) {
+  function remove(id, key = KEY) {
     return change(data => {
       const index = data.records.findIndex(item => item.id === id);
       if (index < 0) return null;
       const [file] = data.records.splice(index, 1);
       data.history = data.history.filter(item => item.id !== id);
       return file;
-    });
+    }, key);
   }
 
   function markRead(id) {
@@ -312,8 +329,25 @@
     });
   }
 
+  function createFileAuditStore(key, scanSecret) {
+    return Object.freeze({
+      list() {
+        const data = read(key);
+        if (advanceFileAudits(data.records, scanSecret, Date.now())) {
+          window.localStorage.setItem(key, JSON.stringify(data));
+        }
+        return data.records;
+      },
+      submitFile: document => submitFile(document, key),
+      failFile: (fileName, reason) => failFile(fileName, reason, key),
+      audit: (id, status) => audit(id, status, '', key),
+      remove: id => remove(id, key),
+    });
+  }
+
   window.BaigeProofreadStore = Object.freeze({
-    KEY, read, initialize, createDraft, saveDraft, addUpload, submitFile, startReview,
+    KEY, read, initialize, createDraft, saveDraft, addUpload, submitFile, failFile, startReview,
     documentParts, confirmResult, advance, stopReview, audit, decide, undoDecision, remove, markRead, REVIEW_MS,
+    createFileAuditStore,
   });
 })();

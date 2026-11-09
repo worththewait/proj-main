@@ -18,6 +18,7 @@
     check: '<path fill="currentColor" d="m12 1 10 4v7c0 5-4 9-10 11C6 21 2 17 2 12V5Z"/><path d="m7 12 3 3 7-7" fill="none" stroke="white" stroke-width="2"/>',
     slides: '<rect x="1" y="2" width="17" height="17" rx="2" fill="currentColor" opacity=".35"/><rect x="5" y="5" width="18" height="17" rx="2" fill="currentColor"/><path d="M10 18V9h4a2.5 2.5 0 0 1 0 5h-4" fill="none" stroke="white" stroke-width="1.8"/>',
     branch: '<path d="M12 5v6 M12 11l-7 7 M12 11l7 7" fill="none" stroke="currentColor" stroke-width="2.5"/><g fill="currentColor"><circle cx="12" cy="4" r="4"/><circle cx="4" cy="19" r="4"/><circle cx="20" cy="19" r="4"/></g><g fill="white"><circle cx="12" cy="4" r="1.5"/><circle cx="4" cy="19" r="1.5"/><circle cx="20" cy="19" r="1.5"/></g>',
+    flowchart: '<path d="M12 5v14 M15 12h4a2 2 0 0 1 2 2v4 m-2-2 2 2 2-2" fill="none" stroke="currentColor" stroke-width="1.8"/><g fill="currentColor"><rect x="7" y="2" width="10" height="5" rx="2.5"/><path d="m12 7.5 4.5 4.5-4.5 4.5L7.5 12Z"/><rect x="7" y="18" width="10" height="4" rx="1"/></g>',
     standard: '<path fill="currentColor" d="M5 1h14a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2Z"/><path d="M7 6h10 M7 10h10 m0 6-4 4-3-3" '+detail+'/>',
     compass: '<circle cx="12" cy="12" r="10" fill="currentColor"/><path fill="white" d="m17 7-3 7-7 3 3-7Z"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>',
     layers: '<path fill="currentColor" d="m12 1 11 5-11 5L1 6Z M2 10l10 5 10-5 1 3-11 5-11-5Z M2 16l10 5 10-5 1 3-11 5-11-5Z"/>',

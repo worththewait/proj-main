@@ -9,7 +9,7 @@
     ['folder', '文件夹'], ['shield', '权限'], ['globe', '情报'], ['chart', '分析'],
     ['translate', '翻译'], ['translate-document', '文档翻译'], ['translate-text', '文本翻译'],
     ['scan', '识别'], ['check', '校对'], ['slides', '演示文稿'],
-    ['branch', '思维导图'], ['standard', '标准'], ['compass', '探索'], ['layers', '系统'],
+    ['branch', '思维导图'], ['flowchart', '流程图'], ['standard', '标准'], ['compass', '探索'], ['layers', '系统'],
     ['database', '数据集'], ['code', '开发'], ['server', '数据平台'], ['bulb', '提示词'],
     ['tag', '标注'], ['bug', '采集'],
   ].map(([id, label]) => Object.freeze({id, label})));
@@ -76,8 +76,13 @@
   });
   const byId = new Map(registry.map(item => [item.id, item]));
   const fields = ['icon', 'iconImage', 'image', 'description', 'homeCategory', 'toolCategory'];
-  const defaultFeature = item => ({icon: item.icon, iconImage: '', image: item.image, description: item.description,
-    homeCategory: item.homeCategory, toolCategory: item.toolCategory});
+  function defaultFeature(item, categories = initialCategories) {
+    // Newly registered entries may arrive after an administrator has removed a default category.
+    const categoryId = (scope, id) => categories[scope].find(category => category.id === id)?.id ?? categories[scope][0].id;
+    return {icon: item.icon, iconImage: '', image: item.image, description: item.description,
+      homeCategory: categoryId('home', item.homeCategory),
+      toolCategory: item.isTool ? categoryId('tools', item.toolCategory) : ''};
+  }
   function defaults() {
     return {version: 1, categories: clone(initialCategories),
       features: Object.fromEntries(registry.map(item => [item.id, defaultFeature(item)]))};
@@ -136,7 +141,7 @@
     if (!isObject(value) || value.version !== 1 || !isObject(value.features)) throw Error('功能配置版本无效。');
     const categories = checkedCategories(value.categories);
     const features = Object.fromEntries(registry.map(item => [item.id,
-      checkedFeature(item.id, Object.hasOwn(value.features, item.id) ? value.features[item.id] : defaultFeature(item), categories)]));
+      checkedFeature(item.id, Object.hasOwn(value.features, item.id) ? value.features[item.id] : defaultFeature(item, categories), categories)]));
     return {version: 1, categories, features};
   }
   function load(strictStorage = false) {

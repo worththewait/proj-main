@@ -35,14 +35,9 @@ test("the file list opens first without showing the input or the review workspac
   assert.equal(get('[data-workbench]').hidden, true);
   assert.equal(get('[data-files-empty]').hidden, false);
   assert.ok(get('[data-upload]'));
-  const writingHeaders = Array.from(
-    read('src/pages/writing.js').match(/<table class="wr-file-table is-material"><thead>(.*?)<\/thead>/)[1]
-      .matchAll(/<th>(.*?)<\/th>/g),
-    ([, header]) => header
-  );
-  const table = get('.wr-file-table.is-material');
+  const table = get('.secret-file-table');
   assert.ok(table);
-  assert.deepEqual(table.querySelectorAll('th').map(cell => cell.textContent), writingHeaders);
+  assert.deepEqual(table.querySelectorAll('th').map(cell => cell.textContent), ['文件名', '上传时间', '文档状态', '操作']);
 });
 
 test("file status filters and name search combine and can be reset from an empty result", () => {
@@ -60,7 +55,7 @@ test("file status filters and name search combine and can be reset from an empty
   const filter = value => get(`[data-file-filter="${value}"]`);
   const search = get('[data-file-search]');
   const searchForm = get('[data-file-search-form]');
-  const names = () => get('[data-intake-table]').querySelectorAll('.wr-file-name [title]').map(cell => cell.textContent);
+  const names = () => get('[data-intake-table]').querySelectorAll('.wr-file-name span').map(cell => cell.textContent);
 
   assert.equal(filter('all').attributes['aria-pressed'], 'true');
   filter('ready').emit('click');
@@ -153,6 +148,7 @@ function setupFlow(storage = new Map()) {
   });
   vm.runInContext(read("src/proofread-store.js"), ctx);
   vm.runInContext(read("src/proofread-file.js"), ctx);
+  vm.runInContext(read("src/secret-file-list.js"), ctx);
   vm.runInContext(read("src/proofread-tool.js"), ctx);
   const store = window.BaigeProofreadStore;
   const tool = window.BaigeProofreadTool;
@@ -315,7 +311,7 @@ test("text review opens automatically after the five-second notice closes", () =
   assert.equal(get('[data-run]').hidden, true);
   get('[data-workbench] [data-intake-back]').emit('click');
   assert.equal(get('[data-intake-start]'), null);
-  assert.equal(get('[data-intake-review]').textContent, '查看状态');
+  assert.equal(get('[data-intake-review]').attributes.title, '查看状态');
 });
 
 test("saved legacy results apply the accepted change once and retain later issue locations", () => {
@@ -506,7 +502,7 @@ test("confirming locks the current result and exposes its separate screening in 
 
   flow.fail();
   get('[data-final-submit]').emit('click');
-  assert.match(get('[data-status]').textContent, /存储空间不足/);
+  assert.match(get('[data-workbench] [data-status]').textContent, /存储空间不足/);
   assert.ok(get('[data-undo-decision]'));
   assert.equal(flow.store.read().history[0].output, undefined);
   assert.equal(isDirty(), true);
@@ -531,7 +527,9 @@ test("confirming locks the current result and exposes its separate screening in 
 
   get('[data-workbench] [data-intake-back]').emit('click');
   get('[data-file-filter="audit"]').emit('click');
-  assert.match(get('[data-intake-table] .wr-secret-cell').textContent, /结果.*检测中/);
+  assert.equal(get('[data-intake-table] .secret-file-state').textContent, '检测中');
+  assert.equal(get('[data-intake-review]'), null);
+  assert.equal(get('[data-intake-download]'), null);
   get('[data-intake-secret]').emit('click');
   assert.match(get('[data-secret-title]').textContent, /校对结果核查/);
   advance(3000);
@@ -604,7 +602,7 @@ test("download saves unsaved choices and waits for approval, then downloads the 
   assert.equal(flow.store.read().history[0].output.secretStatus, 'passed');
   assert.equal(get('[data-download]').disabled, false);
   assert.equal(flow.downloads.length, 1);
-  assert.match(get('[data-status]').textContent, /已发起.*下载/);
+  assert.match(get('[data-workbench] [data-status]').textContent, /已发起.*下载/);
   assert.equal(flow.downloads[0].name, '测试文档.txt');
   assert.equal(await flow.downloads[0].blob.text(), '工作严各。');
   advance(1000);
@@ -637,15 +635,21 @@ test("uploaded files pass screening before manual review and can reopen the resu
   assert.equal(get('[data-intake-notice]').open, true);
   assert.match(get('[data-notice-countdown]').textContent, /5\s*秒后自动关闭/);
   assert.equal(flow.store.read().records[0].secretStatus, 'detecting');
-  assert.equal(get('[data-intake-table] tr').children.length, 6);
+  assert.equal(get('[data-intake-table] tr').children.length, 4);
   assert.equal(flow.store.read().history.length, 0);
   assert.equal(get('[data-intake-start]'), null);
+  assert.equal(get('[data-intake-view]'), null);
+  assert.equal(get('[data-intake-download]'), null);
   get('[data-notice-close]').emit('click');
   advance(3000);
   assert.equal(flow.store.read().records[0].secretStatus, 'passed');
   assert.equal(flow.store.read().history.length, 0);
   assert.equal(get('[data-files]').hidden, false);
   assert.equal(get('[data-workbench]').hidden, true);
+  get('[data-intake-view]').emit('click');
+  assert.equal(get('[data-file-preview]').open, true);
+  assert.equal(get('[data-preview-text]').textContent, '工做内容');
+  get('[data-preview-close]').emit('click');
   get('[data-intake-start]').emit('click');
   assert.equal(get('[data-dialog]').open, true);
   get('[data-confirm]').emit('click');
@@ -659,7 +663,7 @@ test("uploaded files pass screening before manual review and can reopen the resu
   advance(4000);
   get('[data-workbench] [data-intake-back]').emit('click');
   const viewResult = get('[data-intake-review]');
-  assert.equal(viewResult.textContent, '查看结果');
+  assert.equal(viewResult.attributes.title, '查看结果');
   viewResult.emit('click');
   assert.equal(get('[data-workbench]').hidden, false);
   assert.equal(get('.pr-app').children.length, 2);
@@ -684,7 +688,24 @@ test("uploaded suspicious files require manual approval before offering proofrea
   assert.equal(flow.store.read().history.length, 0);
   get('[data-secret-close]').emit('click');
   assert.ok(get('[data-intake-start]'));
+  assert.equal(get('.secret-file-badge').textContent, '审核通过');
   assert.equal(get('[data-workbench]').hidden, true);
+});
+
+test("an unreadable upload remains a failed row with details and deletion only", async () => {
+  const flow = setupFlow();
+  const {get} = flow.mount();
+  get('[data-file]').files = [{name: '空文件.txt', size: 0}];
+  get('[data-file]').emit('change');
+  await new Promise(setImmediate);
+  assert.equal(flow.store.read().records[0].secretStatus, 'failed');
+  assert.equal(get('[data-intake-table] .secret-file-badge').textContent, '失败');
+  assert.equal(get('[data-intake-notice]').open, false);
+  assert.equal(get('[data-intake-view]'), null);
+  assert.equal(get('[data-intake-download]'), null);
+  assert.ok(get('[data-delete]'));
+  get('[data-intake-secret]').emit('click');
+  assert.match(get('[data-secret-body]').textContent, /无法读取文件.*没有可校对的文字/);
 });
 
 test("unsubmitted text stays local and a failed submission retains it for retry without partial records", () => {
