@@ -104,6 +104,12 @@
       window.BaigeProofreadTool.render(root, dirty => toolWorkspace.setDirty(tool.name, dirty));
       return;
     }
+    if (tool.name === "文档翻译" && window.BaigeDocTranslateTool) {
+      root.dataset.toolGroup = tool.group;
+      root.dataset.managesDirty = "true";
+      window.BaigeDocTranslateTool.render(root, dirty => toolWorkspace.setDirty(tool.name, dirty));
+      return;
+    }
     root.replaceChildren(document.querySelector("#toolTemplate").content.cloneNode(true));
     root.querySelector("[data-tool-name]").textContent = tool.name;
     root.querySelector("[data-tool-description]").textContent = tool.description;
@@ -153,6 +159,7 @@
     window.BaigeProofreadTool?.deactivate();
     window.BaigeMindmapTool?.deactivate();
     window.BaigeFlowchartTool?.deactivate();
+    window.BaigeDocTranslateTool?.deactivate();
   });
   featureConfig?.subscribe(refreshConfiguration);
   bridge.onActivate(({ child, focusSearch }) => {
@@ -167,6 +174,8 @@
     else window.BaigeMindmapTool?.deactivate();
     if (child === "流程图生成") window.BaigeFlowchartTool?.resume();
     else window.BaigeFlowchartTool?.deactivate();
+    if (child === "文档翻译") window.BaigeDocTranslateTool?.resume();
+    else window.BaigeDocTranslateTool?.deactivate();
     if (focusSearch) toolWorkspace.catalog.querySelector("#toolSearch").focus();
   });
 })();
