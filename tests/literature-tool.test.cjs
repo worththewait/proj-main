@@ -28,6 +28,7 @@ function loadTool() {
   const window = { BaigeUI: { icon: () => "<svg class='icon'></svg>", escapeHtml: (value) => String(value) } };
   const document = { querySelector: () => null, createElement: () => node("el"), body: { append() {} }, addEventListener() {} };
   const context = vm.createContext({ window, document, console, setTimeout, clearTimeout });
+  vm.runInContext(read("src/secret-file-list.js"), context);
   vm.runInContext(read("src/literature-tool.js"), context, { filename: "literature-tool.js" });
   return { tool: window.BaigeLiteratureTool, node };
 }
@@ -46,13 +47,13 @@ test("列表页还原上传区、历史表与状态分支", () => {
   const js = read("src/literature-tool.js");
   for (const token of [
     "文献伴读", "百舸文献伴读，读懂每一篇船舶科研文献。",
-    "拖放文档到此处，或点击选择文件", "支持 PDF、Word，最大文件大小 100MB", "选择文件",
-    "文献伴读历史", "文件名", "文档状态", "时间", "操作", "开始伴读", "删除",
-    "已入库", "检测中", "涉密可疑", "失败",
+    "支持拖放 PDF、Word", "单个文件不超过 100 MB", "上传本地文件",
+    "文献伴读历史", "查看涉密详情", "开始伴读", "删除",
   ]) assert.ok(js.includes(token), token);
   const css = read("literature-tool.css");
-  assert.match(css, /\.lt-dropzone/);
-  assert.match(css, /\.lt-table/);
+  assert.match(js, /class="pr-intake-head"/);
+  assert.match(css, /attr\(data-lt-tooltip\)/);
+  assert.match(js, /secret-file-table/);
   assert.match(css, /\.lt-reader-body/);
 });
 
@@ -78,6 +79,10 @@ test("渲染列表后包含文献名、状态与伴读按钮", () => {
   assert.match(table.innerHTML, /已入库/);
   assert.match(table.innerHTML, /开始伴读/);
   assert.match(table.innerHTML, /data-lt-action="read"/);
+  assert.match(table.innerHTML, /data-lt-action="audit"/);
+  for (const row of table.innerHTML.split("</tr>").filter(row => /data-status="(?:hit|failed|detecting)"/.test(row))) {
+    assert.doesNotMatch(row, /data-lt-action="read"/);
+  }
 });
 
 test("阅读页含五个页签与伴读面板", () => {

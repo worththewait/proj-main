@@ -4,14 +4,18 @@
   "use strict";
 
   const { icon, escapeHtml: escape } = window.BaigeUI;
+  const fileList = window.BaigeSecretFileList;
   const PAGE_SIZE = 10;
   const MAX_SIZE = 100 * 1024 * 1024;
   const ACCEPT = /\.(pdf|doc|docx)$/i;
   const STATUS = {
-    done: { label: "已入库", tone: "is-done", canDelete: true, canRead: true },
-    parsing: { label: "检测中", tone: "is-parsing", canDelete: false, canRead: false },
-    warning: { label: "涉密可疑", tone: "is-warning", canDelete: true, canRead: true },
-    failed: { label: "失败", tone: "is-failed", canDelete: true, canRead: true },
+    done: { code: "stored", canDelete: true, canRead: true },
+    parsing: { code: "detecting", canDelete: false, canRead: false },
+    warning: { code: "hit", canDelete: true, canRead: false },
+    submitted: { code: "submitted", canDelete: true, canRead: false },
+    approved: { code: "approved", canDelete: true, canRead: true },
+    rejected: { code: "rejected", canDelete: true, canRead: false },
+    failed: { code: "failed", canDelete: true, canRead: false },
   };
 
   /* 演示记录：文件名为线上工作区的历史条目，正文与状态用于展示不同分支。 */
@@ -86,7 +90,7 @@
   const state = {
     records: [], built: false, view: "list", activeId: "", page: 1, query: "",
     tab: "read", docPage: 1, zoom: 1, targetLang: "英文", qa: [], dom: null,
-    noticeTimer: 0, detectTimer: 0,
+    noticeTimer: 0, auditId: "",
   };
 
   const seedRecords = () => SEED.map(([name, sizeText, type, status, time], i) => ({
@@ -116,40 +120,38 @@
   /* ---------- 列表页 ---------- */
 
   function listMarkup() {
-    return `<div class="lt-page">
-      <section class="lt-card" aria-labelledby="ltTitle">
-        <h2 class="lt-title" id="ltTitle">文献伴读</h2>
-        <p class="lt-subtitle">百舸文献伴读，读懂每一篇船舶科研文献。</p>
-        <div class="lt-dropzone" data-lt-dropzone>
-          <div class="lt-drop-content">
-            <span class="lt-drop-icon">${icon("upload")}</span>
-            <p class="lt-drop-text">拖放文档到此处，或点击选择文件</p>
-            <p class="lt-drop-hint">支持 PDF、Word，最大文件大小 100MB</p>
-            <button class="lt-primary" type="button" data-lt-action="choose">选择文件</button>
-            <input class="lt-sr" type="file" accept=".pdf,.doc,.docx" data-lt-file aria-label="选择待伴读文献" />
+    return `<section class="lt-page pr-intake" data-lt-dropzone aria-labelledby="ltTitle">
+      <header class="pr-intake-head">
+        <div><h1 id="ltTitle">文献伴读</h1><p>百舸文献伴读，读懂每一篇船舶科研文献。</p></div>
+        <div class="wr-file-entry">
+          <div class="pr-intake-actions">
+            <button class="primary-button" type="button" data-lt-action="choose" aria-describedby="ltFileFormats">${icon("upload")}上传本地文件</button>
           </div>
+          <p class="wr-file-formats" id="ltFileFormats">支持拖放 PDF、Word，单个文件不超过 100 MB。</p>
+          <input type="file" accept=".pdf,.doc,.docx" data-lt-file hidden />
         </div>
-        <p class="lt-note" data-lt-note role="status"></p>
-      </section>
-      <section class="lt-card" aria-labelledby="ltHistoryTitle">
+      </header>
+      <p class="lt-note" data-lt-note role="status"></p>
+      <section aria-labelledby="ltHistoryTitle">
         <div class="lt-history-head">
           <h3 class="lt-history-title" id="ltHistoryTitle">文献伴读历史</h3>
           <span class="lt-count" data-lt-count></span>
           <input class="lt-search" type="search" data-lt-search placeholder="搜索文献名..." aria-label="搜索文献名" />
         </div>
-        <div data-lt-table></div>
+        <div class="secret-file-table-wrap" data-lt-table tabindex="0" role="region" aria-label="文献列表"></div>
         <div class="lt-pager" data-lt-pager></div>
       </section>
-    </div>`;
+    </section>`;
   }
 
   function rowMarkup(rec) {
     const meta = STATUS[rec.status];
+    const action = (key, glyph, label) => `<button class="secret-file-icon${key === "delete" ? " is-danger" : ""}" type="button" data-lt-action="${key}" data-id="${escape(rec.id)}" ${key === "audit" ? `data-lt-tooltip="${label}"` : `title="${label}"`} aria-label="${label}：${escape(rec.name)}">${icon(glyph)}</button>`;
     return `<tr>
       <td><div class="lt-file"><span class="lt-badge ${rec.type === "pdf" ? "is-pdf" : ""}">${rec.type === "pdf" ? "PDF" : "DOC"}</span><span class="lt-file-info"><span class="lt-file-name" title="${escape(rec.name)}">${escape(rec.name)}</span><span class="lt-file-size">${escape(rec.sizeText)}</span></span></div></td>
-      <td><span class="lt-status ${meta.tone}">${meta.label}</span></td>
-      <td class="lt-time">${escape(rec.time)}</td>
-      <td><div class="lt-actions"><button class="lt-btn is-primary" type="button" data-lt-action="read" data-id="${rec.id}" ${meta.canRead ? "" : "disabled"}>开始伴读</button>${meta.canDelete ? `<button class="lt-btn is-danger" type="button" data-lt-action="delete" data-id="${rec.id}">删除</button>` : ""}</div></td>
+      <td>${fileList.time(rec.time)}</td>
+      <td>${fileList.status(meta.code, action("audit", "eye", "查看涉密详情"))}</td>
+      <td><div class="secret-file-actions">${meta.canRead ? action("read", "book", "开始伴读") : ""}${meta.canRead && rec.file ? action("download", "download", "下载原文件") : ""}${meta.canDelete ? action("delete", "trash", "删除文献") : ""}</div></td>
     </tr>`;
   }
 
@@ -158,10 +160,9 @@
     if (!d) return;
     const rows = filtered();
     d.count.textContent = `共 ${state.records.length} 篇`;
-    d.table.innerHTML = `<table class="lt-table">
-      <colgroup><col style="width:42%" /><col style="width:12%" /><col style="width:20%" /><col style="width:26%" /></colgroup>
-      <thead><tr><th scope="col">文件名</th><th scope="col">文档状态</th><th scope="col">时间</th><th scope="col">操作</th></tr></thead>
-      <tbody>${rows.length ? rows.map(rowMarkup).join("") : '<tr><td colspan="4" class="lt-empty">没有匹配的文献</td></tr>'}</tbody>
+    d.table.innerHTML = `<table class="secret-file-table">
+      ${fileList.head}
+      <tbody>${rows.length ? rows.map(rowMarkup).join("") : '<tr><td colspan="4">没有匹配的文献</td></tr>'}</tbody>
     </table>`;
     const total = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
     state.page = Math.min(state.page, total);
@@ -286,12 +287,17 @@
   }
 
   function build(target) {
-    target.innerHTML = `<div class="lt-root"><div data-lt-list></div><div data-lt-reader hidden></div><div class="lt-toast" data-lt-toast role="status" hidden></div></div>`;
+    target.innerHTML = `<div class="lt-root"><div data-lt-list></div><div data-lt-reader hidden></div><div class="lt-toast" data-lt-toast role="status" hidden></div>
+      <dialog class="lt-audit-dialog" data-lt-audit aria-labelledby="ltAuditTitle">
+        <header><h2 id="ltAuditTitle">涉密核查详情</h2><button class="secret-file-icon" type="button" data-lt-action="audit-close" aria-label="关闭详情">${icon("close")}</button></header>
+        <div data-lt-audit-content></div>
+      </dialog></div>`;
     state.dom = {
       root: target,
       list: target.querySelector("[data-lt-list]"),
       reader: target.querySelector("[data-lt-reader]"),
       toast: target.querySelector("[data-lt-toast]"),
+      audit: target.querySelector("[data-lt-audit]"),
       table: null, count: null, pager: null, doc: null, panel: null, docPageInput: null, pageTotal: null,
     };
   }
@@ -320,35 +326,49 @@
     search.addEventListener("input", () => { state.query = search.value; renderTable(); });
   }
 
-  function handleFiles(list) {
+  function renderAudit(rec) {
+    const messages = {
+      parsing: "正在进行涉密核查。", done: "文献已通过核查，可以开始伴读。",
+      warning: "发现疑似涉密内容，请提交人工审核。", submitted: "等待人工审核，可在此演示审核结果。",
+      approved: "人工审核已通过，可以开始伴读。", rejected: "人工审核未通过，文献不可用。",
+      failed: "文件读取失败，请检查格式后重新上传。",
+    };
+    state.dom.audit.querySelector("[data-lt-audit-content]").innerHTML = `<div class="lt-audit-copy"><strong>${escape(rec.name)}</strong>${fileList.status(STATUS[rec.status].code)}
+      <p role="status">${messages[rec.status]}</p>${rec.keywords?.length ? `<p>命中关键词：${rec.keywords.map(escape).join("、")}</p>` : ""}</div>
+      <footer><button class="secondary-button" type="button" data-lt-action="audit-close">关闭</button>
+      ${rec.status === "warning" ? '<button class="primary-button" type="button" data-lt-action="audit-submit">提交人工审核</button>' : ""}
+      ${rec.status === "submitted" ? '<button class="secondary-button" type="button" data-lt-action="audit-reject">模拟驳回</button><button class="primary-button" type="button" data-lt-action="audit-approve">模拟通过</button>' : ""}</footer>`;
+  }
+
+  async function handleFiles(list) {
     const file = list && list[0];
     if (!file) return;
     if (!ACCEPT.test(file.name)) { state.dom.note.textContent = "仅支持 PDF、Word（.doc / .docx）格式的文献。"; return; }
     if (file.size > MAX_SIZE) { state.dom.note.textContent = "文件大小超过 100MB，请压缩后重试。"; return; }
     state.dom.note.textContent = "";
     const rec = {
-      id: `lt-local-${Date.now()}`,
+      id: `lt-local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       name: file.name,
       sizeText: file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / 1024 / 1024).toFixed(1)} MB`,
       type: /\.pdf$/i.test(file.name) ? "pdf" : "doc",
       status: "parsing",
-      time: nowText(),
+      time: nowText(), file,
     };
     state.records.unshift(rec);
     state.page = 1;
     renderTable();
     toast(`已添加「${file.name}」，正在检测…`);
-    clearTimeout(state.detectTimer);
-    state.detectTimer = setTimeout(() => {
-      rec.status = "done";
-      if (state.view === "list") renderTable();
-      toast(`「${file.name}」已入库，可以开始伴读`);
-    }, 2200);
+    const [result] = await Promise.all([window.BaigeTranslateAudit.inspect(file), new Promise(resolve => setTimeout(resolve, 2200))]);
+    rec.keywords = result.keywords;
+    rec.status = { passed: "done", hit: "warning", failed: "failed" }[result.auditStatus];
+    if (rec.status === "failed") delete rec.file;
+    if (state.view === "list") renderTable();
+    if (state.dom.audit.open && state.auditId === rec.id) renderAudit(rec);
   }
 
   function render(target, onDirty = () => {}) {
     if (!state.built) { state.records = seedRecords(); state.built = true; }
-    target.classList.add("lt-workspace");
+    target.classList.add("lt-workspace", "file-intake-workspace");
     build(target);
     showList();
   }
@@ -359,7 +379,7 @@
 
   function deactivate() {
     clearTimeout(state.noticeTimer);
-    clearTimeout(state.detectTimer);
+    if (state.dom?.audit.open) state.dom.audit.close();
     const el = state.dom?.toast;
     if (el) el.hidden = true;
   }
@@ -373,9 +393,40 @@
     if (action === "choose") { state.dom.file.click(); return; }
     if (action === "back") { showList(); return; }
     if (action === "read") { showReader(button.dataset.id); return; }
+    if (action === "audit-close") { state.dom.audit.close(); return; }
+    if (action === "audit" || action.startsWith("audit-")) {
+      const rec = state.records.find(item => item.id === (button.dataset.id || state.auditId));
+      if (!rec) return;
+      if (action === "audit") {
+        state.auditId = rec.id;
+        renderAudit(rec);
+        state.dom.audit.showModal();
+        return;
+      }
+      if (action === "audit-submit" && rec.status === "warning") rec.status = "submitted";
+      else if (action === "audit-approve" && rec.status === "submitted") rec.status = "approved";
+      else if (action === "audit-reject" && rec.status === "submitted") {
+        rec.status = "rejected";
+        delete rec.file;
+      } else return;
+      renderTable();
+      renderAudit(rec);
+      return;
+    }
+    if (action === "download") {
+      const rec = state.records.find(item => item.id === button.dataset.id);
+      if (!rec?.file || !STATUS[rec.status].canRead) return;
+      const url = URL.createObjectURL(rec.file);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = rec.name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      return;
+    }
     if (action === "delete") {
       const rec = state.records.find(item => item.id === button.dataset.id);
-      if (!rec) return;
+      if (!rec || !STATUS[rec.status].canDelete) return;
       if (!window.confirm(`确定删除「${rec.name}」的伴读记录吗？`)) return;
       state.records = state.records.filter(item => item.id !== rec.id);
       renderTable();

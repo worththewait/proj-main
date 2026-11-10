@@ -7,72 +7,26 @@
 
 /* ---------- 列表页 ---------- */
 
-.lt-page { display: grid; gap: 20px; min-width: 0; }
-
-.lt-card {
-  min-width: 0;
-  padding: 24px;
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.lt-title { margin: 0; color: #1a1a1a; font-size: 20px; font-weight: 700; line-height: 1.5; }
-.lt-subtitle { margin: 6px 0 0; color: #888; font-size: 13px; line-height: 1.6; }
-
-.lt-dropzone {
-  display: grid;
-  place-items: center;
-  min-height: 266px;
-  margin-top: 18px;
-  padding: 40px 24px;
-  border: 2px dashed #ddd;
-  border-radius: 12px;
-  text-align: center;
-  transition: border-color 160ms var(--ease), background-color 160ms var(--ease);
-}
-
-.lt-dropzone.is-over { border-color: var(--accent); background: var(--accent-soft); }
-
-.lt-drop-content { display: flex; flex-direction: column; align-items: center; gap: 12px; }
-
-.lt-drop-icon {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.lt-drop-icon .icon { width: 28px; height: 28px; }
-
-.lt-drop-text { margin: 0; color: #555; font-size: 16px; font-weight: 500; line-height: 1.5; }
-.lt-drop-hint { margin: 0; color: #999; font-size: 13px; line-height: 1.6; }
-
-.lt-primary {
-  min-height: 36px;
-  padding: 8px 24px;
-  border: 0;
-  border-radius: 6px;
-  background: var(--accent);
-  color: #fff;
-  font-size: 14px;
-}
-
-.lt-primary:hover { background: var(--accent-hover); }
-.lt-primary:disabled { cursor: not-allowed; opacity: .6; }
-
-.lt-note { min-height: 18px; margin: 10px 0 0; color: var(--danger); font-size: 12.5px; }
+.lt-page.is-over { outline: 2px dashed var(--accent); outline-offset: -6px; }
+.lt-note { margin: 0; color: var(--danger); font-size: 12.5px; }
 .lt-note:empty { display: none; }
 
-.lt-sr {
+[data-lt-tooltip] { position: relative; }
+[data-lt-tooltip]:is(:hover, :focus-visible) { z-index: 2; }
+[data-lt-tooltip]:is(:hover, :focus-visible)::after {
+  content: attr(data-lt-tooltip);
   position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 5px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 12px;
+  line-height: 1.5;
   white-space: nowrap;
+  pointer-events: none;
 }
 
 /* ---------- 历史表 ---------- */
@@ -99,30 +53,14 @@
 
 .lt-search:focus { border-color: var(--accent); outline: none; }
 
-.lt-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-
-.lt-table th,
-.lt-table td { padding: 12px 16px; text-align: left; vertical-align: middle; }
-
-.lt-table thead th {
-  background: #f8f9fa;
-  color: #666;
-  font-size: 14px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.lt-table tbody td { border-bottom: 1px solid #f2f4f7; font-size: 14px; }
-.lt-table tbody tr:last-child td { border-bottom: 0; }
-
 .lt-file { display: flex; align-items: center; gap: 12px; min-width: 0; }
 
 .lt-badge {
   display: grid;
   place-items: center;
-  flex: 0 0 40px;
-  width: 40px;
-  height: 46px;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 30px;
   border-radius: 6px;
   background: var(--accent-soft);
   color: var(--accent);
@@ -144,25 +82,16 @@
   white-space: nowrap;
 }
 
-.lt-file-size { color: #999; font-size: 12px; }
+.lt-file-size { color: var(--muted); font-size: 12px; }
 
-.lt-status {
-  display: inline-block;
-  padding: 3px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.lt-status.is-done { background: var(--success-soft); color: var(--success); }
-.lt-status.is-parsing { background: var(--pending-soft); color: var(--pending); }
-.lt-status.is-warning { background: #fdeeee; color: var(--danger); }
-.lt-status.is-failed { background: #f2f3f5; color: #8b94a3; }
-
-.lt-time { color: #666; font-size: 13px; }
-
-.lt-actions { display: flex; align-items: center; gap: 8px; }
+.lt-audit-dialog { width: min(460px, calc(100% - 32px)); padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); }
+.lt-audit-dialog::backdrop { background: rgb(16 24 40 / 40%); }
+.lt-audit-dialog header, .lt-audit-dialog footer { display: flex; align-items: center; gap: 8px; padding: 12px 16px; }
+.lt-audit-dialog header { justify-content: space-between; border-bottom: 1px solid var(--line); }
+.lt-audit-dialog h2 { margin: 0; font-size: 16px; }
+.lt-audit-dialog footer { justify-content: flex-end; border-top: 1px solid var(--line); }
+.lt-audit-copy { display: grid; gap: 8px; padding: 16px; overflow-wrap: anywhere; }
+.lt-audit-copy p { margin: 0; color: var(--muted); font-size: 13px; }
 
 .lt-btn {
   min-height: 30px;
