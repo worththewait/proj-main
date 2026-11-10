@@ -146,7 +146,7 @@
     const body = visible.length ? visible.map((doc) => {
       const allowed = secretFiles.canView(doc.status);
       return `<tr>
-        <td><button type="button" class="kb-file-edit" data-kb-edit="${text(doc.id)}" title="编辑文件信息">${text(doc.name)}</button></td>
+        <td><button type="button" class="kb-file-edit" data-kb-edit="${text(doc.id)}" title="${text(doc.name)}" aria-label="编辑 ${text(doc.name)} 的文件信息">${text(doc.name)}</button></td>
         <td>${secretFiles.time(doc.created)}</td>
         <td>${secretFiles.status(doc.status, docAction(doc, "audit", "eye", "查看涉密详情"))}</td>
         <td><div class="secret-file-actions">

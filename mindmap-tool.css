@@ -2,7 +2,7 @@
 
 .mm-app {
   display: grid;
-  grid-template-columns: clamp(544px, 44%, 560px) minmax(0, 1fr);
+  grid-template-columns: clamp(488px, 40%, 512px) minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   gap: 4px;
   height: clamp(515px, calc(100dvh - 70px), 900px);
@@ -129,11 +129,17 @@
 .mm-search input::placeholder { color: var(--muted); }
 .mm-search:focus-within, .mm-drawer-search:focus-within { border-color: var(--accent); }
 
-.mm-file-list { max-height: min(325px, 40vh); }
+.mm-file-list { max-height: min(325px, 40vh); scrollbar-width: thin; scrollbar-gutter: stable; }
+.mm-file-list .secret-file-table { min-width: 420px; }
+.mm-file-list .secret-file-table :is(th, td) { padding-inline: 8px; }
+.mm-file-list .secret-file-table th:nth-child(2) { width: 120px; }
+.mm-file-list .secret-file-table th:nth-child(3) { width: 106px; }
+.mm-file-list .secret-file-table th:last-child { width: 98px; }
 .mm-file.is-active td, .mm-file.is-active:hover td { background: var(--accent-soft); }
 .mm-file-choice { width: 100%; padding: 0; border: 0; background: transparent; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
 .mm-file-choice:disabled { opacity: 1; cursor: default; }
 .mm-file-choice:not(:disabled):hover, .mm-file.is-active .mm-file-choice { color: var(--accent-hover); }
+.mm-file-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; white-space: normal; overflow-wrap: anywhere; }
 .mm-file-example { display: block; color: var(--muted); font-size: 11px; }
 .mm-file-help { margin: 6px 0 10px; color: var(--muted); font-size: 12px; line-height: 1.55; }
 .mm-notice-status { display: flex; align-items: center; gap: 8px; }

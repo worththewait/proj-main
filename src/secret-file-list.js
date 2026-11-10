@@ -14,7 +14,11 @@
     draft: "—",
   };
   const label = code => Object.hasOwn(labels, code) ? labels[code] : labels.failed;
-  const head = '<thead><tr><th scope="col">文件名</th><th scope="col">上传时间</th><th scope="col">文档状态</th><th scope="col">操作</th></tr></thead>';
+  function header(...extraColumns) {
+    const columns = ["文件名", "上传时间", "文档状态", ...extraColumns, "操作"];
+    return `<thead><tr>${columns.map(label => `<th scope="col">${escapeHtml(label)}</th>`).join("")}</tr></thead>`;
+  }
+  const head = header();
   const canView = code => ["passed", "approved", "stored"].includes(code);
 
   function status(code, eyeMarkup = "") {
@@ -35,5 +39,5 @@
     return `<time datetime="${escapeHtml(date.toISOString())}" title="${day} ${clock}:${pad(date.getSeconds())}">${day} ${clock}</time>`;
   }
 
-  window.BaigeSecretFileList = Object.freeze({ head, status, time, label, canView });
+  window.BaigeSecretFileList = Object.freeze({ head, header, status, time, label, canView });
 })();

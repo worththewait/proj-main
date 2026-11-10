@@ -16,9 +16,13 @@ function fakeNode() {
 }
 
 function loadTool() {
-  const window = { BaigeUI: { icon: () => "<svg></svg>", escapeHtml: (value) => String(value) } };
+  const window = {
+    BaigeUI: { icon: () => "<svg></svg>", escapeHtml: (value) => String(value) },
+    BaigeProofreadTool: { scanSecret: name => name.includes("机密") ? ["机密"] : [] },
+  };
   const document = { querySelector: () => null, createElement: () => fakeNode(), body: { append() {} } };
   const context = vm.createContext({ window, document, console, setTimeout, clearTimeout });
+  vm.runInContext(read("src/secret-file-list.js"), context);
   vm.runInContext(read("src/translate-tool.js"), context, { filename: "translate-tool.js" });
   return window.BaigeDocTranslateTool;
 }
@@ -31,19 +35,21 @@ test("文档翻译仅在同名工具页挂载，样式与脚本已引入", () =>
   const html = read("pages/smart-tools.html");
   assert.match(html, /translate-tool\.css/);
   assert.match(html, /src\/translate-tool\.js/);
+  assert.match(html, /src\/translate-audit\.js[^]*src\/translate-tool\.js/);
 });
 
-test("工作区还原线上上传卡片与六列历史表格", () => {
+test("工作区沿用纠错布局，统一涉密列表保留两个语言列和翻译状态列", () => {
   const js = read("src/translate-tool.js");
   for (const token of [
-    "翻译文档上传", "拖放文档到此处，或点击选择文件", "支持 PDF、Word，最大文件大小 100MB", "选择文件",
-    "文档翻译历史", "文件名", "源语言", "目标语言", "状态", "时间", "操作",
+    "上传本地文件", "支持拖放 PDF、Word", "100 MB",
+    "翻译记录", "源语言", "目标语言", "上传时间", "翻译状态",
     "下载", "查看", "上一页", "下一页", "第 ", "页 / 共 ", "页",
   ]) assert.ok(js.includes(token), token);
   const css = read("translate-tool.css");
-  assert.match(css, /\.dt-dropzone/);
   assert.match(css, /\.dt-table/);
   assert.match(css, /\.dt-dialog/);
+  assert.match(js, /class="dt-page pr-intake"/);
+  assert.match(js, /fileList\.header\("源语言", "目标语言", "翻译状态"\)/);
 });
 
 test("上传仅接受 PDF / Word，且限制 100MB", () => {
@@ -72,12 +78,12 @@ test("演示历史共 27 条、分 6 页，首屏与线上记录一致", () => {
   assert.deepEqual(
     first,
     [
-      ["机密秘密.pdf", "中文", "英文", "翻译成功"],
+      ["机密秘密.pdf", "中文", "英文", "待解析"],
       ["小作文2.pdf", "中文", "英文", "翻译成功"],
       ["小作文.docx", "中文", "英文", "翻译失败"],
     ],
   );
-  assert.ok(records.some(item => tool.STATUS[item.status].label === "处理失败"));
+  assert.ok(records.some(item => item.status === "error" && tool.STATUS[item.status].label === "翻译失败"));
   assert.ok(records.every(item => !/\.xlsx$/i.test(item.name)), "历史不应出现上传不支持的格式");
 });
 
@@ -91,6 +97,17 @@ test("渲染后首页显示 5 条、分页为第 1 页 / 共 6 页", () => {
   assert.match(body.innerHTML, /机密秘密\.pdf/);
   assert.match(body.innerHTML, /翻译成功/);
   assert.match(body.innerHTML, /翻译失败/);
+  assert.match(body.innerHTML, /<td>中文<\/td><td>英文<\/td>/);
+  assert.match(body.innerHTML, /32\.67 KB/);
+  const firstRow = body.innerHTML.split("</tr>")[0];
+  assert.match(firstRow, /data-status="hit"/);
+  assert.match(firstRow, /class="dt-status-empty"[^>]*>—<\/span>/);
+  assert.doesNotMatch(firstRow, /翻译成功|翻译失败/);
+  assert.doesNotMatch(firstRow, /data-dt-action="(?:view|download)"/);
+  assert.match(firstRow, /data-dt-action="delete"/);
+  const secondRow = body.innerHTML.split("</tr>")[1];
+  assert.match(secondRow, /data-dt-action="view"/);
+  assert.match(secondRow, /data-dt-action="download"/);
   assert.equal((body.innerHTML.match(/<tr>/g) || []).length, 5);
   assert.match(pager.innerHTML, /第 1 页 \/ 共 6 页/);
   assert.match(pager.innerHTML, /data-dt-action="prev" disabled/);

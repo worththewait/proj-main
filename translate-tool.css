@@ -1,238 +1,104 @@
-/* 智能工具 · 文档翻译：上传卡片 + 翻译历史表格 + 文件预览。
-   结构与线上智能工具工作区一致，配色沿用 DESIGN.md 全站令牌。 */
+/* 文档翻译与其他智能工具共用白色内容面、涉密列表和线性图标。 */
 
-/* 工作区容器由外壳程序聚焦，复刻页面不需要这圈焦点框；内部控件仍保留键盘焦点提示。 */
 [data-page="smart-tools"] .tool-detail-workspace.dt-workspace:focus { outline: none; }
 
-.dt-page {
-  --dt-line: var(--line);
-  --dt-muted: var(--muted);
-  display: grid;
-  gap: 20px;
-  min-width: 0;
-}
+.dt-page.is-over { outline: 2px dashed var(--accent); outline-offset: -6px; }
 
-.dt-card {
-  min-width: 0;
-  padding: 24px;
-  border-radius: 12px;
+.dt-primary,
+.dt-mini {
+  min-height: 34px;
+  padding: 5px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
   background: var(--surface);
-}
-
-.dt-card-title {
-  margin: 0 0 20px;
   color: var(--ink);
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1.5;
-}
-
-/* ---------- 上传区 ---------- */
-
-.dt-dropzone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  min-height: 266px;
-  padding: 40px 24px;
-  border: 2px dashed var(--line-strong);
-  border-radius: 12px;
-  text-align: center;
-  transition: border-color 160ms var(--ease), background-color 160ms var(--ease);
-}
-
-.dt-dropzone.is-over {
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.dt-dropzone-icon {
-  display: grid;
-  place-items: center;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.dt-dropzone-icon .icon { width: 30px; height: 30px; stroke-width: 1.7; }
-
-.dt-dropzone-title {
-  margin: 18px 0 0;
-  color: var(--ink);
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.dt-dropzone-hint {
-  margin: 8px 0 0;
-  color: var(--dt-muted);
-  font-size: 12.5px;
-  line-height: 1.6;
+  font-size: 12px;
+  font-weight: 550;
+  white-space: nowrap;
 }
 
 .dt-primary {
-  min-height: 36px;
-  margin-top: 18px;
-  padding: 8px 24px;
-  border: 0;
-  border-radius: 6px;
+  min-height: 38px;
+  padding-inline: 16px;
+  border-color: var(--accent);
   background: var(--accent);
-  color: #fff;
-  font-size: 14px;
+  color: var(--surface);
+  font-size: 13px;
+  font-weight: 600;
 }
 
-.dt-primary:hover { background: var(--accent-hover); }
+.dt-primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
+.dt-mini:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-hover); }
+.dt-mini:disabled { background: var(--canvas); }
 
 .dt-upload-note {
-  min-height: 18px;
-  margin: 12px 0 0;
+  margin: 0;
   color: var(--danger);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
 .dt-upload-note:empty { display: none; }
 
-.dt-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+.dt-table { min-width: 740px; }
+.dt-table th:nth-child(4), .dt-table th:nth-child(5) { width: 78px; }
+.dt-table th:nth-child(6) { width: 142px; }
+
+@container secret-files (min-width: 980px) {
+  .dt-table th:nth-child(2) { width: 14%; }
+  .dt-table th:nth-child(3), .dt-table th:nth-child(6) { width: 13%; }
+  .dt-table th:nth-child(4), .dt-table th:nth-child(5) { width: 8%; }
+  .dt-table th:last-child { width: 11%; }
 }
-
-/* ---------- 历史表格 ---------- */
-
-.dt-table-scroll { overflow-x: auto; }
-
-.dt-table {
-  width: 100%;
-  min-width: 760px;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.dt-table th,
-.dt-table td {
-  padding: 12px 14px;
-  text-align: left;
-  vertical-align: middle;
-}
-
-.dt-table thead th {
-  background: #f7f9fc;
-  color: var(--dt-muted);
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.dt-table thead th:first-child { border-radius: 6px 0 0 6px; }
-.dt-table thead th:last-child { border-radius: 0 6px 6px 0; }
-
-.dt-table tbody td {
-  border-bottom: 1px solid var(--dt-line);
-  color: var(--ink);
-  font-size: 13px;
-}
-
-.dt-table tbody tr:last-child td { border-bottom: 0; }
-
-.dt-file {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.dt-file-badge {
-  display: grid;
-  place-items: center;
-  flex: 0 0 32px;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.dt-file-badge .icon { width: 17px; height: 17px; }
 
 .dt-file-copy { display: grid; gap: 1px; min-width: 0; }
-
-.dt-file-name {
-  overflow: hidden;
-  color: var(--ink);
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dt-file-size { color: #98a1b1; font-size: 11px; }
+.dt-file-name { overflow: hidden; color: var(--ink); font-weight: 550; text-overflow: ellipsis; white-space: nowrap; }
+.dt-file-size { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 .dt-status {
   display: inline-flex;
   align-items: center;
-  min-height: 26px;
-  padding: 3px 12px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 500;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
   white-space: nowrap;
 }
 
-.dt-status.is-done { background: var(--success-soft); color: var(--success); }
-.dt-status.is-failed { background: #fdf0f0; color: var(--danger); }
-.dt-status.is-running { background: var(--accent-soft); color: var(--accent); }
-
-.dt-actions { display: flex; align-items: center; gap: 8px; }
-
-.dt-mini {
-  min-height: 26px;
-  padding: 2px 11px;
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
-  background: var(--surface);
-  color: var(--ink);
-  font-size: 12.5px;
-  white-space: nowrap;
+.dt-status::before {
+  content: "";
+  flex: 0 0 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
 }
 
-.dt-mini:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
-.dt-mini:disabled { cursor: not-allowed; color: #aeb6c4; background: #fafbfd; }
-
-.dt-empty {
-  padding: 42px 0;
-  color: var(--dt-muted);
-  font-size: 13px;
-  text-align: center;
-}
+.dt-status.is-done { color: var(--success); }
+.dt-status.is-failed { color: var(--danger); }
+.dt-status.is-running { color: var(--accent-hover); }
+.dt-progress { margin-top: 2px; }
+.dt-status-empty { color: var(--muted); }
 
 .dt-pager {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 18px;
+  padding: 8px 0 0;
 }
 
-.dt-page-info { color: #888; font-size: 13px; }
+.dt-page-info { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
 
 /* ---------- 预览弹窗 ---------- */
 
 .dt-dialog {
-  width: min(1060px, 92vw);
+  width: min(960px, calc(100% - 32px));
   max-height: 88vh;
   padding: 0;
   border: 0;
   border-radius: 12px;
   background: var(--surface);
-  box-shadow: 0 24px 64px rgba(18, 30, 54, .24);
+  box-shadow: 0 16px 48px rgba(18, 30, 54, .2);
   overflow: hidden;
 }
 
@@ -244,7 +110,7 @@
   justify-content: space-between;
   gap: 16px;
   padding: 14px 20px;
-  border-bottom: 1px solid var(--dt-line);
+  border-bottom: 1px solid var(--line);
 }
 
 .dt-dialog-head strong {
@@ -266,7 +132,7 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: var(--dt-muted);
+  color: var(--muted);
 }
 
 .dt-dialog-close:hover { background: var(--surface-subtle); color: var(--ink); }
@@ -274,36 +140,27 @@
 
 .dt-facts {
   display: grid;
-  gap: 6px;
+  grid-template-columns: minmax(0, 1.7fr) repeat(3, minmax(0, 1fr));
+  gap: 12px 20px;
   margin: 0;
-  padding: 16px 24px;
-  background: #f7f9fc;
+  padding: 14px 20px;
+  background: var(--canvas);
 }
 
-.dt-facts > div { display: flex; gap: 8px; font-size: 13px; line-height: 1.6; }
-.dt-facts dt { flex: 0 0 76px; margin: 0; color: var(--dt-muted); }
-.dt-facts dd { margin: 0; color: var(--ink); }
+.dt-facts > div { min-width: 0; font-size: 13px; line-height: 1.6; }
+.dt-facts dt { color: var(--muted); font-size: 12px; }
+.dt-facts dd { margin: 2px 0 0; color: var(--ink); overflow-wrap: anywhere; }
 
 .dt-viewer-bar {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 16px;
-  border-top: 1px solid var(--dt-line);
-  border-bottom: 1px solid var(--dt-line);
+  border-block: 1px solid var(--line);
 }
 
 .dt-viewer-bar .dt-spacer { flex: 1; }
-.dt-viewer-page { display: flex; align-items: center; gap: 8px; color: var(--dt-muted); font-size: 13px; }
-
-.dt-viewer-input {
-  width: 44px;
-  height: 28px;
-  border: 1px solid var(--line-strong);
-  border-radius: 5px;
-  text-align: center;
-  font-size: 13px;
-}
+.dt-viewer-page { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
 
 .dt-tool-btn {
   display: grid;
@@ -313,19 +170,19 @@
   border: 0;
   border-radius: 5px;
   background: transparent;
-  color: var(--dt-muted);
+  color: var(--muted);
 }
 
 .dt-tool-btn:hover { background: var(--surface-subtle); color: var(--accent); }
 .dt-tool-btn .icon { width: 17px; height: 17px; }
-.dt-viewer-zoom { color: var(--ink); font-size: 13px; }
+.dt-viewer-zoom { min-width: 42px; color: var(--ink); font-size: 13px; font-variant-numeric: tabular-nums; text-align: center; }
 
 .dt-viewer-stage {
   display: grid;
   place-items: start center;
   max-height: 52vh;
   padding: 22px;
-  background: #e9edf3;
+  background: var(--surface-subtle);
   overflow: auto;
 }
 
@@ -333,16 +190,16 @@
   width: min(620px, 100%);
   min-height: 540px;
   padding: 64px 62px;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 2px 10px rgba(24, 38, 66, .12);
   color: #2a3345;
   font-size: 13px;
   line-height: 2;
 }
 
-.dt-paper h3 { margin: 0 0 28px; font-size: 17px; font-weight: 600; text-align: center; }
+.dt-paper h3 { margin: 0 0 16px; font-size: 20px; font-weight: 650; line-height: 1.4; }
 .dt-paper p { margin: 0 0 16px; }
-.dt-paper .dt-placeholder { height: 10px; margin: 0 0 14px; border-radius: 3px; background: #f0f3f8; }
+.dt-paper .dt-paper-label { margin-bottom: 24px; color: var(--muted); font-size: 12px; }
 
 /* ---------- 轻提示 ---------- */
 
@@ -354,7 +211,7 @@
   max-width: 340px;
   padding: 10px 16px;
   border-radius: 8px;
-  background: #1d2433;
+  background: var(--ink);
   color: #fff;
   font-size: 13px;
   line-height: 1.6;
@@ -363,7 +220,39 @@
 
 .dt-toast[hidden] { display: none; }
 
-@media (max-width: 1240px) {
-  .dt-card { padding: 18px; }
+/* ---------- 核查详情 ---------- */
+
+.dt-audit-dialog { width: min(460px, calc(100% - 32px)); overflow: auto; }
+
+.dt-audit-copy {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  padding: 18px 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+
+.dt-audit-file { color: var(--ink); font-size: 14px; font-weight: 650; }
+.dt-audit-status { max-width: 100%; }
+
+.dt-audit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+}
+
+@media (max-width: 960px) {
   .dt-paper { padding: 44px 40px; }
+}
+
+@media (max-width: 600px) {
+  .dt-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .dt-viewer-bar { gap: 4px; padding-inline: 10px; }
 }

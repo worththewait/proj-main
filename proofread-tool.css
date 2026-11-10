@@ -1,7 +1,7 @@
 /* 纠错校对：文件列表、录入与审校工作台。
    视觉沿用 DESIGN.md 全站基线：白色内容面、百舸蓝交互、12px 辅助文字。 */
 
-.proofread-workspace {
+.proofread-workspace, .file-intake-workspace {
   --pr-work-height: max(420px, calc(100dvh - 70px));
   --pr-surface-radius: 12px;
   --pr-surface-gap: 4px;

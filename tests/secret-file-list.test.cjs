@@ -14,6 +14,7 @@ const list = window.BaigeSecretFileList;
 test("secrecy lists use the same four headings and distinguish scan, review and ingestion outcomes", () => {
   const headings = [...list.head.matchAll(/<th scope="col">([^<]+)<\/th>/g)].map(match => match[1]);
   assert.deepEqual(headings, ["文件名", "上传时间", "文档状态", "操作"]);
+  assert.match(list.header("翻译任务"), /文档状态<\/th><th scope="col">翻译任务<\/th><th scope="col">操作/);
   const expected = { detecting: "检测中", passed: "已通过", hit: "涉密可疑", submitted: "审核中",
     approved: "审核通过", stored: "已入库", rejected: "已驳回", failed: "失败" };
   for (const [code, label] of Object.entries(expected)) {
