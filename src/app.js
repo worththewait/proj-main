@@ -204,6 +204,10 @@
     const route = readRoute();
     if (route.id !== state.activeId || route.child !== state.activeChild) setPage(route.id, route.child, { fromHistory: true });
   });
+  // 门户首页在控制台之外，顶栏的「返回首页」直接离开当前外壳。
+  document.querySelector("#portalHomeTrigger")?.addEventListener("click", () => {
+    location.href = "./portal.html";
+  });
   const route = readRoute();
   setPage(route.id, route.child, { fromHistory: true });
 })();
