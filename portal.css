@@ -257,6 +257,7 @@ a { color: inherit; text-decoration: none; }
 .portal-news-thumb.is-c { background: linear-gradient(180deg, #e2e7ee 0%, #cfd6e0 44%, #aeb8c6 44%, #c6ceda 66%, #8b96a6 66%); }
 
 .portal-news-more {
+  display: inline-flex;
   align-self: flex-start;
   margin-top: 2px;
   padding: 0;
@@ -346,10 +347,159 @@ a { color: inherit; text-decoration: none; }
 
 .portal-footer {
   margin-top: 64px;
-  padding-top: 22px;
-  border-top: 1px solid var(--portal-line);
-  color: #9aa4b4;
+  padding: 34px 40px 22px;
+  background: #f2f3f6;
+  color: #7c8698;
   font-size: 12px;
+}
+
+.portal-footer-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 40px;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding-bottom: 22px;
+  border-bottom: 1px solid #e2e5eb;
+}
+
+.portal-footer-brand { display: flex; align-items: flex-start; gap: 12px; }
+.portal-footer-brand img { width: 28px; height: 32px; margin-top: 2px; }
+.portal-footer-brand strong { display: block; color: #2b3444; font-size: 15px; font-weight: 600; }
+.portal-footer-brand small { display: block; margin-top: 10px; color: #8d97a8; font-size: 12px; line-height: 1.8; }
+
+.portal-footer-qr { display: grid; justify-items: center; gap: 6px; }
+.portal-footer-qr .portal-qr { width: 76px; height: 76px; }
+.portal-footer-qr small { color: #8d97a8; font-size: 11.5px; }
+
+.portal-footer-record {
+  max-width: 1360px;
+  margin: 14px auto 0;
+  color: #9aa4b4;
+  font-size: 11.5px;
+}
+
+/* ---------- 全部动态 ---------- */
+
+.portal-page-main { max-width: 960px; padding-bottom: 0; }
+
+.portal-page-title { margin: 6px 0 0; color: #10161f; font-size: 26px; font-weight: 600; }
+.portal-page-sub { margin: 8px 0 0; color: var(--portal-muted); font-size: 13px; }
+
+.portal-feed { display: grid; gap: 12px; margin-top: 26px; }
+
+.portal-feed-item {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: #fff;
+  transition: box-shadow 160ms var(--ease, ease);
+}
+
+.portal-feed-item:hover { box-shadow: 0 8px 20px rgba(24, 38, 66, .10); }
+.portal-feed-item:hover .portal-feed-title { color: var(--portal-accent); }
+
+.portal-feed-thumb {
+  position: relative;
+  flex: 0 0 92px;
+  width: 92px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: #e6ebf3;
+}
+
+.portal-feed-thumb::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(118deg, rgba(255, 255, 255, .26), rgba(255, 255, 255, 0) 46%);
+  content: "";
+}
+
+.portal-feed-thumb.is-a { background: linear-gradient(150deg, #122d52 0%, #2c6491 46%, #c2404d 78%, #e8eef6 78%); }
+.portal-feed-thumb.is-b { background: linear-gradient(160deg, #6d5648 0%, #a58b74 44%, #3f4a5c 44%, #222b3a 100%); }
+.portal-feed-thumb.is-c { background: linear-gradient(180deg, #2d4a86 0%, #3f66a8 52%, #5a78b4 52%, #213a68 100%); }
+.portal-feed-thumb.is-d { background: linear-gradient(150deg, #8fd0f2 0%, #d6eefb 46%, #f3c94b 46%, #f6dc86 100%); }
+.portal-feed-thumb.is-e { background: linear-gradient(160deg, #cfe3c4 0%, #eef6e8 44%, #7aa26a 44%, #456a44 100%); }
+
+.portal-feed-copy { display: grid; gap: 8px; min-width: 0; }
+
+.portal-feed-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #1a2231;
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.portal-feed-date { color: #b7c0cd; font-size: 12.5px; }
+
+/* ---------- 动态详情 ---------- */
+
+.portal-detail-main { max-width: 1020px; padding-bottom: 0; }
+
+.portal-article {
+  padding: 34px 40px 44px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.portal-article-inner { max-width: 640px; margin: 0 auto; }
+
+.portal-article h1 {
+  margin: 0;
+  color: #10161f;
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.portal-article-meta { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+
+.portal-article-tag {
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--portal-accent-soft, #e8efff);
+  color: var(--portal-accent);
+  font-size: 12px;
+}
+
+.portal-article-meta time { color: #9aa4b4; font-size: 12.5px; }
+
+.portal-article-body { margin-top: 24px; color: #2b3444; font-size: 13.5px; line-height: 2.05; }
+.portal-article-body p { margin: 0 0 14px; text-indent: 2em; }
+.portal-article-body p:last-child { margin-bottom: 0; }
+
+.portal-article-byline {
+  margin: 20px 0 0;
+  color: #6b7688;
+  font-size: 12.5px;
+  line-height: 2;
+}
+
+.portal-article-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 22px;
+  border: 0;
+  background: transparent;
+  color: var(--portal-accent);
+  font-size: 13px;
+}
+
+.portal-article-back:hover { text-decoration: underline; }
+
+.portal-empty {
+  padding: 60px 0;
+  color: var(--portal-muted);
+  font-size: 13px;
   text-align: center;
 }
 

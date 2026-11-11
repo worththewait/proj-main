@@ -45,9 +45,6 @@
     const channel = event.target.closest("[data-portal-channel]");
     if (channel) { toast(`演示原型：「${channel.dataset.portalChannel}」频道页待接入`); return; }
     const entry = event.target.closest("[data-portal-entry]");
-    if (entry) { toast(`演示原型：「${entry.dataset.portalEntry}」介绍页待接入`); return; }
-    const news = event.target.closest("[data-portal-news]");
-    if (news) { toast(`演示原型：「${news.dataset.portalNews}」详情待接入`); return; }
-    if (event.target.closest("[data-portal-more]")) toast("演示原型：动态列表页待接入");
+    if (entry) { toast(`演示原型：「${entry.dataset.portalEntry}」介绍页待接入`); }
   });
 })();
