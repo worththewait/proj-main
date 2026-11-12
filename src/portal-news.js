@@ -1,134 +1,243 @@
-/* 门户「最新动态」列表与详情：数据为演示内容，详情按 ?id= 渲染。 */
+/* 门户「最新动态」：首页三条、列表页（搜索 + 分类）与详情页都从 portal-news-store 取数，
+   后台「动态发布」保存后立即生效。活动报名公告在详情页提供「立即报名」。 */
 (() => {
   "use strict";
 
-  const NEWS = [
-    {
-      id: 28,
-      title: "中船集团各单位举行形式多样的“安全生产月”活动",
-      tag: "安全生产",
-      date: "2026-09-24",
-      thumb: "is-a",
-      body: [
-        "今年六月是第 24 个全国“安全生产月”，中船集团各所属单位围绕“人人讲安全、个个会应急”主题，结合生产实际开展警示教育、应急演练与隐患排查。",
-        "活动期间，各单位把安全责任落实到班组和岗位，重点检查高处作业、有限空间、动火作业等环节，并通过线上答题与现场演练相结合的方式提升员工应急处置能力。",
-      ],
-      byline: "来　源：中船集团新闻宣传中心",
-    },
-    {
-      id: 29,
-      title: "徐鹏与四川大学校长汪劲松会谈 共谋“十五五”高质量发展",
-      tag: "会谈",
-      date: "2026-09-24",
-      thumb: "is-b",
-      body: [
-        "双方围绕科研平台共建、人才培养与成果转化进行了交流，表示将发挥各自优势，在船舶与海洋工程、新材料与智能制造等方向深化合作。",
-        "会谈前，汪劲松一行参观了集团展厅，了解中船集团在主业发展和科技创新方面的进展。",
-      ],
-      byline: "来　源：中船集团新闻宣传中心",
-    },
-    {
-      id: 30,
-      title: "中船先锋｜全国工人先锋号中船风帆清苑分公司极板车间铸板班组：…",
-      tag: "中船先锋",
-      date: "2026-09-24",
-      thumb: "is-c",
-      body: [
-        "该班组承担极板铸造的关键工序，通过工艺改进与班组建设，持续提升产品一致性与生产效率。",
-        "班组以师带徒、岗位练兵为抓手，把质量要求落到每一道操作步骤，先后获得多项集体荣誉。",
-      ],
-      byline: "来　源：中船集团新闻宣传中心",
-    },
-    {
-      id: 31,
-      title: "儿童节活动",
-      tag: "节日活动",
-      date: "2026-09-24",
-      thumb: "is-d",
-      body: [
-        "集团总部举办亲子主题活动，设置手工、科普与互动游戏等环节，员工与家属共同参与。",
-        "活动旨在丰富员工文化生活，增进员工与家庭的沟通交流。",
-      ],
-      byline: "来　源：集团工会",
-    },
-    {
-      id: 32,
-      title: "今日芒种｜中船二十四节气",
-      tag: "节气",
-      date: "2026-09-24",
-      thumb: "is-e",
-      body: [
-        "芒种时节，万物并秀。集团各条战线抢抓工期、稳产保供，以实干迎接仲夏。",
-        "二十四节气系列内容由集团新闻宣传中心策划推出，记录节气里的船舶工业图景。",
-      ],
-      byline: "来　源：中船集团新闻宣传中心",
-    },
-    {
-      id: 33,
-      title: "中船集团与中国气象局签订战略合作框架协议 以务实合作赋能高质量可持续发展",
-      tag: "战略合作",
-      date: "2026-09-24",
-      thumb: "is-a",
-      body: [
-        "7月16日，中国船舶集团有限公司与中国气象局在上海签署战略合作框架协议。中船集团党组书记、董事长徐鹏，中国气象局党组书记、局长陈振林出席签约仪式。中国气象局党组成员、副局长毕宝贵，中船集团党组成员、副总经理赵同宾分别代表双方在协议上签字。签约前，双方就进一步加强沟通交流、推动互利共赢发展进行了交流探讨。",
-        "徐鹏对陈振林一行来访表示欢迎，并介绍了中船集团改革发展情况和“十五五”规划思路。徐鹏表示，气象工作在保障船舶建设、赋能船舶工业高质量可持续发展等方面发挥着重要支撑作用，希望双方以此次签约为契机，进一步强化协同联动，建立健全常态化沟通机制，聚焦防灾减灾能力建设、气象装备研制、新兴产业开发等领域，加强科技创新协同攻关，推进科研成果双向转化应用，推动合作向更宽领域、更深层次迈进，携手为海洋强国、气象强国建设提供有力支撑。",
-        "陈振林介绍了中国气象局发展概况。陈振林表示，中船集团是我国船舶工业的国家队和海洋科技创新的主力军，与中国气象局业务互补性强、战略契合度高。中国气象局愿与中船集团一道，以此次签约为契机，深化常态合作机制共建，加强在科研项目落地、数智赋能增效、科技成果转化等方面的合作，促进资源共建共享，加快推动合作协议落实落地，共同为落实国家重大战略作出新的更大贡献。",
-        "中国气象局有关内设机构和单位负责人，中船集团总助级领导、总部有关部门和相关二级管理单位负责人参加上述活动。",
-      ],
-      byline: "记　者：刘　畅　责　编：钱　平　一　审：周　芒　二　审：项　丽　三　审：甘丰录　来　源：中船集团新闻宣传中心/中国船舶报社",
-    },
-    {
-      id: 34,
-      title: "中船集团亮相2026中国国际应急管理展览 王国强出席展会并调研…",
-      tag: "展会",
-      date: "2026-09-24",
-      thumb: "is-c",
-      body: [
-        "展会集中展示了应急指挥、救援装备与安全保障等领域的技术与产品，中船集团组织所属单位联合参展。",
-        "期间，集团领导到展台调研，了解产品研制进展与市场应用情况。",
-      ],
-      byline: "来　源：中船集团新闻宣传中心",
-    },
-    {
-      id: 35,
-      title: "徐鹏调研中船集团上海地区部分单位",
-      tag: "调研",
-      date: "2026-09-24",
-      thumb: "is-b",
-      body: [
-        "调研期间，集团领导深入科研生产一线，了解重点项目进展、能力建设与人才队伍情况。",
-        "在随后召开的座谈会上，围绕“十五五”规划编制、深化改革与风险防控听取了意见建议。",
-      ],
-      byline: "来　源：中船集团新闻宣传中心",
-    },
-  ];
+  const store = window.BaigePortalNewsStore;
+  if (!store) return;
 
   const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+  const STAR_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 3 2.7 5.6 6.3.9-4.5 4.3 1.1 6.2L12 17.1 6.4 20l1.1-6.2L3 9.5l6.3-.9Z"/></svg>';
+  const SHARE_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4 m-4 4 4-4 4 4 M5 13v6a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-6"/></svg>';
+  const SIGNUP_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 5 5 5 M4 20l5-1L21 7l-5-5L4 14Z"/></svg>';
 
+  const homeRoot = document.querySelector("[data-portal-news-list]");
   const listRoot = document.querySelector("[data-news-list]");
   const detailRoot = document.querySelector("[data-news-detail]");
+  const tagRoot = document.querySelector("[data-news-tags]");
+  const searchInput = document.querySelector("#newsSearch");
 
-  if (listRoot) {
-    listRoot.innerHTML = NEWS.map(item => `<a class="portal-feed-item" href="./portal-news-detail.html?id=${item.id}">
-      <span class="portal-feed-thumb ${item.thumb}" aria-hidden="true"></span>
-      <span class="portal-feed-copy"><span class="portal-feed-title">${escapeHtml(item.title)}</span><span class="portal-feed-date">${escapeHtml(item.date)}</span></span>
-    </a>`).join("");
+  const filters = { tag: "全部", keyword: "" };
+
+  /* 缩略图：后台配了图片就用图片，否则沿用渐变示意块。 */
+  const thumbOf = item => (item.image
+    ? `<span class="portal-news-thumb has-image" aria-hidden="true"><img src="${escapeHtml(item.image)}" alt="" /></span>`
+    : `<span class="portal-news-thumb ${escapeHtml(item.thumb || "is-a")}" aria-hidden="true"></span>`);
+
+  const cardOf = (item, from) => `<a class="portal-news-item" href="./portal-news-detail.html?id=${encodeURIComponent(item.id)}&amp;from=${from}">
+            <span class="portal-news-copy"><span class="portal-news-title">${escapeHtml(item.title)}</span><span class="portal-news-date">${escapeHtml(item.date || String(item.publishedAt || "").slice(0, 10))}</span></span>
+            ${thumbOf(item)}
+          </a>`;
+
+  function renderHome() {
+    if (!homeRoot) return;
+    homeRoot.innerHTML = store.latest(3).map(item => cardOf(item, "home")).join("");
   }
 
-  window.BaigePortalNews = Object.freeze({ NEWS });
+  function renderTags() {
+    if (!tagRoot) return;
+    const tags = ["全部", ...store.TAGS];
+    tagRoot.innerHTML = tags.map(tag => `<button class="portal-chip${tag === filters.tag ? " is-active" : ""}" type="button" data-tag="${escapeHtml(tag)}" aria-pressed="${tag === filters.tag}">${escapeHtml(tag)}</button>`).join("");
+  }
 
-  if (detailRoot) {
-    const id = new URLSearchParams(location.search).get("id");
-    const item = NEWS.find(entry => String(entry.id) === id) || NEWS.find(entry => entry.id === 33);
+  function visibleNews() {
+    const keyword = filters.keyword.trim();
+    return store.feed().filter(item => {
+      if (filters.tag !== "全部" && item.tag !== filters.tag) return false;
+      if (keyword && !item.title.includes(keyword)) return false;
+      return true;
+    });
+  }
+
+  function renderList() {
+    if (!listRoot) return;
+    const list = visibleNews();
+    listRoot.innerHTML = list.length
+      ? list.map(item => `<a class="portal-feed-item" href="./portal-news-detail.html?id=${encodeURIComponent(item.id)}&from=news">
+      <span class="portal-feed-thumb ${escapeHtml(item.thumb || "is-a")}" aria-hidden="true"></span>
+      <span class="portal-feed-copy"><span class="portal-feed-title">${escapeHtml(item.title)}</span><span class="portal-feed-date"><em class="portal-feed-tag">${escapeHtml(item.tag)}</em>${escapeHtml(item.date || String(item.publishedAt || "").slice(0, 10))}</span></span>
+    </a>`).join("")
+      : `<div class="portal-empty-result"><strong>没有找到相关动态</strong><p>换个关键词或选择其他分类试试。</p></div>`;
+    if (tagRoot) renderTags();
+  }
+
+  /* 正文：后台富文本直接输出，纯文本按空行拆段。 */
+  function bodyOf(item) {
+    if (item.content && /<[a-z][\s\S]*>/i.test(item.content)) return item.content;
+    const paragraphs = Array.isArray(item.body) && item.body.length ? item.body : String(item.content || "").split(/\n{2,}/).filter(Boolean);
+    return paragraphs.map(para => `<p>${escapeHtml(para)}</p>`).join("");
+  }
+
+  /* 活动报名弹窗：只有「活动报名公告」才出现入口。 */
+  /* 表单顺序与线上报名表一致：姓名 → 性别 → 单位 → 部门 → 手机号 → 邮箱 → 职务 → 备注。 */
+  const SIGNUP_FIELDS = [
+    { kind: "text", name: "realname", label: "姓名", required: true, placeholder: "请输入姓名" },
+    { kind: "sex", label: "性别" },
+    { kind: "text", name: "unit", label: "单位", placeholder: "请输入单位名称" },
+    { kind: "text", name: "dept", label: "部门", placeholder: "请输入部门名称" },
+    { kind: "text", name: "phone", label: "手机号", required: true, placeholder: "请输入手机号", type: "tel" },
+    { kind: "text", name: "email", label: "邮箱", required: true, placeholder: "请输入邮箱地址", type: "email" },
+    { kind: "text", name: "title", label: "职务/职称", placeholder: "请输入职务或职称" },
+  ];
+
+  const fieldOf = field => (field.kind === "sex"
+    ? `<div class="ps-field"><span>性别</span>
+        <div class="ps-choices">
+          <label><input type="radio" name="sex" value="男"><span>男</span></label>
+          <label><input type="radio" name="sex" value="女"><span>女</span></label>
+        </div>
+      </div>`
+    : `<label class="ps-field"><span>${field.label}${field.required ? "<b>*</b>" : ""}</span>
+        <input class="ps-input" type="${field.type || "text"}" name="${field.name}" placeholder="${field.placeholder}" autocomplete="off">
+      </label>`);
+
+  function signupMarkup(title) {
+    return `<div class="ps-mask" data-signup-mask hidden></div>
+    <form class="ps-modal" data-signup-modal role="dialog" aria-modal="true" aria-labelledby="psTitle" hidden novalidate>
+      <header class="ps-head">
+        <span class="ps-badge" aria-hidden="true">${SIGNUP_ICON}</span>
+        <div class="ps-head-copy"><strong id="psTitle">立即报名</strong><p>请填写以下信息完成活动报名</p></div>
+        <button class="ps-close" type="button" data-signup-close aria-label="关闭">×</button>
+      </header>
+      <div class="ps-body">
+        <label class="ps-field"><span>活动名称</span><input class="ps-input is-readonly" type="text" value="${escapeHtml(title)}" readonly></label>
+        ${SIGNUP_FIELDS.map(fieldOf).join("")}
+        <label class="ps-field"><span>备注</span>
+          <textarea class="ps-input ps-textarea" name="remark" maxlength="200" placeholder="请输入备注信息（选填）"></textarea>
+          <span class="ps-counter" data-signup-counter>0/200</span>
+        </label>
+        <p class="ps-tip">* 为必填项，请确保信息准确无误</p>
+        <p class="ps-error" data-signup-error role="alert"></p>
+      </div>
+      <footer class="ps-foot"><button class="ps-submit" type="submit">提交报名</button></footer>
+    </form>`;
+  }
+
+  function mountSignup(item) {
+    const holder = document.createElement("div");
+    holder.innerHTML = signupMarkup(item.title);
+    document.body.append(holder.firstElementChild, holder.lastElementChild);
+    const mask = document.querySelector("[data-signup-mask]");
+    const modal = document.querySelector("[data-signup-modal]");
+    const errorEl = modal.querySelector("[data-signup-error]");
+    const remark = modal.querySelector('textarea[name="remark"]');
+    const counter = modal.querySelector("[data-signup-counter]");
+
+    const close = () => { modal.hidden = true; mask.hidden = true; document.body.style.overflow = ""; };
+    mask.addEventListener("click", close);
+    modal.querySelector("[data-signup-close]").addEventListener("click", close);
+    document.addEventListener("keydown", event => { if (event.key === "Escape" && !modal.hidden) close(); });
+    remark.addEventListener("input", () => { counter.textContent = `${remark.value.length}/200`; });
+
+    modal.addEventListener("submit", event => {
+      event.preventDefault();
+      const value = name => (modal.querySelector(`[name="${name}"]`)?.value || "").trim();
+      if (!value("realname")) { errorEl.textContent = "请填写姓名"; return; }
+      if (!/^1[3-9]\d{9}$/.test(value("phone"))) { errorEl.textContent = "请填写正确的 11 位手机号"; return; }
+      if (!/^[\w.+-]+@[\w-]+\.[\w.-]+$/.test(value("email"))) { errorEl.textContent = "请填写正确的邮箱地址"; return; }
+      errorEl.textContent = "";
+      close();
+      toast("报名成功，活动开始前会通过短信通知您");
+    });
+
+    modal.hidden = false;
+    mask.hidden = false;
+    document.body.style.overflow = "hidden";
+    modal.querySelector('input[name="realname"]').focus();
+  }
+
+  let toastTimer = 0;
+  function toast(message) {
+    let el = document.querySelector("[data-portal-toast]");
+    if (!el) {
+      el = document.createElement("div");
+      el.className = "portal-toast";
+      el.setAttribute("data-portal-toast", "");
+      el.setAttribute("role", "status");
+      el.hidden = true;
+      document.body.append(el);
+    }
+    el.textContent = message;
+    el.hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
+  }
+
+  function renderDetail() {
+    if (!detailRoot) return;
+    const params = new URLSearchParams(location.search);
+    const item = store.find(params.get("id")) || store.feed()[0];
+    if (!item) { detailRoot.innerHTML = `<div class="portal-empty-state"><strong>找不到这篇动态</strong><p>它可能已被删除或尚未发布。</p><a href="./portal-news.html">去看看最新动态 →</a></div>`; return; }
+    // 返回目标跟随来源：门户首页进入则回首页，列表进入或直接打开则回「最新动态」。
+    const fromHome = params.get("from") === "home";
+    const back = fromHome
+      ? { href: "./portal.html", label: "返回首页" }
+      : { href: "./portal-news.html", label: "返回最新动态" };
+    const dateText = item.date || String(item.publishedAt || "").slice(0, 10);
+    const signup = item.type === "活动报名公告"
+      ? `<button class="portal-signup" type="button" data-signup="${encodeURIComponent(item.id)}">立即报名</button>`
+      : "";
     document.title = `${item.title.slice(0, 20)} - 百舸门户`;
     detailRoot.innerHTML = `<article class="portal-article">
       <div class="portal-article-inner">
+        <div class="portal-detail-head">
+          <nav class="portal-crumbs" aria-label="当前位置">
+            <a href="./portal.html">首页</a><span aria-hidden="true">›</span><a href="./portal-news.html">最新动态</a><span aria-hidden="true">›</span><span aria-current="page">正文</span>
+          </nav>
+          <a class="portal-back-link" href="${back.href}">← ${back.label}</a>
+        </div>
         <h1>${escapeHtml(item.title)}</h1>
-        <div class="portal-article-meta"><span class="portal-article-tag">${escapeHtml(item.tag)}</span><time>${escapeHtml(item.date)}</time></div>
-        <div class="portal-article-body">${item.body.map(para => `<p>${escapeHtml(para)}</p>`).join("")}</div>
-        <p class="portal-article-byline">${escapeHtml(item.byline)}</p>
-        <a class="portal-article-back" href="./portal-news.html">← 返回最新动态</a>
+        <div class="portal-article-meta">
+          <span class="portal-article-tag">${escapeHtml(item.tag)}</span><time>${escapeHtml(dateText)}</time>
+          <div class="portal-article-actions">
+            <button class="portal-act" type="button" data-fav-toggle data-id="${escapeHtml(item.id)}" aria-pressed="false">${STAR_ICON}<span data-fav-label>收藏</span></button>
+            <button class="portal-act" type="button" data-share="${escapeHtml(item.id)}">${SHARE_ICON}<span>分享</span></button>
+            ${signup}
+          </div>
+        </div>
+        <div class="portal-article-body">${bodyOf(item)}</div>
+        <p class="portal-article-byline">${escapeHtml(item.byline || "")}</p>
+        <div class="portal-article-foot">
+          <a class="portal-article-back" href="${back.href}">← ${back.label}</a>
+          <a class="portal-article-back" href="./portal-favorites.html">我的收藏 →</a>
+        </div>
       </div>
     </article>`;
+
+    detailRoot.querySelector("[data-signup]")?.addEventListener("click", () => mountSignup(item));
   }
+
+  /* 列表页的搜索与分类 */
+  if (tagRoot) {
+    tagRoot.addEventListener("click", event => {
+      const chip = event.target.closest("[data-tag]");
+      if (!chip) return;
+      filters.tag = chip.dataset.tag;
+      renderList();
+    });
+  }
+  searchInput?.addEventListener("input", () => {
+    filters.keyword = searchInput.value;
+    renderList();
+  });
+
+  renderHome();
+  renderList();
+  renderDetail();
+
+  /* 后台发布、编辑、删除后，门户页面即时刷新。 */
+  window.addEventListener("baige:portal-news", () => { renderHome(); renderList(); });
+  window.addEventListener("storage", event => {
+    if (event.key !== store.KEY) return;
+    renderHome();
+    renderList();
+  });
+
+  window.BaigePortalNews = Object.freeze({
+    NEWS: store.all(),
+    latest: store.latest,
+    feed: store.feed,
+    find: store.find,
+    filters,
+  });
 })();

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>百舸 · 船舶行业数智服务平台</title>
-  <link rel="stylesheet" href="./portal.css?v=20261110-portal-home" />
+  <link rel="stylesheet" href="./portal.css?v=20261111-restore" />
 </head>
 <body>
   <header class="portal-topbar">
@@ -99,20 +99,7 @@
       </div>
 
       <aside class="portal-news" aria-label="集团动态">
-        <div class="portal-news-list">
-          <a class="portal-news-item" href="./portal-news-detail.html?id=33">
-            <span class="portal-news-copy"><span class="portal-news-title">中船集团与中国气象局签订战略合作框架协议 以务实合作赋能高质量…</span><span class="portal-news-date">2026-09-24</span></span>
-            <span class="portal-news-thumb is-a" aria-hidden="true"></span>
-          </a>
-          <a class="portal-news-item" href="./portal-news-detail.html?id=34">
-            <span class="portal-news-copy"><span class="portal-news-title">中船集团亮相2026中国国际应急管理展览 王国强出席展会并调研集团…</span><span class="portal-news-date">2026-09-24</span></span>
-            <span class="portal-news-thumb is-b" aria-hidden="true"></span>
-          </a>
-          <a class="portal-news-item" href="./portal-news-detail.html?id=35">
-            <span class="portal-news-copy"><span class="portal-news-title">徐鹏调研中船集团上海地区部分单位</span><span class="portal-news-date">2026-09-24</span></span>
-            <span class="portal-news-thumb is-c" aria-hidden="true"></span>
-          </a>
-        </div>
+        <div class="portal-news-list" data-portal-news-list></div>
         <a class="portal-news-more" href="./portal-news.html">更多动态 ›</a>
       </aside>
     </section>
@@ -162,6 +149,13 @@
       </div>
     </section>
 
+  <section class="portal-cta" aria-label="合作咨询">
+    <div class="portal-cta-inner">
+      <img class="portal-cta-art" src="./assets/partner-banner.jpg" width="1920" height="736" alt="百舸 · 你的行业数智化合作伙伴">
+      <button class="portal-cta-action" type="button" data-contact aria-label="留言咨询"><span>留言咨询</span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15 m-6-6 6 6-6 6"/></svg></button>
+    </div>
+  </section>
+
   </main>
 
   <footer class="portal-footer">
@@ -195,6 +189,10 @@
 
   <div class="portal-toast" data-portal-toast role="status" hidden></div>
   <script src="./src/ui.js?v=20261109-diagram-tools"></script>
+  <script src="./src/portal-news-store.js?v=20261111-news-store"></script>
   <script src="./src/portal.js?v=20261110-portal-home"></script>
+  <script src="./src/portal-consult-store.js?v=20261111-consult"></script>
+  <script src="./src/portal-contact.js?v=20261111-consult"></script>
+  <script src="./src/portal-news.js?v=20261111-news-store"></script>
 </body>
 </html>

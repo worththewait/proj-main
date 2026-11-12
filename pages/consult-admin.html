@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>留言咨询 · 后台系统</title>
+  <link rel="stylesheet" href="../styles.css?v=20261027-management">
+  <link rel="stylesheet" href="../consult-admin.css?v=20261111-consult">
+</head>
+<body class="module-page cs-admin-page">
+  <main class="module-main">
+    <div class="content-scroll">
+      <div class="content-inner cs-admin">
+        <nav class="cs-crumbs" aria-label="当前位置">
+          <span>门户管理</span><i>/</i><span>留言咨询记录</span>
+        </nav>
+
+        <header class="cs-head">
+          <div>
+            <h1>留言咨询列表管理</h1>
+            <p>门户「留言咨询」提交的内容会实时出现在这里。</p>
+          </div>
+          <button class="secondary-button cs-export" type="button" id="csExport">导出</button>
+        </header>
+
+        <section class="cs-filter" aria-label="留言筛选">
+          <div class="cs-range">
+            <input class="cs-input" type="date" id="csFrom" aria-label="开始日期">
+            <span>→</span>
+            <input class="cs-input" type="date" id="csTo" aria-label="结束日期">
+          </div>
+          <input class="cs-input" type="text" id="csName" placeholder="请输入姓名">
+          <input class="cs-input" type="text" id="csPhone" placeholder="请输入电话">
+          <select class="cs-input cs-select" id="csType" aria-label="咨询类型">
+            <option value="">全部类型</option>
+          </select>
+          <input class="cs-input cs-wide" type="text" id="csKeyword" placeholder="请输入咨询内容">
+          <button class="primary-button" type="button" id="csSearch">搜索</button>
+          <button class="secondary-button" type="button" id="csReset">重置</button>
+        </section>
+
+        <section class="cs-panel" aria-labelledby="csListTitle">
+          <header class="cs-panel-head">
+            <h2 id="csListTitle">留言咨询列表</h2>
+            <span class="cs-note" id="csNote"></span>
+          </header>
+          <div class="cs-table-wrap">
+            <table class="cs-table">
+              <thead>
+                <tr>
+                  <th scope="col" class="col-time">咨询时间</th>
+                  <th scope="col" class="col-type">咨询类型</th>
+                  <th scope="col" class="col-name">姓名</th>
+                  <th scope="col" class="col-company">单位</th>
+                  <th scope="col" class="col-phone">联系电话</th>
+                  <th scope="col" class="col-content">咨询内容</th>
+                </tr>
+              </thead>
+              <tbody id="csTableBody"></tbody>
+            </table>
+          </div>
+          <footer class="cs-pager">
+            <span class="cs-count" id="csCount">共 0 条数据</span>
+            <div class="cs-pages" id="csPager" role="group" aria-label="留言分页"></div>
+          </footer>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="cs-toast" id="csToast" role="status" hidden></div>
+
+  <script src="../src/ui.js?v=20261109-diagram-tools"></script>
+  <script src="../src/portal-consult-store.js?v=20261111-consult"></script>
+  <script src="../src/consult-admin.js?v=20261111-consult"></script>
+</body>
+</html>

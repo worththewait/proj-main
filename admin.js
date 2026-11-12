@@ -6,6 +6,8 @@
     files: { src: "pages/library-admin.html?embed=admin&view=files&v=20261109-library-original", title: "文件管理" },
     perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261109-library-original", title: "权限管理" },
     notices: { src: "pages/notice-admin.html?embed=admin&v=20261029-notice", title: "通知公告" },
+    "portal-news": { src: "pages/portal-news-admin.html?embed=admin&v=20261111-news-admin", title: "动态发布" },
+    consult: { src: "pages/consult-admin.html?embed=admin&v=20261111-consult", title: "留言咨询" },
     interface: { src: INTERFACE_SRC, title: "界面管理" },
     access: { src: "pages/permission-review.html?embed=admin&v=20261104-no-stats", title: "权限审核" },
   };

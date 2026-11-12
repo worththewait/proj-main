@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>动态发布 · 后台系统</title>
+  <link rel="stylesheet" href="../styles.css?v=20261027-management">
+  <link rel="stylesheet" href="../portal-news-admin.css?v=20261111-news-admin">
+</head>
+<body class="module-page pn-admin-page">
+  <main class="module-main">
+    <div class="content-scroll">
+      <div class="content-inner pn-admin">
+        <nav class="pn-crumbs" aria-label="当前位置">
+          <span>门户管理</span><i>/</i><span>门户首页</span><i>/</i><b>动态发布</b>
+        </nav>
+
+        <header class="pn-head">
+          <div>
+            <h1>动态发布</h1>
+            <p>发布成功的动态会立即出现在门户首页推荐位与「最新动态」列表；草稿仅在后台可见。</p>
+          </div>
+          <button class="primary-button pn-new" type="button" id="pnNew">新增</button>
+        </header>
+
+        <section class="pn-filter" aria-label="动态筛选">
+          <input class="pn-input pn-filter-title" type="text" id="pnFilterTitle" placeholder="请输入公告标题">
+          <select class="pn-select" id="pnFilterType" aria-label="公告类型">
+            <option value="">公告类型</option>
+            <option value="普通公告">普通公告</option>
+            <option value="活动报名公告">活动报名公告</option>
+          </select>
+          <select class="pn-select" id="pnFilterStatus" aria-label="公告状态">
+            <option value="">公告状态</option>
+            <option value="已发布">已发布</option>
+            <option value="草稿">草稿</option>
+          </select>
+          <div class="pn-range">
+            <input class="pn-input" type="date" id="pnFilterFrom" aria-label="开始日期">
+            <span>→</span>
+            <input class="pn-input" type="date" id="pnFilterTo" aria-label="结束日期">
+          </div>
+          <button class="primary-button" type="button" id="pnSearch">搜索</button>
+          <button class="secondary-button" type="button" id="pnReset">重置</button>
+        </section>
+
+        <section class="pn-panel" aria-labelledby="pnListTitle">
+          <header class="pn-panel-head">
+            <h2 id="pnListTitle">公告列表</h2>
+            <span class="pn-panel-note" id="pnPanelNote"></span>
+          </header>
+          <div class="pn-table-wrap">
+            <table class="pn-table">
+              <thead>
+                <tr>
+                  <th scope="col" class="col-title">公告标题</th>
+                  <th scope="col">标签</th>
+                  <th scope="col">公告类型</th>
+                  <th scope="col">公告图片</th>
+                  <th scope="col">公告状态</th>
+                  <th scope="col">置顶状态</th>
+                  <th scope="col" class="col-time">发布时间</th>
+                  <th scope="col" class="col-actions">操作</th>
+                </tr>
+              </thead>
+              <tbody id="pnTableBody"></tbody>
+            </table>
+          </div>
+          <footer class="pn-pager">
+            <span class="pn-count" id="pnCount">共 0 条数据</span>
+            <div class="pn-pages" id="pnPager" role="group" aria-label="动态分页"></div>
+          </footer>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <div class="pn-mask" id="pnMask" hidden></div>
+
+  <aside class="pn-drawer" id="pnDrawer" role="dialog" aria-modal="true" aria-labelledby="pnDrawerTitle" hidden>
+    <header class="pn-drawer-head">
+      <h2 id="pnDrawerTitle"><span class="pn-drawer-tag" aria-hidden="true">i</span>新增</h2>
+      <button class="pn-drawer-close" type="button" id="pnClose" aria-label="关闭">×</button>
+    </header>
+
+    <form class="pn-form" id="pnForm" novalidate>
+      <div class="pn-field">
+        <label class="pn-label" for="pnTitle">公告标题<b>*</b></label>
+        <div class="pn-control">
+          <input class="pn-input" id="pnTitle" type="text" maxlength="50" placeholder="请输入公告标题" required>
+          <span class="pn-counter" data-counter-for="pnTitle">0 / 50</span>
+        </div>
+      </div>
+
+      <div class="pn-field">
+        <label class="pn-label" for="pnTag">公告标签<b>*</b></label>
+        <div class="pn-control">
+          <select class="pn-input pn-select-full" id="pnTag" required>
+            <option value="">请选择公告标签</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="pn-field">
+        <span class="pn-label">公告图片</span>
+        <div class="pn-control">
+          <label class="pn-upload" id="pnUpload">
+            <input type="file" accept="image/*" id="pnImage" hidden>
+            <span class="pn-upload-text">上传图片</span>
+            <img id="pnUploadPreview" alt="" hidden>
+          </label>
+          <button class="pn-upload-clear" type="button" id="pnImageClear" hidden>移除图片</button>
+        </div>
+      </div>
+
+      <div class="pn-field">
+        <span class="pn-label">公告内容<b>*</b></span>
+        <div class="pn-editor">
+          <div class="pn-editor-tools" role="toolbar" aria-label="正文格式">
+            <button type="button" data-cmd="bold" title="加粗"><b>B</b></button>
+            <button type="button" data-cmd="italic" title="斜体"><i>I</i></button>
+            <button type="button" data-cmd="underline" title="下划线"><u>U</u></button>
+            <span class="pn-editor-sep"></span>
+            <button type="button" data-cmd="insertUnorderedList" title="无序列表">≡</button>
+            <button type="button" data-cmd="formatBlock" data-value="blockquote" title="引用">❝</button>
+            <span class="pn-editor-sep"></span>
+            <button type="button" data-cmd="removeFormat" title="清除格式">⌫</button>
+          </div>
+          <div class="pn-editor-body" id="pnContent" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="请输入正文"></div>
+        </div>
+      </div>
+
+      <div class="pn-field is-inline">
+        <span class="pn-label">公告状态</span>
+        <div class="pn-radios">
+          <label><input type="radio" name="pnStatus" value="草稿" checked><span>草稿</span></label>
+          <label><input type="radio" name="pnStatus" value="已发布"><span>立即发布</span></label>
+        </div>
+      </div>
+
+      <div class="pn-field is-inline">
+        <span class="pn-label">置顶状态</span>
+        <div class="pn-radios">
+          <label><input type="radio" name="pnPinned" value="0" checked><span>未置顶</span></label>
+          <label><input type="radio" name="pnPinned" value="1"><span>置顶</span></label>
+        </div>
+      </div>
+
+      <div class="pn-field is-inline">
+        <span class="pn-label">公告类型<b>*</b></span>
+        <div class="pn-radios">
+          <label><input type="radio" name="pnType" value="普通公告" checked><span>普通公告</span></label>
+          <label><input type="radio" name="pnType" value="活动报名公告"><span>活动报名公告</span></label>
+        </div>
+      </div>
+
+      <div class="pn-field is-inline">
+        <label class="pn-label" for="pnSort">排序号<b>*</b></label>
+        <div class="pn-stepper">
+          <input class="pn-input" id="pnSort" type="number" value="0" min="0" step="1">
+          <button type="button" data-step="-1" aria-label="减少">−</button>
+          <button type="button" data-step="1" aria-label="增加">+</button>
+        </div>
+      </div>
+
+      <p class="pn-form-hint" id="pnFormHint" role="status"></p>
+    </form>
+
+    <footer class="pn-drawer-foot">
+      <button class="secondary-button" type="button" id="pnCancel">取消</button>
+      <button class="primary-button" type="button" id="pnSave">保存</button>
+    </footer>
+  </aside>
+
+  <div class="pn-toast" id="pnToast" role="status" hidden></div>
+
+  <script src="../src/ui.js?v=20261109-diagram-tools"></script>
+  <script src="../src/portal-news-store.js?v=20261111-news-store"></script>
+  <script src="../src/portal-news-admin.js?v=20261111-news-admin"></script>
+</body>
+</html>

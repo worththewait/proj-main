@@ -1,0 +1,133 @@
+/* 后台「留言咨询」：查询区 + 咨询列表 + 导出。数据来自 consult-store。 */
+
+.cs-admin { display: grid; gap: 14px; padding: 22px 26px 40px; }
+
+.cs-crumbs { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; }
+.cs-crumbs i { color: var(--line-strong); font-style: normal; }
+
+.cs-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.cs-head h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -.01em; }
+.cs-head p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+.cs-export { height: 34px; padding: 0 18px; border-radius: 6px; font-size: 13px; }
+
+.cs-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.cs-input {
+  height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.cs-input::placeholder { color: #9aa4b8; }
+.cs-input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.cs-range { display: flex; align-items: center; gap: 6px; color: var(--line-strong); }
+.cs-range .cs-input { width: 138px; color: var(--muted); }
+.cs-filter #csName, .cs-filter #csPhone { width: 132px; }
+.cs-wide { width: 220px; }
+.cs-select { width: 132px; color: var(--muted); }
+.cs-filter .primary-button,
+.cs-filter .secondary-button { height: 34px; padding: 0 16px; border-radius: 6px; font-size: 13px; }
+
+.cs-panel { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); overflow: hidden; }
+.cs-panel-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.cs-panel-head h2 { margin: 0; font-size: 14.5px; font-weight: 600; }
+.cs-note { color: var(--muted); font-size: 12.5px; }
+
+.cs-table-wrap { overflow-x: auto; }
+.cs-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 860px; }
+.cs-table th,
+.cs-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  text-align: left;
+  vertical-align: middle;
+  word-break: break-word;
+}
+.cs-table th { color: var(--muted); font-size: 12.5px; font-weight: 500; background: #fbfcfe; }
+.cs-table tbody tr:last-child td { border-bottom: 0; }
+.cs-table tbody tr:hover { background: #fafcff; }
+
+.cs-table .col-time { width: 122px; }
+.cs-table .col-type { width: 104px; }
+.cs-table .col-name { width: 92px; }
+.cs-table .col-company { width: 200px; }
+.cs-table .col-phone { width: 122px; }
+
+.cs-time { color: var(--muted); font-variant-numeric: tabular-nums; }
+.cs-type {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 4px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.cs-type[data-type="问题咨询"] { background: #fff4e5; color: #a45a12; }
+.cs-type[data-type="使用反馈"] { background: #e9f5ed; color: var(--success); }
+.cs-type[data-type="功能建议"] { background: #f0edff; color: var(--ai-ink); }
+.cs-name { color: var(--ink); font-weight: 500; }
+.cs-company { color: var(--ink); }
+.cs-phone { color: var(--muted); font-variant-numeric: tabular-nums; }
+.cs-content { color: #3c4555; line-height: 1.6; }
+
+.cs-empty { padding: 52px 16px; text-align: center; color: var(--muted); }
+.cs-empty strong { display: block; margin-bottom: 6px; color: var(--ink); font-size: 14px; font-weight: 600; }
+.cs-empty span { font-size: 12.5px; }
+
+.cs-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line);
+}
+.cs-count { color: var(--muted); font-size: 12.5px; }
+.cs-pages { display: flex; align-items: center; gap: 6px; }
+.cs-pages button {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12.5px;
+  font-family: inherit;
+}
+.cs-pages button.is-active { border-color: var(--accent); background: var(--accent); color: #fff; }
+.cs-pages button:disabled { color: #b7c0cd; border-color: var(--line); }
+.cs-pages .cs-size { margin-left: 4px; color: var(--muted); font-size: 12.5px; }
+
+.cs-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 42px;
+  z-index: 60;
+  padding: 9px 16px;
+  border-radius: 6px;
+  background: #1d2433;
+  color: #fff;
+  font-size: 13px;
+  transform: translateX(-50%);
+  box-shadow: 0 10px 26px rgba(18, 26, 40, .22);
+}
+.cs-toast[hidden] { display: none; }
