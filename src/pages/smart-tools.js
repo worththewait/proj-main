@@ -116,6 +116,12 @@
       window.BaigeTextTranslateTool.render(root, dirty => toolWorkspace.setDirty(tool.name, dirty));
       return;
     }
+    if (tool.name === "OCR识别" && window.BaigeOcrTool) {
+      root.dataset.toolGroup = tool.group;
+      root.dataset.managesDirty = "true";
+      window.BaigeOcrTool.render(root, dirty => toolWorkspace.setDirty(tool.name, dirty));
+      return;
+    }
     if (tool.name === "文献伴读" && window.BaigeLiteratureTool) {
       root.dataset.toolGroup = tool.group;
       root.dataset.managesDirty = "true";
@@ -174,6 +180,7 @@
     window.BaigeDocTranslateTool?.deactivate();
     window.BaigeTextTranslateTool?.deactivate();
     window.BaigeLiteratureTool?.deactivate();
+    window.BaigeOcrTool?.deactivate();
   });
   featureConfig?.subscribe(refreshConfiguration);
   bridge.onActivate(({ child, focusSearch }) => {
@@ -194,6 +201,8 @@
     else window.BaigeTextTranslateTool?.deactivate();
     if (child === "文献伴读") window.BaigeLiteratureTool?.resume();
     else window.BaigeLiteratureTool?.deactivate();
+    if (child === "OCR识别") window.BaigeOcrTool?.resume();
+    else window.BaigeOcrTool?.deactivate();
     if (focusSearch) toolWorkspace.catalog.querySelector("#toolSearch").focus();
   });
 })();
