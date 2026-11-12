@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>最新动态 · 百舸门户</title>
-  <link rel="stylesheet" href="./portal.css?v=20261111-restore" />
+  <link rel="stylesheet" href="./portal.css?v=20261112-news-filter" />
 </head>
-<body>
+<body class="portal-news-page">
   <header class="portal-topbar">
     <a class="portal-brand" href="./portal.html" aria-label="返回门户首页">
       <img src="./assets/baige-logo.svg" width="26" height="30" alt="" />
@@ -37,20 +37,17 @@
       </div>
     </div>
     <section class="portal-filter" aria-label="动态筛选">
-      <div class="portal-chips" role="group" aria-label="按标签筛选" data-news-tags></div>
-      <label class="portal-search">
-        <span data-icon="search" aria-hidden="true"></span>
-        <input type="search" id="newsSearch" placeholder="搜索动态标题" aria-label="搜索动态标题" autocomplete="off">
-      </label>
+      <nav class="portal-news-categories" aria-label="动态分类" data-news-tags></nav>
+      <form class="portal-search" role="search" aria-label="搜索动态" data-news-search>
+        <label class="portal-search-field">
+          <span data-icon="search" aria-hidden="true"></span>
+          <input type="search" id="newsSearch" placeholder="搜索动态标题" aria-label="搜索动态标题" autocomplete="off">
+        </label>
+        <button class="portal-search-submit" type="submit">搜索</button>
+      </form>
     </section>
-    <div class="portal-feed" data-news-list></div>
-  <section class="portal-cta" aria-label="合作咨询">
-    <div class="portal-cta-inner">
-      <img class="portal-cta-art" src="./assets/partner-banner.jpg" width="1920" height="736" alt="百舸 · 你的行业数智化合作伙伴">
-      <button class="portal-cta-action" type="button" data-contact aria-label="留言咨询"><span>留言咨询</span><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15 m-6-6 6 6-6 6"/></svg></button>
-    </div>
-  </section>
-
+    <span class="portal-news-status" role="status" data-news-status></span>
+    <div class="portal-feed" id="newsResults" data-news-list></div>
   </main>
 
   <footer class="portal-footer">
@@ -86,9 +83,7 @@
   <script src="./src/ui.js?v=20261109-diagram-tools"></script>
   <script src="./src/portal.js?v=20261110-portal-home"></script>
   <script src="./src/portal-news-store.js?v=20261111-news-store"></script>
-  <script src="./src/portal-consult-store.js?v=20261111-consult"></script>
-  <script src="./src/portal-contact.js?v=20261111-consult"></script>
-  <script src="./src/portal-news.js?v=20261111-news-store"></script>
+  <script src="./src/portal-news.js?v=20261112-news-filter"></script>
   <script src="./src/portal-favorites.js?v=20261111-favorites"></script>
 </body>
 </html>

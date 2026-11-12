@@ -19,20 +19,18 @@ function loadStore() {
   return window.BaigeConsultStore;
 }
 
-test("首页与最新动态页底部有留言咨询横幅，详情页不放", () => {
-  for (const file of ["portal.html", "portal-news.html"]) {
-    const html = read(file);
-    assert.match(html, /class="portal-cta"/, file);
-    assert.match(html, /assets\/partner-banner\.jpg/, file);
-    assert.match(html, /class="portal-cta-action"[^>]*data-contact[^>]*>[\s\S]{0,200}留言咨询/, file);
-    assert.match(html, /portal-consult-store\.js/, file);
-    assert.match(html, /portal-contact\.js/, file);
-    assert.doesNotMatch(html, />合作咨询</, file);
+test("留言咨询横幅与弹窗仅在门户首页加载", () => {
+  const home = read("portal.html");
+  assert.match(home, /class="portal-cta"/);
+  assert.match(home, /assets\/partner-banner\.jpg/);
+  assert.match(home, /class="portal-cta-action"[^>]*data-contact[^>]*>[\s\S]{0,200}留言咨询/);
+  assert.match(home, /portal-consult-store\.js/);
+  assert.match(home, /portal-contact\.js/);
+  assert.doesNotMatch(home, />合作咨询</);
+
+  for (const file of ["portal-news.html", "portal-news-detail.html", "portal-favorites.html"]) {
+    assert.doesNotMatch(read(file), /portal-cta|data-contact|portal-(?:contact|consult-store)\.js/, file);
   }
-  // 读文章时不该被商务横幅打断，详情页不挂 CTA
-  const detail = read("portal-news-detail.html");
-  assert.doesNotMatch(detail, /portal-cta/);
-  assert.doesNotMatch(detail, /portal-contact\.js/);
 });
 
 test("横幅图片已入库，图内旧按钮已被抹平", () => {

@@ -4,7 +4,6 @@
   "use strict";
 
   const KEY = "baige.portal.favorites.v1";
-  const NEWS = window.BaigePortalNews?.NEWS || [];
   const escapeHtml = value => String(value).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
   let toastTimer = 0;
 
@@ -93,14 +92,14 @@
 
   const listRoot = document.querySelector("[data-favorites-list]");
   if (listRoot) {
-    const ids = read();
-    const items = ids.map(id => NEWS.find(entry => String(entry.id) === id)).filter(Boolean);
+    const news = window.BaigePortalNewsStore?.all() || [];
+    const items = read().map(id => news.find(entry => String(entry.id) === id)).filter(Boolean);
     const countEl = document.querySelector("[data-favorites-count]");
     if (countEl) countEl.textContent = items.length ? `共 ${items.length} 条` : "";
     listRoot.innerHTML = items.length
-      ? items.map(item => `<a class="portal-feed-item" href="./portal-news-detail.html?id=${item.id}&from=news">
-          <span class="portal-feed-thumb ${item.thumb}" aria-hidden="true"></span>
-          <span class="portal-feed-copy"><span class="portal-feed-title">${escapeHtml(item.title)}</span><span class="portal-feed-date">${escapeHtml(item.date)}</span></span>
+      ? items.map(item => `<a class="portal-feed-item" href="./portal-news-detail.html?id=${encodeURIComponent(item.id)}&amp;from=news">
+          <span class="portal-feed-thumb ${escapeHtml(item.thumb || "is-a")}" aria-hidden="true"></span>
+          <span class="portal-feed-copy"><span class="portal-feed-title">${escapeHtml(item.title)}</span><span class="portal-feed-date">${escapeHtml(item.date || String(item.publishedAt || "").slice(0, 10))}</span></span>
         </a>`).join("")
       : `<div class="portal-empty-state"><strong>还没有收藏任何动态</strong><p>在动态详情页点击「收藏」，内容就会出现在这里。</p><a href="./portal-news.html">去看看最新动态 →</a></div>`;
   }
