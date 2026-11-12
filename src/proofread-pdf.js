@@ -27,7 +27,7 @@
     return loadingRuntime;
   }
 
-  async function read(buffer) {
+  async function read(buffer, { allowEmpty = false } = {}) {
     await loadRuntime();
     let task;
     const pages = [];
@@ -57,7 +57,7 @@
     } finally {
       await task?.destroy().catch(() => {});
     }
-    if (!pages.length) throw new Error('未读取到正文，请上传文字型 PDF 或先通过 OCR 识别。');
+    if (!pages.length && !allowEmpty) throw new Error('未读取到正文，请上传文字型 PDF 或先通过 OCR 识别。');
     return pages.join('\n\n');
   }
 

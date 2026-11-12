@@ -4,8 +4,20 @@
   "use strict";
 
   const { icon, escapeHtml: escape } = window.BaigeUI;
+  const fileList = window.BaigeSecretFileList;
+  const audit = window.BaigeOcrAudit;
   const MAX_SIZE = 100 * 1024 * 1024;
   const ACCEPT = /\.(pdf|doc|docx|xls|xlsx|png|jpe?g)$/i;
+  const AUDIT_MESSAGES = {
+    detecting: ["正在进行涉密核查", "核查通过后自动解析。"],
+    hit: ["涉密可疑", "系统发现疑似涉密内容，需人工审核通过后才能查看原文和解析。"],
+    submitted: ["等待人工审核", "审核通过后自动解析。"],
+    rejected: ["人工审核已驳回", "涉密核查未通过，文件已停止处理。"],
+    failed: ["涉密核查失败", "请检查文件后重新上传。"],
+    passed: ["自动核查已通过", ""],
+    approved: ["人工审核已通过", ""],
+  };
+  const PARSE_LABELS = { queued: "等待解析", running: "解析中", done: "解析完成", failed: "解析失败" };
   const TABS = [
     { id: "markdown", label: "Markdown" },
     { id: "json", label: "JSON" },
@@ -81,13 +93,17 @@
     },
   ];
 
-  /* 上传按钮使用「文件 + 向上箭头」，与右上角下载图标的托盘箭头区分开。 */
   const UPLOAD_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h7l5 5v13H6Z"/><path d="M13 3v5h5"/><path d="M12 17v-5 m-2.5 2.5 2.5-2.5 2.5 2.5"/></svg>';
+  const SOURCE_DOWNLOAD_ICON = '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h7l5 5v13H6Z"/><path d="M13 3v5h5"/><path d="M12 12v5 m-2.5-2.5 2.5 2.5 2.5-2.5"/></svg>';
 
   const state = {
     records: [],
     keyword: "",
     selected: null,
+    auditId: null,
+    previewFile: null,
+    previewUrl: "",
+    previewMarkup: "",
     tab: "markdown",
     render: true,
     built: false,
@@ -105,10 +121,16 @@
   };
 
   const isAllowed = name => ACCEPT.test(name);
-  const ready = record => record && record.status === "done";
+  const cleared = record => Boolean(record && fileList.canView(record.auditStatus));
+  const ready = record => cleared(record) && record.status === "done";
+  const canDownloadSource = record => cleared(record) && Boolean(record.file || window.BaigeOcrSampleFiles?.[record.id]);
 
   function seedRecords() {
-    return SEED.map(item => ({ ...item }));
+    return SEED.map(item => {
+      if (item.id === "f5") return { ...item, status: "queued", auditStatus: "hit", keywords: ["机密", "秘密"] };
+      if (item.id === "f8") return { ...item, status: "queued", auditStatus: "rejected" };
+      return { ...item, auditStatus: "passed" };
+    });
   }
 
   function visibleRecords() {
@@ -125,13 +147,13 @@
     return `<div class="oc-page">
       <header class="oc-head">
         <h2>OCR解析工具</h2>
-        <button class="oc-download" type="button" data-oc-action="download">${icon("download")}<span>下载</span></button>
+        <button class="oc-download" type="button" data-oc-action="download-result" disabled>${icon("download")}<span>下载解析结果</span></button>
       </header>
       <div class="oc-body">
         <aside class="oc-files" aria-label="文件列表">
           <div class="oc-search">
             <input class="oc-search-input" type="search" placeholder="搜索文件..." data-oc-search aria-label="搜索文件" autocomplete="off">
-            <button class="oc-search-reset" type="button" data-oc-action="reset-search" aria-label="重置搜索">${icon("refresh")}</button>
+            <button class="oc-source-download" type="button" data-oc-action="download-source" aria-label="下载原文件" title="下载原文件" aria-haspopup="dialog" aria-controls="ocSourceDialog">${SOURCE_DOWNLOAD_ICON}</button>
           </div>
           <button class="oc-upload" type="button" data-oc-action="upload">${UPLOAD_ICON}<span>上传文件</span></button>
           <div class="oc-list" data-oc-list role="list"></div>
@@ -140,7 +162,65 @@
         <section class="oc-result" data-oc-result aria-label="解析结果"></section>
       </div>
       <input class="oc-file-input" type="file" hidden multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg">
+      <dialog class="pr-dialog oc-source-dialog" id="ocSourceDialog" data-oc-source-dialog aria-labelledby="ocSourceTitle">
+        <header class="oc-source-dialog-head">
+          <h2 id="ocSourceTitle">下载原文件</h2>
+          <button class="oc-source-close" type="button" data-oc-action="close-source-download" aria-label="关闭">${icon("close")}</button>
+        </header>
+        <div class="oc-source-files">
+          <label class="oc-source-all"><input type="checkbox" data-oc-source-all autofocus>全选文件</label>
+          <ul class="oc-source-list" data-oc-source-list></ul>
+        </div>
+        <footer class="oc-source-foot">
+          <span class="oc-source-count" data-oc-source-count role="status">已选 0 项</span>
+          <div class="oc-source-buttons">
+            <button type="button" class="secondary-button" data-oc-action="close-source-download">取消</button>
+            <button type="button" class="primary-button" data-oc-action="confirm-source-download" disabled>确认下载</button>
+          </div>
+        </footer>
+      </dialog>
+      <dialog class="pr-dialog oc-audit-dialog" data-oc-audit-dialog aria-labelledby="ocAuditTitle">
+        <header class="oc-source-dialog-head">
+          <h2 id="ocAuditTitle">涉密核查详情</h2>
+          <button class="oc-source-close" type="button" data-oc-action="audit-close" aria-label="关闭" autofocus>${icon("close")}</button>
+        </header>
+        <div class="oc-audit-body" data-oc-audit-body></div>
+        <footer class="oc-audit-actions" data-oc-audit-actions></footer>
+      </dialog>
     </div>`;
+  }
+
+  function renderSourceDownloads(preserveSelection = false) {
+    const { sourceList } = state.dom;
+    const selected = preserveSelection ? new Set([...sourceList.querySelectorAll("[data-oc-source-file]:checked")]
+      .map(box => box.dataset.ocSourceFile)) : new Set();
+    sourceList.innerHTML = state.records.map(record => {
+      const name = escape(record.name);
+      const allowed = canDownloadSource(record);
+      const reason = cleared(record) ? "暂无原件" : fileList.label(record.auditStatus);
+      return `<li><label class="oc-source-row">
+        <input type="checkbox" data-oc-source-file="${record.id}"${allowed ? (selected.has(record.id) ? " checked" : "") : " disabled"}>
+        <span title="${name}">${name}</span>
+        ${allowed ? "" : `<small>${reason}</small>`}
+      </label></li>`;
+    }).join("");
+    syncSourceSelection();
+  }
+
+  function showSourceDownloads() {
+    renderSourceDownloads();
+    if (!state.dom.sourceDialog.open) state.dom.sourceDialog.showModal();
+  }
+
+  function syncSourceSelection() {
+    const { sourceAll, sourceList, sourceCount, sourceConfirm } = state.dom;
+    const boxes = [...sourceList.querySelectorAll("[data-oc-source-file]")].filter(box => !box.disabled);
+    const count = boxes.filter(box => box.checked).length;
+    sourceAll.checked = count > 0 && count === boxes.length;
+    sourceAll.indeterminate = count > 0 && count < boxes.length;
+    sourceAll.disabled = boxes.length === 0;
+    sourceCount.textContent = `已选 ${count} 项`;
+    sourceConfirm.disabled = count === 0;
   }
 
   function emptyPreview() {
@@ -152,13 +232,29 @@
     </div>`;
   }
 
-  function previewOf(record) {
+  function auditMessage(record) {
+    const [title, description] = AUDIT_MESSAGES[record.auditStatus] || AUDIT_MESSAGES.failed;
+    return [title, record.auditReason || description];
+  }
+
+  function previewOf(record, mediaUrl) {
     if (!record) return emptyPreview();
-    if (!ready(record)) {
-      return `<div class="oc-drop is-failed"><span class="oc-drop-icon" aria-hidden="true">${icon("file")}</span>
-        <strong>解析失败</strong><p>该文件未能解析，请重新上传或更换文件。</p></div>`;
+    if (!cleared(record)) {
+      const [title, description] = auditMessage(record);
+      return `<div class="oc-guard">
+        <strong>${title}</strong><p>${escape(description)}</p>
+        ${record.auditStatus === "detecting" ? "" : `<button type="button" class="secondary-button" data-oc-action="audit" data-oc-audit-id="${record.id}">查看涉密详情</button>`}
+      </div>`;
     }
-    const lines = (record.paragraphs || []).map(text => `<p>${escape(text)}</p>`).join("");
+    const name = escape(record.name);
+    if (mediaUrl) {
+      const media = audit.isImage(record.name)
+        ? `<img src="${mediaUrl}" alt="${name}">`
+        : `<iframe src="${mediaUrl}" title="${name}"></iframe>`;
+      return `<div class="oc-doc"><div class="oc-doc-bar">${name}</div><div class="oc-doc-media">${media}</div></div>`;
+    }
+    const paragraphs = record.sourceText ? record.sourceText.split(/\r?\n+/).filter(line => line.trim()) : record.paragraphs;
+    const lines = paragraphs.map(text => `<p>${escape(text)}</p>`).join("");
     return `<div class="oc-doc">
       <div class="oc-doc-bar">
         <span class="oc-doc-pager">1 / ${record.pages || 1}</span>
@@ -167,7 +263,9 @@
           <button type="button" data-oc-action="zoom-in" aria-label="放大">+</button>
         </span>
       </div>
-      <div class="oc-doc-page"><h3>${escape(record.title)}</h3>${lines}<p class="oc-doc-note">${escape(record.name)}</p></div>
+      <div class="oc-doc-page"><h3>${escape(record.title || record.name)}</h3>
+        ${lines || "<p>涉密核查已通过，可下载原文件查看。</p>"}<p class="oc-doc-note">${name}</p>
+      </div>
     </div>`;
   }
 
@@ -181,6 +279,20 @@
     }
     lines.push(`（共 ${record.pages} 页）`);
     return lines.join("\n");
+  }
+
+  function jsonOf(record) {
+    return JSON.stringify({
+      title: record.title,
+      source: record.name,
+      parsedAt: record.time,
+      pages: record.pages,
+      paragraphs: record.paragraphs,
+      table: record.table,
+      formulas: record.formulas,
+      header: record.header,
+      images: record.images,
+    }, null, 2);
   }
 
   function renderMarkdown(record) {
@@ -200,14 +312,20 @@
 
   function resultBody(record) {
     if (!record) return `<div class="oc-empty"><span aria-hidden="true">${icon("file")}</span><p>请先选择文件</p></div>`;
-    if (!ready(record)) return `<div class="oc-empty"><span aria-hidden="true">${icon("file")}</span><p>该文件解析失败，暂无结果</p></div>`;
+    if (!ready(record)) {
+      const waitingForAudit = ["detecting", "hit", "submitted"].includes(record.auditStatus);
+      const message = waitingForAudit ? "核查通过后自动解析"
+        : !cleared(record) ? "涉密核查未通过，解析已停止"
+        : record.status === "failed" ? "解析失败，仍可下载原文件"
+        : "正在解析，完成后将在这里显示结果";
+      return `<div class="oc-empty"><span aria-hidden="true">${icon("file")}</span><p>${message}</p></div>`;
+    }
 
     if (state.tab === "markdown") {
       return state.render ? renderMarkdown(record) : `<pre class="oc-raw">${escape(markdownOf(record))}</pre>`;
     }
     if (state.tab === "json") {
-      const json = { title: record.title, source: record.name, parsedAt: record.time, pages: record.pages, paragraphs: record.paragraphs, table: record.table, formulas: record.formulas, header: record.header, images: record.images };
-      return `<pre class="oc-raw">${escape(JSON.stringify(json, null, 2))}</pre>`;
+      return `<pre class="oc-raw">${escape(jsonOf(record))}</pre>`;
     }
     if (state.tab === "content") {
       return `<div class="oc-block"><h4>正文段落（${record.paragraphs.length}）</h4>
@@ -245,8 +363,8 @@
       ${bar}
       <div class="oc-result-body" data-oc-body>${resultBody(record)}</div>
       <footer class="oc-result-foot">
-        <button class="oc-ghost" type="button" data-oc-action="save">${icon("check")}<span>保存</span></button>
-        <button class="oc-ghost" type="button" data-oc-action="copy">${icon("file")}<span>复制</span></button>
+        <button class="oc-ghost" type="button" data-oc-action="save"${ready(record) ? "" : " disabled"}>${icon("check")}<span>保存</span></button>
+        <button class="oc-ghost" type="button" data-oc-action="copy"${ready(record) ? "" : " disabled"}>${icon("file")}<span>复制</span></button>
       </footer>`;
   }
 
@@ -255,18 +373,60 @@
     if (!list) return;
     const records = visibleRecords();
     list.innerHTML = records.length
-      ? records.map(record => `<button class="oc-file${record.id === state.selected ? " is-active" : ""}" type="button" role="listitem" data-oc-file="${record.id}">
-          ${fileIcon(record)}
-          <span class="oc-file-copy"><span class="oc-file-name" title="${escape(record.name)}">${escape(record.name)}</span>
-          <span class="oc-file-state ${record.status === "done" ? "is-done" : record.status === "failed" ? "is-failed" : "is-running"}">${record.status === "done" ? "解析完成" : record.status === "failed" ? "解析失败" : "解析中"}</span></span>
-        </button>`).join("")
+      ? records.map(record => {
+        const name = escape(record.name);
+        return `<div class="oc-file-row${record.id === state.selected ? " is-active" : ""}" role="listitem">
+          <button class="oc-file" type="button" data-oc-file="${record.id}" aria-pressed="${record.id === state.selected}">
+            ${fileIcon(record)}
+            <span class="oc-file-copy"><span class="oc-file-name" title="${name}">${name}</span>
+            <span class="oc-file-state" data-stage="${cleared(record) ? record.status : record.auditStatus}">${cleared(record) ? PARSE_LABELS[record.status] : fileList.label(record.auditStatus)}</span></span>
+          </button>
+          <button class="secret-file-icon oc-file-audit" type="button" data-oc-action="audit" data-oc-audit-id="${record.id}" title="查看涉密详情" aria-label="查看涉密详情：${name}">${icon("eye")}</button>
+        </div>`;
+      }).join("")
       : `<p class="oc-list-empty">没有匹配的文件</p>`;
+  }
+
+  function setPreviewMedia(file) {
+    if (file === state.previewFile) return;
+    if (state.previewUrl) URL.revokeObjectURL(state.previewUrl);
+    state.previewFile = file;
+    state.previewUrl = file ? URL.createObjectURL(file) : "";
   }
 
   function renderPanels() {
     const record = state.records.find(item => item.id === state.selected) || null;
-    state.dom.preview.innerHTML = previewOf(record);
+    const showMedia = cleared(record) && record.file
+      && (audit.isImage(record.name) || (audit.isPdf(record.name) && !record.sourceText));
+    setPreviewMedia(showMedia ? record.file : null);
+    state.dom.resultDownload.disabled = !ready(record);
+    state.dom.resultDownload.title = ready(record)
+      ? `下载 ${state.tab === "json" ? "JSON" : "Markdown"} 解析结果`
+      : "解析完成后可下载";
+    const preview = previewOf(record, state.previewUrl);
+    if (preview !== state.previewMarkup) {
+      state.dom.preview.innerHTML = preview;
+      state.previewMarkup = preview;
+    }
     state.dom.result.innerHTML = resultMarkup(record);
+  }
+
+  function renderAudit(record) {
+    const { auditBody, auditActions } = state.dom;
+    const [title, description] = auditMessage(record);
+    auditBody.innerHTML = `<div class="oc-audit-file"><strong>${escape(record.name)}</strong>${fileList.status(record.auditStatus)}</div>
+      <p role="status">${escape(description || title)}</p>
+      ${record.keywords?.length ? `<p>命中关键词：${record.keywords.map(escape).join("、")}</p>` : ""}`;
+    auditActions.innerHTML = `<button type="button" class="secondary-button" data-oc-action="audit-close">关闭</button>
+      ${record.auditStatus === "hit" ? '<button type="button" class="primary-button" data-oc-action="audit-submit">提交人工审核</button>' : ""}
+      ${record.auditStatus === "submitted" ? '<button type="button" class="secondary-button" data-oc-action="audit-reject">模拟驳回</button><button type="button" class="primary-button" data-oc-action="audit-approve">模拟审核通过</button>' : ""}`;
+  }
+
+  function refreshRecord(record, auditChanged = false) {
+    renderList();
+    if (state.active && state.selected === record.id) renderPanels();
+    if (auditChanged && state.dom.sourceDialog.open) renderSourceDownloads(true);
+    if (auditChanged && state.dom.auditDialog.open && state.auditId === record.id) renderAudit(record);
   }
 
   function selectRecord(id) {
@@ -290,43 +450,98 @@
     state.timer = setTimeout(() => { el.hidden = true; }, 2400);
   }
 
+  function startParsing(record) {
+    if (!cleared(record) || record.status !== "queued") return;
+    record.status = "running";
+    setTimeout(() => {
+      record.status = "done";
+      record.paragraphs = ["（演示环境）文件已上传，解析结果由本地示例内容生成。"];
+      refreshRecord(record);
+    }, 1200);
+  }
+
+  async function inspectRecord(record) {
+    Object.assign(record, await audit.inspect(record.file));
+    if (record.auditStatus === "failed") delete record.file;
+    startParsing(record);
+    refreshRecord(record, true);
+  }
+
   function addFiles(files) {
+    const added = [];
     [...files].forEach(file => {
       if (!isAllowed(file.name)) { toast(`不支持的文件格式：${file.name}`); return; }
       if (file.size > MAX_SIZE) { toast(`文件超过 100MB：${file.name}`); return; }
-      const record = { id: `u${Date.now()}${Math.random().toString(16).slice(2, 6)}`, name: file.name, size: file.size, file, status: "running", time: new Date().toISOString().slice(0, 19).replace("T", " "), title: file.name.replace(/\.[^.]+$/, ""), pages: 1, paragraphs: ["（演示环境）文件已上传，解析结果由本地示例内容生成。"], table: null, formulas: [], header: [], images: 0 };
+      const record = {
+        id: `u${Date.now()}${Math.random().toString(16).slice(2, 6)}`,
+        name: file.name, size: file.size, file, status: "queued", auditStatus: "detecting",
+        time: new Date().toISOString().slice(0, 19).replace("T", " "),
+        title: file.name.replace(/\.[^.]+$/, ""), pages: 1, paragraphs: [],
+        table: null, formulas: [], header: [], images: 0,
+      };
       state.records.unshift(record);
-      state.selected = record.id;
-      renderList();
-      renderPanels();
-      setTimeout(() => {
-        record.status = "done";
-        renderList();
-        if (state.selected === record.id) renderPanels();
-        state.onDirty(true);
-        toast("解析完成");
-      }, 1200);
+      added.push(record);
     });
+    if (!added.length) return;
+    selectRecord(added.at(-1).id);
+    state.onDirty(true);
+    added.forEach(inspectRecord);
   }
 
-  /* 下载源文件：上传的文件直接回传原文件；演示记录没有源文件，给出说明。 */
-  function downloadSource(record) {
-    if (!record) { toast("请先选择文件"); return; }
-    if (!record.file) { toast("该记录为演示数据，上传文件后可下载原文件"); return; }
-    const url = URL.createObjectURL(record.file);
+  function downloadFile(blob, name) {
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = record.name;
+    link.download = name;
     document.body.append(link);
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    toast(`正在下载 ${record.name}`);
+    toast(`正在下载 ${name}`);
+  }
+
+  function sourceBlob(record) {
+    if (record.file) return record.file;
+    const sample = window.BaigeOcrSampleFiles?.[record.id];
+    if (!sample) throw new Error("选中的文件暂不可下载");
+    const bytes = Uint8Array.from(atob(sample.base64), character => character.charCodeAt(0));
+    return new Blob([bytes], { type: sample.type });
+  }
+
+  async function confirmSourceDownload() {
+    const { sourceDialog, sourceList } = state.dom;
+    if (!sourceDialog.open) return;
+    const selected = new Set([...sourceList.querySelectorAll("[data-oc-source-file]")]
+      .filter(box => box.checked).map(box => box.dataset.ocSourceFile));
+    const records = state.records.filter(record => selected.has(record.id) && canDownloadSource(record));
+    if (!records.length) return;
+    sourceDialog.close();
+    try {
+      const files = records.map(record => ({ name: record.name, blob: sourceBlob(record) }));
+      if (files.length === 1) {
+        downloadFile(files[0].blob, files[0].name);
+      } else {
+        const archive = await window.BaigeOcrSourceZip.create(files);
+        downloadFile(archive, "OCR原文件.zip");
+      }
+    } catch (error) {
+      toast(error.message || "下载失败，请重试");
+    }
+  }
+
+  function downloadResult(record) {
+    const isJson = state.tab === "json";
+    const result = isJson ? jsonOf(record) : markdownOf(record);
+    const type = isJson ? "application/json" : "text/markdown;charset=utf-8";
+    const extension = isJson ? "json" : "md";
+    const name = record.name.replace(/\.[^.]+$/, "");
+    downloadFile(new Blob([result], { type }), `${name}-解析结果.${extension}`);
   }
 
   function build(root) {
     root.classList.add("oc-workspace");
     root.innerHTML = markup();
+    state.previewMarkup = "";
     const dom = {
       page: root.querySelector(".oc-page"),
       list: root.querySelector("[data-oc-list]"),
@@ -334,12 +549,22 @@
       result: root.querySelector("[data-oc-result]"),
       search: root.querySelector("[data-oc-search]"),
       input: root.querySelector(".oc-file-input"),
+      sourceDialog: root.querySelector("[data-oc-source-dialog]"),
+      sourceList: root.querySelector("[data-oc-source-list]"),
+      sourceAll: root.querySelector("[data-oc-source-all]"),
+      sourceCount: root.querySelector("[data-oc-source-count]"),
+      sourceConfirm: root.querySelector('[data-oc-action="confirm-source-download"]'),
+      resultDownload: root.querySelector('[data-oc-action="download-result"]'),
+      auditDialog: root.querySelector("[data-oc-audit-dialog]"),
+      auditBody: root.querySelector("[data-oc-audit-body]"),
+      auditActions: root.querySelector("[data-oc-audit-actions]"),
     };
     state.dom = dom;
 
     dom.page.addEventListener("click", event => {
       const record = state.records.find(item => item.id === state.selected) || null;
-      const action = event.target.closest("[data-oc-action]")?.dataset.ocAction;
+      const button = event.target.closest("[data-oc-action]");
+      const action = button?.dataset.ocAction;
       const tab = event.target.closest("[data-oc-tab]")?.dataset.ocTab;
       const file = event.target.closest("[data-oc-file]")?.dataset.ocFile;
       if (file) { selectRecord(file); return; }
@@ -352,12 +577,36 @@
       }
       if (!action) return;
       if (action === "upload") dom.input.click();
-      if (action === "reset-search") { state.keyword = ""; dom.search.value = ""; renderList(); }
-      if (action === "download") downloadSource(record);
-      if (action === "save") toast("已保存到个人空间（演示）");
+      if (action === "download-source") showSourceDownloads();
+      if (action === "close-source-download") dom.sourceDialog.close();
+      if (action === "confirm-source-download") return confirmSourceDownload();
+      if (action === "download-result" && ready(record)) downloadResult(record);
+      if (action === "save" && ready(record)) toast("已保存到个人空间（演示）");
+      if (action === "audit") {
+        const file = state.records.find(item => item.id === button.dataset.ocAuditId);
+        if (!file) return;
+        state.auditId = file.id;
+        renderAudit(file);
+        if (!dom.auditDialog.open) dom.auditDialog.showModal();
+      }
+      if (action === "audit-close") dom.auditDialog.close();
+      const nextAuditStatus = { "audit-submit": "submitted", "audit-approve": "approved", "audit-reject": "rejected" }[action];
+      if (nextAuditStatus) {
+        const file = state.records.find(item => item.id === state.auditId);
+        if (!file || !window.BaigeTranslateAudit.transition(file.auditStatus, nextAuditStatus)) return;
+        file.auditStatus = nextAuditStatus;
+        delete file.auditReason;
+        if (nextAuditStatus === "rejected") {
+          delete file.file;
+          delete file.sourceText;
+        }
+        startParsing(file);
+        refreshRecord(file, true);
+        dom.auditActions.querySelector('[data-oc-action="audit-close"]')?.focus();
+      }
       if (action === "copy") {
         if (!record || !ready(record)) { toast("请先选择已解析的文件"); return; }
-        const text = state.tab === "markdown" ? markdownOf(record) : JSON.stringify(record, null, 2);
+        const text = state.tab === "markdown" ? markdownOf(record) : jsonOf(record);
         navigator.clipboard?.writeText(text).then(() => toast("已复制解析结果"), () => toast("复制失败，请手动选择内容"));
       }
       if (action === "zoom-in" || action === "zoom-out") toast("演示原型：缩放待接入");
@@ -365,6 +614,17 @@
 
     dom.search.addEventListener("input", () => { state.keyword = dom.search.value; renderList(); });
     dom.input.addEventListener("change", () => { addFiles(dom.input.files); dom.input.value = ""; });
+    dom.sourceDialog.addEventListener("change", event => {
+      if (event.target === dom.sourceAll) {
+        for (const box of dom.sourceList.querySelectorAll("[data-oc-source-file]")) {
+          if (!box.disabled) box.checked = dom.sourceAll.checked;
+        }
+      }
+      syncSourceSelection();
+    });
+    dom.auditDialog.addEventListener("close", () => {
+      if (state.active) dom.list.querySelector(`[data-oc-audit-id="${state.auditId}"]`)?.focus();
+    });
 
     dom.page.addEventListener("change", event => {
       if (event.target.matches("[data-oc-render]")) { state.render = event.target.checked; renderPanels(); }
@@ -393,6 +653,9 @@
 
   function deactivate() {
     state.active = false;
+    if (state.dom?.sourceDialog.open) state.dom.sourceDialog.close();
+    if (state.dom?.auditDialog.open) state.dom.auditDialog.close();
+    setPreviewMedia(null);
     const el = document.querySelector(".oc-toast");
     if (el) el.hidden = true;
   }
