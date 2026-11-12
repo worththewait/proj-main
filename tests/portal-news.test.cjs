@@ -113,6 +113,83 @@ test("最新动态支持关键词与标签筛选", () => {
   assert.match(js, /store\.TAGS/);
 });
 
+test("搜索只提交已确认的关键词，分类切换即时生效并保留该关键词", () => {
+  const { list, tags, input, search, location } = mountNews();
+  const clickTag = tag => tags.emit("click", {
+    target: { closest: () => ({ dataset: { tag }, setAttribute() {} }) },
+  });
+  const submit = () => search.emit("submit", { preventDefault() {} });
+
+  assert.match(list.innerHTML, /儿童节活动/);
+  input.value = "气象局";
+  input.emit("input");
+  clickTag("行业动态");
+  assert.doesNotMatch(list.innerHTML, /儿童节活动/);
+  assert.match(list.innerHTML, /安全生产月/);
+
+  submit();
+  assert.match(list.innerHTML, /中国气象局/);
+  assert.doesNotMatch(list.innerHTML, /安全生产月/);
+  assert.equal(new URLSearchParams(location.hash.slice(1)).get("q"), "气象局");
+
+  input.value = "未提交的修改";
+  clickTag("活动报名");
+  assert.match(list.innerHTML, /清除关键词/);
+  clickTag("全部");
+  assert.match(list.innerHTML, /中国气象局/);
+  assert.doesNotMatch(list.innerHTML, /儿童节活动/);
+
+  clickTag("活动报名");
+  list.emit("click", { target: { closest: () => ({}) } });
+  assert.match(list.innerHTML, /儿童节活动/);
+  assert.equal(input.value, "");
+  assert.equal(new URLSearchParams(location.hash.slice(1)).get("tag"), "活动报名");
+});
+
+test("详情返回链接恢复已提交的分类和关键词", () => {
+  const listUrl = new URL("http://localhost/portal-news.html");
+  listUrl.hash = new URLSearchParams({ tag: "行业动态", q: "气象局" });
+  const { list, input } = mountNews(listUrl);
+  assert.equal(input.value, "气象局");
+  assert.match(list.innerHTML, /中国气象局/);
+  assert.doesNotMatch(list.innerHTML, /安全生产月/);
+
+  const articleUrl = new URL(list.innerHTML.match(/href="([^"]+)"/)[1].replaceAll("&amp;", "&"), listUrl);
+  const { detail } = mountNews(articleUrl);
+  const returnLinks = [...detail.innerHTML.matchAll(/href="(\.\/portal-news\.html[^"]*)"/g)];
+  assert.equal(returnLinks.length, 3);
+  for (const [, href] of returnLinks) assert.equal(new URL(href.replaceAll("&amp;", "&"), articleUrl).hash, listUrl.hash);
+});
+
+function mountNews(url = "http://localhost/portal-news.html") {
+  function element() {
+    const events = {};
+    return {
+      innerHTML: "",
+      value: "",
+      addEventListener(type, callback) { events[type] = callback; },
+      emit(type, event) { events[type]?.(event); },
+      querySelector() { return null; },
+      focus() {},
+    };
+  }
+  const location = new URL(url);
+  const window = { BaigePortalNewsStore: loadStore(), addEventListener() {} };
+  const list = element();
+  const tags = element();
+  const input = element();
+  const search = element();
+  const detail = element();
+  const isDetail = location.pathname.endsWith("detail.html");
+  const nodes = isDetail ? { "[data-news-detail]": detail } : {
+    "[data-news-list]": list, "[data-news-tags]": tags, "#newsSearch": input, "[data-news-search]": search,
+  };
+  const document = { querySelector: selector => nodes[selector] ?? null };
+  const history = { replaceState(_state, _title, url) { location.href = String(url); } };
+  vm.runInNewContext(read("src/portal-news.js"), { window, document, location, history, URL, URLSearchParams });
+  return { list, tags, input, search, detail, location };
+}
+
 test("活动报名公告在详情页给出立即报名与报名表", () => {
   const js = read("src/portal-news.js");
   assert.match(js, /item\.type === "活动报名公告"/);
@@ -133,6 +210,6 @@ test("列表按数据顺序渲染并带详情链接", () => {
   const js = read("src/portal-news.js");
   assert.match(js, /data-news-list/);
   assert.match(js, /portal-feed-item/);
-  assert.match(js, /portal-news-detail\.html\?id=\$\{encodeURIComponent\(item\.id\)\}&from=news/);
+  assert.match(js, /portal-news-detail\.html\?id=\$\{encodeURIComponent\(item\.id\)\}&amp;from=news/);
   assert.match(js, /portal-feed-thumb/);
 });

@@ -6,26 +6,36 @@ const vm = require("node:vm");
 
 const read = (file) => fs.readFileSync(path.join(__dirname, "..", file), "utf8");
 
-function loadFavorites() {
-  const store = new Map();
+function loadFavorites(file, store = new Map(), url = file) {
   const window = {
-    BaigePortalNews: { NEWS: [{ id: 33, title: "示例一", date: "2026-09-24", thumb: "is-a", body: ["x"], byline: "", tag: "t" }, { id: 28, title: "示例二", date: "2026-09-24", thumb: "is-b", body: ["x"], byline: "", tag: "t" }] },
     addEventListener() {},
   };
   const localStorage = {
     getItem: key => (store.has(key) ? store.get(key) : null),
     setItem: (key, value) => store.set(key, value),
   };
+  const html = read(file);
+  const list = { innerHTML: "" };
+  const count = { textContent: "" };
+  const detail = { innerHTML: "", querySelector: () => null };
+  const nodes = {
+    "[data-favorites-list]": list,
+    "[data-favorites-count]": count,
+    "[data-news-detail]": detail,
+  };
   const document = {
-    querySelector: () => null,
+    querySelector: selector => html.includes(selector.slice(1, -1)) ? nodes[selector] ?? null : null,
     querySelectorAll: () => [],
     addEventListener() {},
     createElement: () => ({ style: {}, append() {}, select() {}, remove() {}, setAttribute() {} }),
     body: { append() {} },
   };
-  const context = vm.createContext({ window, document, localStorage, console, setTimeout, clearTimeout, navigator: {} });
-  vm.runInContext(read("src/portal-favorites.js"), context, { filename: "portal-favorites.js" });
-  return { tool: window.BaigePortalFavorites, store };
+  const location = new URL(url, "http://localhost/");
+  const context = vm.createContext({ window, document, localStorage, location, URLSearchParams, setTimeout, clearTimeout });
+  for (const [, script] of html.matchAll(/<script src="\.\/(src\/portal-(?:news-store|news|favorites)\.js)\?[^"]*"/g)) {
+    vm.runInContext(read(script), context, { filename: script });
+  }
+  return { tool: window.BaigePortalFavorites, store, list, count };
 }
 
 test("详情页提供收藏与分享，并在顶部和底部各留返回", () => {
@@ -53,7 +63,7 @@ test("收藏入口下沉到最新动态页，不占顶栏也不显示数量", ()
 });
 
 test("收藏写入本地存储并可再次取消", () => {
-  const { tool, store } = loadFavorites();
+  const { tool, store } = loadFavorites("portal-news-detail.html");
   assert.equal(tool.read().length, 0);
   assert.equal(tool.toggle("33"), true);
   assert.equal(tool.has("33"), true);
@@ -61,6 +71,22 @@ test("收藏写入本地存储并可再次取消", () => {
   assert.equal(tool.toggle("33"), false);
   assert.equal(tool.has("33"), false);
   assert.deepEqual(JSON.parse(store.get(tool.KEY)), []);
+});
+
+test("详情页保存的收藏在我的收藏中显示，取消后重新打开为空", () => {
+  const detail = loadFavorites("portal-news-detail.html", new Map(), "portal-news-detail.html?id=33");
+  detail.tool.toggle("33");
+
+  const favorites = loadFavorites("portal-favorites.html", detail.store);
+  assert.match(favorites.list.innerHTML, /中国气象局签订战略合作框架协议/);
+  assert.match(favorites.list.innerHTML, /portal-news-detail\.html\?id=33/);
+  assert.match(favorites.list.innerHTML, /class="portal-feed-date">2026-09-24</);
+  assert.equal(favorites.count.textContent, "共 1 条");
+
+  detail.tool.toggle("33");
+  const reopened = loadFavorites("portal-favorites.html", detail.store);
+  assert.match(reopened.list.innerHTML, /还没有收藏任何动态/);
+  assert.equal(reopened.count.textContent, "");
 });
 
 test("收藏页渲染列表，无收藏时给出空状态", () => {

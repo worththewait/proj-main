@@ -15,9 +15,31 @@
   const listRoot = document.querySelector("[data-news-list]");
   const detailRoot = document.querySelector("[data-news-detail]");
   const tagRoot = document.querySelector("[data-news-tags]");
+  const searchForm = document.querySelector("[data-news-search]");
   const searchInput = document.querySelector("#newsSearch");
+  const resultStatus = document.querySelector("[data-news-status]");
 
-  const filters = { tag: "全部", keyword: "" };
+  const filterParams = new URLSearchParams(location.hash.slice(1));
+  const tag = filterParams.get("tag");
+  const filters = {
+    tag: store.TAGS.includes(tag) ? tag : "全部",
+    keyword: (filterParams.get("q") || "").trim(),
+  };
+
+  // Fragment parameters let both the browser Back button and the detail links restore the list.
+  function filterHash() {
+    const params = new URLSearchParams();
+    if (filters.tag !== "全部") params.set("tag", filters.tag);
+    if (filters.keyword) params.set("q", filters.keyword);
+    return params.size ? `#${params}` : "";
+  }
+
+  function applyFilters() {
+    const url = new URL(location.href);
+    url.hash = filterHash();
+    history.replaceState(history.state, "", url);
+    renderList();
+  }
 
   /* 缩略图：后台配了图片就用图片，否则沿用渐变示意块。 */
   const thumbOf = item => (item.image
@@ -37,7 +59,10 @@
   function renderTags() {
     if (!tagRoot) return;
     const tags = ["全部", ...store.TAGS];
-    tagRoot.innerHTML = tags.map(tag => `<button class="portal-chip${tag === filters.tag ? " is-active" : ""}" type="button" data-tag="${escapeHtml(tag)}" aria-pressed="${tag === filters.tag}">${escapeHtml(tag)}</button>`).join("");
+    tagRoot.innerHTML = tags.map(tag => `<button class="portal-news-category" type="button" data-tag="${escapeHtml(tag)}" aria-controls="newsResults" aria-pressed="${tag === filters.tag}">${escapeHtml(tag)}</button>`).join("");
+    if (filters.tag !== "全部") {
+      tagRoot.querySelector('[aria-pressed="true"]')?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
   }
 
   function visibleNews() {
@@ -52,13 +77,16 @@
   function renderList() {
     if (!listRoot) return;
     const list = visibleNews();
+    const hash = escapeHtml(filterHash());
     listRoot.innerHTML = list.length
-      ? list.map(item => `<a class="portal-feed-item" href="./portal-news-detail.html?id=${encodeURIComponent(item.id)}&from=news">
+      ? list.map(item => `<a class="portal-feed-item" href="./portal-news-detail.html?id=${encodeURIComponent(item.id)}&amp;from=news${hash}">
       <span class="portal-feed-thumb ${escapeHtml(item.thumb || "is-a")}" aria-hidden="true"></span>
       <span class="portal-feed-copy"><span class="portal-feed-title">${escapeHtml(item.title)}</span><span class="portal-feed-date"><em class="portal-feed-tag">${escapeHtml(item.tag)}</em>${escapeHtml(item.date || String(item.publishedAt || "").slice(0, 10))}</span></span>
     </a>`).join("")
-      : `<div class="portal-empty-result"><strong>没有找到相关动态</strong><p>换个关键词或选择其他分类试试。</p></div>`;
-    if (tagRoot) renderTags();
+      : `<div class="portal-empty-result"><strong>没有找到相关动态</strong>
+        ${filters.keyword ? '<button type="button" data-news-clear>清除关键词</button>' : '<p>试试其他分类。</p>'}
+      </div>`;
+    if (resultStatus) resultStatus.textContent = list.length ? `共 ${list.length} 条动态` : "没有找到相关动态";
   }
 
   /* 正文：后台富文本直接输出，纯文本按空行拆段。 */
@@ -170,9 +198,10 @@
     if (!item) { detailRoot.innerHTML = `<div class="portal-empty-state"><strong>找不到这篇动态</strong><p>它可能已被删除或尚未发布。</p><a href="./portal-news.html">去看看最新动态 →</a></div>`; return; }
     // 返回目标跟随来源：门户首页进入则回首页，列表进入或直接打开则回「最新动态」。
     const fromHome = params.get("from") === "home";
+    const listHref = `./portal-news.html${params.get("from") === "news" ? escapeHtml(filterHash()) : ""}`;
     const back = fromHome
       ? { href: "./portal.html", label: "返回首页" }
-      : { href: "./portal-news.html", label: "返回最新动态" };
+      : { href: listHref, label: "返回最新动态" };
     const dateText = item.date || String(item.publishedAt || "").slice(0, 10);
     const signup = item.type === "活动报名公告"
       ? `<button class="portal-signup" type="button" data-signup="${encodeURIComponent(item.id)}">立即报名</button>`
@@ -182,7 +211,7 @@
       <div class="portal-article-inner">
         <div class="portal-detail-head">
           <nav class="portal-crumbs" aria-label="当前位置">
-            <a href="./portal.html">首页</a><span aria-hidden="true">›</span><a href="./portal-news.html">最新动态</a><span aria-hidden="true">›</span><span aria-current="page">正文</span>
+            <a href="./portal.html">首页</a><span aria-hidden="true">›</span><a href="${listHref}">最新动态</a><span aria-hidden="true">›</span><span aria-current="page">正文</span>
           </nav>
           <a class="portal-back-link" href="${back.href}">← ${back.label}</a>
         </div>
@@ -208,17 +237,28 @@
   }
 
   /* 列表页的搜索与分类 */
-  if (tagRoot) {
-    tagRoot.addEventListener("click", event => {
-      const chip = event.target.closest("[data-tag]");
-      if (!chip) return;
-      filters.tag = chip.dataset.tag;
-      renderList();
-    });
-  }
-  searchInput?.addEventListener("input", () => {
-    filters.keyword = searchInput.value;
-    renderList();
+  renderTags();
+  tagRoot?.addEventListener("click", event => {
+    const category = event.target.closest("[data-tag]");
+    if (!category || filters.tag === category.dataset.tag) return;
+    filters.tag = category.dataset.tag;
+    tagRoot.querySelector('[aria-pressed="true"]')?.setAttribute("aria-pressed", "false");
+    category.setAttribute("aria-pressed", "true");
+    applyFilters();
+  });
+  if (searchInput) searchInput.value = filters.keyword;
+  searchForm?.addEventListener("submit", event => {
+    event.preventDefault();
+    filters.keyword = searchInput.value.trim();
+    searchInput.value = filters.keyword;
+    applyFilters();
+  });
+  listRoot?.addEventListener("click", event => {
+    if (!event.target.closest("[data-news-clear]")) return;
+    searchInput.value = "";
+    filters.keyword = "";
+    applyFilters();
+    searchInput.focus();
   });
 
   renderHome();
