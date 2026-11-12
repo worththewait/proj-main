@@ -9,6 +9,8 @@
     "portal-news": { src: "pages/portal-news-admin.html?embed=admin&v=20261111-news-admin", title: "动态发布" },
     consult: { src: "pages/consult-admin.html?embed=admin&v=20261111-consult", title: "留言咨询" },
     interface: { src: INTERFACE_SRC, title: "界面管理" },
+    users: { src: "pages/user-admin.html?embed=admin&v=20261112-iam-final", title: "用户管理" },
+    roles: { src: "pages/role-admin.html?embed=admin&v=20261112-iam-final", title: "角色管理" },
     access: { src: "pages/permission-review.html?embed=admin&v=20261104-no-stats", title: "权限审核" },
   };
   // 旧的 #features / #settings 仍可用，落到界面管理的对应页签。

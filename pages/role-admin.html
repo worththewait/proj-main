@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>角色管理 · 百舸后台</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="../admin.css" />
+  <link rel="stylesheet" href="../user-role-admin.css?v=20261112-iam-final" />
+</head>
+<body class="module-page" data-page="iam-roles">
+  <main class="module-main">
+    <div class="content-scroll">
+      <div class="content-inner iam-page iam-page--roles">
+        <div class="iam-crumb">权限管理 <span>/</span> <strong>角色管理</strong></div>
+        <div class="iam-toolbar">
+          <label class="iam-field"><span>角色名称</span><input class="iam-input" id="iamRoleName" type="search" placeholder="输入角色名称" autocomplete="off" /></label>
+          <label class="iam-field"><span>权限字符</span><input class="iam-input" id="iamRoleCode" type="search" placeholder="输入权限字符" autocomplete="off" /></label>
+          <label class="iam-field"><span>状态</span><select class="iam-input" id="iamRoleStatus"><option value="">请选择</option><option value="normal">正常</option><option value="disabled">停用</option></select></label>
+          <div class="iam-toolbar-actions"><button class="iam-btn" id="iamRoleReset" type="button">重置</button><button class="iam-btn is-primary" id="iamRoleQuery" type="button">查询</button></div>
+        </div>
+        <section class="iam-panel iam-list-card">
+          <div class="iam-list-head"><h2>角色列表<small id="iamRoleCount"></small></h2><button class="iam-btn is-primary" id="iamNewRole" type="button"><span data-icon="plus" aria-hidden="true"></span>新建角色</button></div>
+          <div class="iam-table-wrap">
+            <table class="iam-table">
+              <thead><tr><th>角色编号</th><th>角色名称</th><th>权限字符</th><th>显示顺序</th><th>创建时间</th><th>状态</th><th>操作</th></tr></thead>
+              <tbody id="iamRoleRows"></tbody>
+            </table>
+          </div>
+          <div class="iam-list-foot"><span id="iamRoleSummary"></span><span>数据为浏览器本地演示</span></div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <dialog class="iam-dialog" id="iamRoleDialog" aria-labelledby="iamRoleDialogTitle">
+    <header class="iam-dialog-head"><h2 id="iamRoleDialogTitle">新建角色</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
+    <div class="iam-dialog-body" id="iamRoleDialogBody"></div>
+    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamRoleSave">保存</button></footer>
+  </dialog>
+
+  <dialog class="iam-dialog iam-dialog--wide" id="iamMenuDialog" aria-labelledby="iamMenuTitle">
+    <header class="iam-dialog-head"><h2 id="iamMenuTitle">菜单权限</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
+    <div class="iam-dialog-body"><p class="iam-dialog-note" id="iamMenuName"></p><div class="iam-check-list" id="iamMenuList"></div></div>
+    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamMenuSave">保存</button></footer>
+  </dialog>
+
+  <dialog class="iam-dialog iam-dialog--role-users" id="iamRoleUsersDialog" aria-labelledby="iamRoleUsersTitle">
+    <header class="iam-dialog-head"><h2 id="iamRoleUsersTitle">已分配的用户列表</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
+    <div class="iam-dialog-body iam-role-users-body">
+      <div class="iam-role-users-filters">
+        <label class="iam-field"><span>用户名称</span><input class="iam-input" id="iamRoleUserName" type="search" placeholder="输入用户名称" autocomplete="off" /></label>
+        <label class="iam-field"><span>手机号码</span><input class="iam-input" id="iamRoleUserPhone" type="search" placeholder="输入手机号码" autocomplete="off" /></label>
+        <div class="iam-toolbar-actions"><button class="iam-btn" id="iamRoleUserReset" type="button">重置</button><button class="iam-btn is-primary" id="iamRoleUserQuery" type="button">查询</button></div>
+      </div>
+      <div class="iam-role-users-toolbar"><button class="iam-btn is-primary" id="iamAddRoleUsers" type="button">添加授权用户</button><button class="iam-btn is-warning" id="iamCancelRoleUsers" type="button">取消授权</button></div>
+      <div class="iam-role-users-table-wrap"><table class="iam-table iam-role-users-table"><thead><tr><th class="iam-assign-check"><input id="iamRoleUsersAll" type="checkbox" aria-label="选择本页全部用户" /></th><th>用户名称</th><th>用户昵称</th><th>所属部门</th><th>手机号码</th><th>创建时间</th><th>状态</th><th>操作</th></tr></thead><tbody id="iamRoleUsersRows"></tbody></table></div>
+      <div class="iam-role-users-foot"><span id="iamRoleUsersSummary"></span><div class="iam-pager" id="iamRoleUsersPager"></div></div>
+    </div>
+  </dialog>
+
+  <dialog class="iam-dialog iam-dialog--select-users" id="iamAddUsersDialog" aria-labelledby="iamAddUsersTitle">
+    <header class="iam-dialog-head"><h2 id="iamAddUsersTitle">选择授权用户</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
+    <div class="iam-dialog-body iam-select-users-body">
+      <div class="iam-role-users-filters">
+        <label class="iam-field"><span>用户名称</span><input class="iam-input" id="iamAddUserName" type="search" placeholder="输入用户名称" autocomplete="off" /></label>
+        <label class="iam-field"><span>手机号码</span><input class="iam-input" id="iamAddUserPhone" type="search" placeholder="输入手机号码" autocomplete="off" /></label>
+        <div class="iam-toolbar-actions"><button class="iam-btn" id="iamAddUserReset" type="button">重置</button><button class="iam-btn is-primary" id="iamAddUserQuery" type="button">查询</button></div>
+      </div>
+      <div class="iam-assign-info" id="iamAddUsersInfo"></div>
+      <div class="iam-select-users-table-wrap"><table class="iam-table iam-select-users-table"><thead><tr><th class="iam-assign-check"><input id="iamAddUsersAll" type="checkbox" aria-label="选择本页全部用户" /></th><th>用户名称</th><th>用户昵称</th><th>所属部门</th><th>手机号码</th><th>创建时间</th><th>状态</th></tr></thead><tbody id="iamAddUsersRows"></tbody></table></div>
+    </div>
+    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamAddUsersSave">确认</button></footer>
+  </dialog>
+
+  <div class="iam-toast" id="iamToast" role="status" aria-live="polite"></div>
+  <script src="../src/ui.js"></script>
+  <script src="../src/iam-store.js?v=20261112-iam-final"></script>
+  <script src="../src/pages/role-admin.js?v=20261112-iam-final"></script>
+</body>
+</html>

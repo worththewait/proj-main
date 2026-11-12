@@ -1,0 +1,220 @@
+/* 后台用户管理与角色管理 */
+.iam-page { padding: 18px 24px 34px; color: var(--ink); }
+.iam-crumb { display: flex; align-items: center; gap: 7px; margin: 0 0 12px; color: var(--muted); font-size: 12px; }
+.iam-crumb span { color: #aeb8c8; }
+.iam-crumb strong { color: var(--ink); font-weight: 550; }
+
+.iam-user-layout { display: grid; grid-template-columns: 310px minmax(0, 1fr); gap: 14px; align-items: start; }
+.iam-panel { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); box-shadow: 0 1px 2px rgba(29,36,51,.03); }
+.iam-dept-panel { position: sticky; top: 14px; padding: 14px 13px; }
+.iam-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+.iam-panel-head h2 { margin: 0; color: var(--ink); font-size: 19px; font-weight: 650; }
+.iam-more { width: 27px; height: 27px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font: inherit; font-size: 16px; cursor: pointer; }
+.iam-more:hover { background: var(--surface-subtle); color: var(--ink); }
+.iam-dept-search { position: relative; margin-bottom: 12px; }
+.iam-dept-search .icon { position: absolute; top: 8px; left: 9px; width: 14px; height: 14px; color: var(--muted); }
+.iam-dept-search input { width: 100%; height: 33px; padding: 0 9px 0 29px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); color: var(--ink); font: inherit; font-size: 12px; outline: none; }
+.iam-dept-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.iam-tree { display: grid; gap: 2px; max-height: calc(100dvh - 240px); overflow-y: auto; }
+.iam-tree-row { display: flex; align-items: center; gap: 4px; min-height: 32px; padding: 2px 4px; border-radius: 6px; color: #3d4c63; font-size: 12.5px; }
+.iam-tree-row:hover { background: #f5f8fd; }
+.iam-tree-row.is-selected { background: var(--accent-soft); color: var(--accent-hover); font-weight: 550; }
+.iam-tree-toggle { display: grid; place-items: center; width: 20px; height: 22px; flex: none; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #7a8799; cursor: pointer; }
+.iam-tree-toggle .icon { width: 12px; height: 12px; transition: transform .15s; }
+.iam-tree-toggle.is-open .icon { transform: rotate(90deg); }
+.iam-tree-toggle.is-empty { visibility: hidden; }
+.iam-tree-label { min-width: 0; padding: 4px 2px; border: 0; background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.iam-tree-children { display: grid; gap: 1px; margin-left: 13px; padding-left: 9px; border-left: 1px solid #edf1f7; }
+.iam-tree-empty { padding: 24px 8px; color: var(--muted); font-size: 12px; text-align: center; }
+
+.iam-user-main { min-width: 0; }
+.iam-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.iam-field { display: flex; align-items: center; gap: 8px; color: #44536b; font-size: 12px; white-space: nowrap; }
+.iam-field > span { font-weight: 500; }
+.iam-input { height: 34px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); color: var(--ink); font: inherit; font-size: 12px; outline: none; }
+.iam-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.iam-field input.iam-input { width: 150px; }
+.iam-field select.iam-input { width: 132px; }
+.iam-toolbar-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.iam-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 15px; border: 1px solid var(--line-strong); border-radius: 7px; background: var(--surface); color: #4b5b71; font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap; }
+.iam-btn:hover { border-color: #a8b8d2; color: var(--ink); }
+.iam-btn.is-primary { border-color: var(--accent); background: var(--accent); color: #fff; }
+.iam-btn.is-primary:hover { border-color: var(--accent-hover); background: var(--accent-hover); }
+.iam-btn.is-danger { border-color: #efc7cb; color: #b4232c; }
+.iam-list-card { overflow: hidden; }
+.iam-list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 16px 13px; }
+.iam-list-head h2 { margin: 0; color: var(--ink); font-size: 19px; font-weight: 650; }
+.iam-list-head small { margin-left: 7px; color: var(--muted); font-size: 11.5px; font-weight: 400; }
+.iam-table-wrap { overflow-x: auto; }
+.iam-table { width: 100%; min-width: 780px; border-collapse: collapse; }
+.iam-table th { padding: 11px 13px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); background: #f8fafd; color: #5d6c82; font-size: 11.5px; font-weight: 500; text-align: left; white-space: nowrap; }
+.iam-table td { padding: 11px 13px; border-bottom: 1px solid #eef2f8; color: #3d4c63; font-size: 12px; vertical-align: middle; }
+.iam-table tbody tr:hover { background: #fbfcff; }
+.iam-table tbody tr:last-child td { border-bottom: 0; }
+.iam-user-name { color: var(--ink); font-weight: 500; }
+.iam-dept-name { display: inline-block; padding: 2px 7px; border-radius: 4px; background: #f1f4f9; color: #5d6c82; font-size: 11px; }
+.iam-phone { font-variant-numeric: tabular-nums; color: #56657c; }
+.iam-time { font-variant-numeric: tabular-nums; color: #64748b; white-space: nowrap; }
+.iam-status-cell { display: flex; align-items: center; gap: 7px; }
+.iam-status-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 35px; height: 22px; padding: 0 6px; border-radius: 4px; background: #eef4ff; color: #245bff; font-size: 10.5px; }
+.iam-status-pill.is-disabled { background: #f2f4f7; color: #7a8799; }
+.iam-switch { position: relative; width: 32px; height: 18px; padding: 0; border: 0; border-radius: 9px; background: #cbd5e3; cursor: pointer; }
+.iam-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: .15s; }
+.iam-switch[aria-pressed="true"] { background: #245bff; }
+.iam-switch[aria-pressed="true"]::after { transform: translateX(14px); }
+.iam-actions { display: flex; align-items: center; gap: 5px; }
+.iam-icon-action { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 5px; background: var(--surface); cursor: pointer; }
+.iam-icon-action .icon { width: 15px; height: 15px; }
+.iam-icon-action.is-edit { border-color: #bcd8f7; color: #2b75c9; background: #f5f9ff; }
+.iam-icon-action.is-delete { border-color: #efc7cb; color: #b4232c; background: #fff8f8; }
+.iam-icon-action.is-key { border-color: #f1df9f; color: #a5790b; background: #fffaf0; }
+.iam-icon-action.is-user { border-color: #bfe3c8; color: #287a42; background: #f6fff8; }
+.iam-icon-action:hover { filter: brightness(.97); box-shadow: 0 1px 4px rgba(29,36,51,.08); }
+.iam-icon-action:focus-visible, .iam-switch:focus-visible, .iam-btn:focus-visible, .iam-tree-label:focus-visible, .iam-tree-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.iam-list-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11.5px; }
+.iam-empty { padding: 38px 16px; color: var(--muted); font-size: 12px; text-align: center; }
+
+/* 角色管理 */
+.iam-page--roles .iam-toolbar { margin-bottom: 12px; }
+.iam-role-name { color: var(--ink); font-weight: 500; }
+.iam-role-code { color: #56657c; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; }
+.iam-order { color: #64748b; font-variant-numeric: tabular-nums; }
+
+/* 弹窗 */
+.iam-dialog { width: min(570px, calc(100vw - 32px)); max-height: calc(100dvh - 40px); padding: 0; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); box-shadow: 0 24px 70px rgba(20,38,69,.22); }
+.iam-dialog[open] { display: flex; flex-direction: column; }
+.iam-dialog::backdrop { background: rgba(20,30,48,.42); }
+.iam-dialog--wide { width: min(720px, calc(100vw - 32px)); }
+.iam-dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 17px 19px 13px; border-bottom: 1px solid var(--line); }
+.iam-dialog-head h2 { margin: 0; font-size: 17px; font-weight: 650; }
+.iam-dialog-close { width: 29px; height: 29px; padding: 0; border: 0; border-radius: 6px; background: transparent; color: var(--muted); font-size: 20px; cursor: pointer; }
+.iam-dialog-close:hover { background: #f3f6fa; color: var(--ink); }
+.iam-dialog-body { flex: 1; min-height: 0; overflow-y: auto; padding: 17px 19px; background: #fbfcfe; }
+.iam-dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 19px 15px; border-top: 1px solid var(--line); background: var(--surface); }
+.iam-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.iam-form-field { display: flex; flex-direction: column; gap: 6px; }
+.iam-form-field.is-wide { grid-column: 1 / -1; }
+.iam-form-field > span { color: #44536b; font-size: 12px; font-weight: 500; }
+.iam-form-field em { color: #b4232c; font-style: normal; }
+.iam-form-field .iam-input { width: 100%; }
+.iam-form-feedback { min-height: 17px; margin: 8px 0 0; color: #b4232c; font-size: 11.5px; }
+.iam-dialog-note { margin: 0 0 12px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.iam-check-list { display: grid; gap: 6px; max-height: 300px; overflow-y: auto; }
+.iam-check-row { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid #e8eef7; border-radius: 7px; background: var(--surface); color: #3d4c63; font-size: 12px; cursor: pointer; }
+.iam-check-row:hover { border-color: #c9d9f7; background: #fbfdff; }
+.iam-check-row input { width: 14px; height: 14px; accent-color: var(--accent); }
+.iam-check-row small { margin-left: auto; color: var(--muted); font-size: 10.5px; }
+.iam-toast { position: fixed; top: 18px; left: 50%; z-index: 40; padding: 9px 15px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink); font-size: 12px; box-shadow: 0 8px 24px rgba(20,38,69,.14); opacity: 0; transform: translate(-50%,-8px); pointer-events: none; transition: .16s ease; }
+.iam-toast.is-visible { opacity: 1; transform: translate(-50%,0); }
+
+@media (max-width: 900px) {
+  .iam-page { padding: 14px 14px 28px; }
+  .iam-user-layout { grid-template-columns: 1fr; }
+  .iam-dept-panel { position: static; }
+  .iam-tree { max-height: 260px; }
+  .iam-toolbar { gap: 9px; }
+  .iam-toolbar-actions { margin-left: 0; }
+}
+@media (max-width: 620px) {
+  .iam-form-grid { grid-template-columns: 1fr; }
+  .iam-form-field.is-wide { grid-column: auto; }
+  .iam-field input.iam-input, .iam-field select.iam-input { width: 100%; }
+  .iam-field { flex: 1 1 100%; }
+  .iam-toolbar-actions { width: 100%; justify-content: flex-end; }
+}
+
+.iam-menu-group { display: grid; gap: 5px; }
+.iam-menu-group + .iam-menu-group { margin-top: 12px; }
+.iam-menu-group > b { margin-bottom: 2px; color: #5d6c82; font-size: 11.5px; font-weight: 600; }
+
+/* 新建/编辑用户表单 */
+.iam-dialog--form { width: min(980px, calc(100vw - 40px)); }
+.iam-dialog--form .iam-dialog-body { padding: 22px 26px 18px; background: var(--surface); }
+.iam-inline-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 28px; }
+.iam-inline-field { display: grid; grid-template-columns: 88px minmax(0, 1fr); align-items: center; gap: 10px; min-width: 0; }
+.iam-inline-field.is-wide { grid-column: 1 / -1; align-items: start; }
+.iam-inline-field > span { color: #1d2433; font-size: 13px; font-weight: 500; line-height: 1.5; text-align: right; }
+.iam-inline-field > span em { color: #b4232c; font-style: normal; }
+.iam-inline-field .iam-input { width: 100%; height: 38px; border-color: #e1e7f1; border-radius: 7px; font-size: 13px; }
+.iam-inline-field .iam-input::placeholder { color: #b3bdcc; }
+.iam-inline-field .iam-textarea { height: 88px; padding: 9px 11px; line-height: 1.65; resize: vertical; }
+.iam-inline-form + .iam-form-feedback { margin: 12px 0 0 98px; }
+.iam-password { position: relative; display: block; }
+.iam-password .iam-input { padding-right: 36px; }
+.iam-password-toggle { position: absolute; top: 50%; right: 7px; display: grid; place-items: center; width: 25px; height: 25px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: #9aa6b6; cursor: pointer; transform: translateY(-50%); }
+.iam-password-toggle:hover { background: #f3f6fa; color: #5d6c82; }
+.iam-password-toggle .icon { width: 16px; height: 16px; }
+.iam-segment { display: inline-flex; width: 100%; max-width: 220px; height: 38px; overflow: hidden; border: 1px solid #e1e7f1; border-radius: 7px; background: var(--surface); }
+.iam-segment button { flex: 1; border: 0; border-right: 1px solid #e1e7f1; background: transparent; color: #627086; font: inherit; font-size: 12.5px; cursor: pointer; }
+.iam-segment button:last-child { border-right: 0; }
+.iam-segment button:hover { background: #f7f9fd; }
+.iam-segment button.is-active { background: #eef4ff; color: var(--accent); font-weight: 550; }
+@media (max-width: 760px) {
+  .iam-inline-form { grid-template-columns: 1fr; }
+  .iam-inline-field.is-wide { grid-column: auto; }
+  .iam-inline-form + .iam-form-feedback { margin-left: 0; }
+}
+@media (max-width: 520px) {
+  .iam-inline-field { grid-template-columns: 1fr; gap: 4px; }
+  .iam-inline-field > span { text-align: left; }
+}
+
+/* 分配角色 */
+.iam-dialog--assign { width: min(980px, calc(100vw - 40px)); }
+.iam-assign-body { background: var(--surface); padding: 18px 22px 14px; }
+.iam-assign-info { display: flex; align-items: center; gap: 10px; min-height: 47px; margin-bottom: 15px; padding: 9px 15px; border: 1px solid #cfe0fb; border-radius: 7px; background: #eef5ff; color: #3568a8; font-size: 13px; }
+.iam-assign-info-icon { display: grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 50%; background: #2f7ee6; color: #fff; font-size: 13px; font-weight: 600; font-family: Georgia, serif; }
+.iam-assign-table-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
+.iam-assign-table { min-width: 620px; }
+.iam-assign-table th { background: #f8fafd; font-size: 12px; }
+.iam-assign-table td { height: 48px; font-size: 12.5px; }
+.iam-assign-check { width: 48px; text-align: center !important; }
+.iam-assign-check input { width: 15px; height: 15px; accent-color: var(--accent); }
+.iam-pager { display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding: 14px 0 2px; }
+.iam-page-btn { display: grid; place-items: center; min-width: 31px; height: 31px; padding: 0 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: #4b5b71; font: inherit; font-size: 12px; cursor: pointer; }
+.iam-page-btn:hover:not(:disabled) { border-color: #9fbcf3; color: var(--accent); }
+.iam-page-btn.is-active { border-color: var(--accent); background: #eef4ff; color: var(--accent); }
+.iam-page-btn:disabled { color: #c3ccda; cursor: not-allowed; }
+.iam-page-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 620px) {
+  .iam-dialog--assign { width: calc(100vw - 24px); }
+  .iam-assign-body { padding: 14px; }
+}
+
+/* 角色管理：已分配用户列表 */
+.iam-dialog--role-users { width: min(1120px, calc(100vw - 40px)); }
+.iam-role-users-body { padding: 16px 20px 12px; background: var(--surface); }
+.iam-role-users-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 14px; padding: 15px 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.iam-role-users-filters .iam-toolbar-actions { margin-left: 0; }
+.iam-role-users-toolbar { display: flex; justify-content: flex-end; gap: 8px; padding: 15px 0 10px; }
+.iam-btn.is-warning { border-color: #e9b94c; background: #f3c35a; color: #fff; }
+.iam-btn.is-warning:hover { border-color: #d9a53a; background: #eab747; color: #fff; }
+.iam-role-users-table-wrap { border: 1px solid var(--line); border-radius: 7px; overflow-x: auto; }
+.iam-role-users-table { min-width: 860px; }
+.iam-role-users-table th { background: #f8fafd; }
+.iam-role-users-table td { height: 46px; }
+.iam-status-pill.is-green { background: #edf8f1; color: #1f7a4c; }
+.iam-icon-action.is-auth { border-color: #f1df9f; color: #b2840e; background: #fffaf0; }
+.iam-role-users-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; color: var(--muted); font-size: 11.5px; }
+.iam-role-users-foot .iam-pager { padding: 0; }
+@media (max-width: 700px) {
+  .iam-dialog--role-users { width: calc(100vw - 24px); }
+  .iam-role-users-body { padding: 12px; }
+  .iam-role-users-filters { align-items: stretch; }
+  .iam-role-users-filters .iam-field { flex: 1 1 100%; }
+}
+
+/* 选择授权用户 */
+.iam-dialog--select-users { width: min(1080px, calc(100vw - 40px)); }
+.iam-select-users-body { padding: 16px 20px 8px; background: var(--surface); }
+.iam-select-users-body .iam-role-users-filters { margin-bottom: 15px; }
+.iam-select-users-table-wrap { max-height: 470px; overflow: auto; border: 1px solid var(--line); border-radius: 7px; }
+.iam-select-users-table { min-width: 760px; }
+.iam-select-users-table thead th { position: sticky; top: 0; z-index: 1; background: #f8fafd; }
+.iam-select-users-table td { height: 47px; }
+.iam-select-users-table .iam-status-pill { min-width: 38px; }
+@media (max-width: 700px) {
+  .iam-dialog--select-users { width: calc(100vw - 24px); }
+  .iam-select-users-body { padding: 12px; }
+  .iam-select-users-table-wrap { max-height: 380px; }
+}

@@ -10,12 +10,14 @@ test("back-office shell exposes file, permission, notice and interface navigatio
   const html = read("admin.html");
   assert.match(html, /id="adminNav"/);
   assert.match(html, /id="adminFrame"/);
-  assert.equal((html.match(/data-admin-view=/g) || []).length, 7);
+  assert.equal((html.match(/data-admin-view=/g) || []).length, 9);
   assert.match(html, />文件管理</);
   assert.match(html, />权限管理</);
   assert.match(html, />通知公告</);
   assert.match(html, />界面管理</);
   assert.match(html, />权限审核</);
+  assert.match(html, />用户管理</);
+  assert.match(html, />角色管理</);
   assert.match(html, />动态发布</);
   assert.match(html, />留言咨询</);
   assert.doesNotMatch(html, />功能管理</);
@@ -26,6 +28,8 @@ test("back-office shell exposes file, permission, notice and interface navigatio
   assert.match(js, /pages\/notice-admin\.html\?embed=admin/);
   assert.match(js, /pages\/interface-admin\.html\?embed=admin/);
   assert.match(js, /pages\/permission-review\.html\?embed=admin/);
+  assert.match(js, /pages\/user-admin\.html\?embed=admin/);
+  assert.match(js, /pages\/role-admin\.html\?embed=admin/);
   assert.match(js, /"portal-news": \{ src: "pages\/portal-news-admin\.html\?embed=admin/);
   assert.match(js, /features: \{ src: `\$\{INTERFACE_SRC\}&view=features`/);
   assert.match(js, /settings: \{ src: `\$\{INTERFACE_SRC\}&view=settings`/);

@@ -55,6 +55,11 @@
     bell: '<path d="M5 10a7 7 0 0 1 14 0v6l2 3H3l2-3Z M10 22h4 M12 1v2"/>',
     down: '<path d="m6 9 6 6 6-6"/>',
     back: '<path d="M20 12H4 m6-6-6 6 6 6"/>',
+    user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75"/>',
+    key: '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.8 12.2 8.2-8.2 3 3-8.2 8.2 M16 7l2 2"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    plus: '<path d="M12 5v14 M5 12h14"/>',
   };
   const icon = (name) => `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || paths.file}</svg>`;
   function hydrate(root = document) {
