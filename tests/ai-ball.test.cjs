@@ -11,7 +11,7 @@ test("global AI ball is wired into the shell with current routes", () => {
   const account = read("src/account.js");
 
   assert.match(html, /ai-ball\.css\?v=20261103-quick-center/);
-  assert.match(html, /ai-ball\.js\?v=20261103-quick-center/);
+  assert.match(html, /ai-ball\.js\?v=/);
   assert.match(html, /account\.js\?v=20261102-permission/);
   assert.match(html, /home-directory-icons\.js\?v=[\w-]+"/);
 

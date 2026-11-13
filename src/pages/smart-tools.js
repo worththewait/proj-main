@@ -5,6 +5,9 @@
   const featureConfig=window.BaigeFeatureConfig;
   const { icon, escapeHtml, hydrate } = window.BaigeUI;
   const bridge = window.BaigePage;
+  const rolePreview = typeof window.BaigePermissions?.previewUserId === "string";
+  let allowedTools = new Set();
+  const canOpenTool = name => !rolePreview || allowedTools.has(name);
   const content = document.querySelector("#content");
   const state = { category: "all", query: "" };
   let categories=[];
@@ -51,9 +54,12 @@
 
   function updateCatalog(root) {
     root.querySelector("#toolCategories").innerHTML = [{id:'all',label:'全部工具'},...categories].map(({id,label}) => `<button data-category="${escapeHtml(id)}" aria-pressed="${state.category === id}" class="category-tab ${state.category === id ? "is-active" : ""}">${escapeHtml(label)}</button>`).join("");
-    root.querySelector("#totalTools").textContent = `${tools.length} 个工具`;
+    root.querySelector("#totalTools").textContent = `${tools.filter(tool => canOpenTool(tool.name)).length} 个工具`;
+    let hasFeatured = false;
     root.querySelectorAll(".featured-tool").forEach((button) => {
       const tool = tools.find((tool) => tool.name === button.dataset.tool);
+      button.hidden = !canOpenTool(button.dataset.tool);
+      hasFeatured ||= !button.hidden;
       button.dataset.toolGroup = tool?.group || "";
       button.querySelector("[data-featured-description]").textContent = tool?.description || "";
       if (tool?.feature?.image) {
@@ -61,12 +67,15 @@
         button.querySelector('.featured-art img').setAttribute('src',source.startsWith('data:')?source:`../${source}`);
       }
     });
+    root.querySelector(".featured-grid").hidden = !hasFeatured;
+    root.querySelector("#featuredTitle").textContent = hasFeatured ? "热门工具" : "工具搜索";
     renderToolResults(root);
   }
 
   function renderToolResults(catalog = toolWorkspace.catalog) {
     const query = state.query.trim().toLowerCase();
-    const matches = tools.filter((tool) => (state.category === "all" || tool.categoryId === state.category)
+    const available = tools.filter(tool => canOpenTool(tool.name));
+    const matches = available.filter((tool) => (state.category === "all" || tool.categoryId === state.category)
       && `${tool.name} ${tool.description}`.toLowerCase().includes(query));
     const root = catalog.querySelector("#toolResults");
     root.innerHTML = matches.length ? [...new Set(matches.map((tool) => tool.group))].map((group, index) => {
@@ -83,7 +92,7 @@
     }).join("") : `<div class="search-empty">${icon("search")}<h2>没有找到匹配的工具</h2>
       <p>试试“翻译”“文档”或“写作”，也可以清除筛选。</p>
       <button class="secondary-button" data-reset-tools>清除筛选</button></div>`;
-    catalog.querySelector("#resultCount").textContent = `显示 ${matches.length} 个工具，共 ${tools.length} 个`;
+    catalog.querySelector("#resultCount").textContent = `显示 ${matches.length} 个工具，共 ${available.length} 个`;
   }
 
   function renderToolPage(tool, root) {
@@ -155,6 +164,7 @@
     const button = event.target.closest("button");
     if (!button) return;
     if (button.dataset.tool) {
+      if (!canOpenTool(button.dataset.tool)) return;
       toolWorkspace.rememberFocus(button);
       bridge.navigate("smart-tools", button.dataset.tool);
     } else if (button.dataset.category) {
@@ -183,7 +193,15 @@
     window.BaigeOcrTool?.deactivate();
   });
   featureConfig?.subscribe(refreshConfiguration);
-  bridge.onActivate(({ child, focusSearch }) => {
+  bridge.onActivate(({ child, focusSearch, allowedChildren }) => {
+    if (rolePreview) allowedTools = new Set(allowedChildren);
+    if (child && !canOpenTool(child)) child = "";
+    for (const [key, page] of toolWorkspace.pages) {
+      if (key && !canOpenTool(key)) {
+        page.panel.remove();
+        toolWorkspace.pages.delete(key);
+      }
+    }
     refreshConfiguration();
     if (activeChild !== child) {
       toolWorkspace.show(child);

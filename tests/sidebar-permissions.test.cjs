@@ -11,10 +11,10 @@ function element() {
     handlers, innerHTML: '', hidden: false,
     classList: { add() {}, remove() {}, toggle() { return false; } },
     addEventListener(name, fn) { handlers[name] = fn; },
-    setAttribute() {}, querySelectorAll() { return []; }, focus() {}, append() {},
+    setAttribute() {}, querySelectorAll() { return []; }, focus() {}, append() {}, before() {}, remove() { this.removed = true; },
   };
 }
-function app({denyFrontier = false, hash = ''} = {}) {
+function app({denyFrontier = false, hash = '', preview = false} = {}) {
   const nodes = new Map();
   const doc = element();
   doc.querySelector = selector => {
@@ -23,14 +23,27 @@ function app({denyFrontier = false, hash = ''} = {}) {
   };
   const frames = [];
   doc.querySelector('#pageHost').append = frame => frames.push(frame);
-  doc.createElement = () => Object.assign(element(), {contentWindow: {postMessage() {}}});
+  doc.createElement = () => {
+    const messages = [];
+    return Object.assign(element(), {messages, contentWindow: {postMessage(message) { messages.push(message); }}});
+  };
   const win = element();
   const alerts = [];
   win.alert = message => alerts.push(message);
   win.BaigeUI = {icon: () => '', escapeHtml: String};
   const location = {hash};
+  let updatePermissions = () => {};
+  let menus = [];
+  if (preview) {
+    win.location = {search: '?iam-user=u-demo'};
+    win.BaigeIamStore = {
+      users: () => [{id: 'u-demo', nickname: '演示用户', status: 'normal'}],
+      effectiveMenus: () => menus,
+      subscribe(callback) { updatePermissions = callback; },
+    };
+  }
   win.history = {replaceState(_state, _title, hash) { location.hash = hash; }};
-  const context = vm.createContext({window: win, document: doc, location});
+  const context = vm.createContext({window: win, document: doc, location, URLSearchParams});
   vm.runInContext(source('data.js'), context);
   if (denyFrontier) {
     const original = win.BaigePermissions;
@@ -43,7 +56,7 @@ function app({denyFrontier = false, hash = ''} = {}) {
     if (selector === '[data-nav]' && dataset.nav) return {dataset};
     return null;
   }}});
-  return {nav, frames, alerts, location, click, win};
+  return {nav, frames, alerts, location, click, win, setMenus(value) { menus = value; updatePermissions(); }};
 }
 
 test('sidebar shows granted and unavailable children with clear status', () => {
@@ -133,4 +146,31 @@ test('unavailable child gives permission guidance without leaving current page',
   assert.equal(a.location.hash, hash);
   assert.match(a.alerts[0], /智能问数.*未开通/);
   assert.match(a.alerts[0], /申请/);
+});
+
+test('role preview rejects direct routes until approved and evicts revoked open pages', () => {
+  const a = app({hash: '#writing', preview: true});
+  assert.equal(a.location.hash, '#home');
+  assert.match(a.alerts[0], /尚未获得.*百舸写作/);
+  assert.doesNotMatch(a.nav.innerHTML, /data-nav="writing"/);
+  a.setMenus(['writing']);
+  assert.match(a.nav.innerHTML, /data-nav="writing"/);
+  a.click({nav: 'writing'});
+  const writing = a.frames.at(-1);
+  assert.match(writing.src, /pages\/writing\.html\?.*&iam-user=u-demo/);
+  assert.equal(a.location.hash, '#writing');
+  a.setMenus([]);
+  assert.equal(writing.removed, true);
+  assert.equal(a.location.hash, '#home');
+});
+
+test('role preview sends current child grants to the mounted tool catalog', () => {
+  const a = app({preview: true});
+  a.setMenus(['smart-tools:OCR识别']);
+  a.click({nav: 'smart-tools'});
+  const tools = a.frames.at(-1);
+  a.win.handlers.message({source: tools.contentWindow, data: {type: 'baige:ready', pageId: 'smart-tools'}});
+  assert.deepEqual(Array.from(tools.messages.at(-1).allowedChildren), ['OCR识别']);
+  a.setMenus(['smart-tools:OCR识别', 'smart-tools:文档翻译']);
+  assert.deepEqual(Array.from(tools.messages.at(-1).allowedChildren), ['文档翻译', 'OCR识别']);
 });

@@ -463,11 +463,14 @@
     setPanel(historyPanel, historyToggle, false, historyToggle, false);
   });
   window.BaigePage.onActivate(({ child, question, knowledgeBaseIds }) => {
-    const conversation = document.querySelector("#conversationView");
-    const pending = document.querySelector("#qaPending");
-    if (child === "智能问数") { cancelGeneration(); closePicker(false); clearSource(); }
-    conversation.hidden = child === "智能问数";
-    pending.hidden = !conversation.hidden;
+    const dataQuestions = child === "智能问数";
+    if (dataQuestions) {
+      cancelGeneration(); closePicker(false); clearSource();
+      setPanel(historyPanel, historyToggle, false, historyToggle, false);
+    }
+    conversation.hidden = dataQuestions;
+    document.querySelector("#conversationActions").hidden = dataQuestions;
+    document.querySelector("#qaPending").hidden = !dataQuestions;
     if (child === "对话" && typeof question === "string") {
       const text = question.trim();
       if (!text || text.length > 16000) return;

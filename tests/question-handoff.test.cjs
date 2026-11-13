@@ -161,13 +161,30 @@ test("leaving QA before readiness cancels an undelivered question", () => {
   assert.equal(app.frame("qa").messages.filter(message => message.question).length, 0);
 });
 
-function bridge(pageId) {
+function bridge(pageId, preview = false) {
   const env = environment(pageId);
   const parentMessages = [];
   env.window.parent = { postMessage(message) { parentMessages.push(plain(message)); } };
+  if (preview) {
+    env.window.BaigePermissions = { previewUserId: "u-demo", canOpen() { return false; } };
+    Object.defineProperty(env.window.parent, "BaigeIamStore", { get() { throw new Error("Cross-origin frame"); } });
+  }
   vm.runInContext(source("page-bridge.js"), env.context);
   return { ...env, parentMessages };
 }
+
+test("an isolated preview frame only activates routes accepted by the shell", () => {
+  const env = bridge("qa", true);
+  const children = [];
+  env.location.hash = "#" + encodeURIComponent("对话");
+  env.window.BaigePage.onActivate(({ child }) => children.push(child));
+  assert.deepEqual(children, []);
+  env.window.BaigePage.navigate("qa", "对话");
+  assert.deepEqual(children, []);
+  assert.equal(env.parentMessages.at(-1).child, "对话");
+  env.window.emit("message", { source: env.window.parent, data: { type: "baige:activate", pageId: "qa", child: "智能问数" } });
+  assert.deepEqual(children, ["智能问数"]);
+});
 
 test("all independently registered homepage cleanup handlers run on trusted deactivation", () => {
   const env = bridge("home");
@@ -284,6 +301,22 @@ test("QA consumes an incoming question in general mode and keeps previous knowle
   assert.match(node("#selectedSourceTags").innerHTML, /企业制度知识库/);
   assert.match(node("#selectedSourceTags").innerHTML, /项目资料知识库/);
   assert.match(node("#conversationMessages").innerHTML, /按企业制度解答/);
+});
+
+test("switching to data questions closes conversation history and hides its actions", () => {
+  const env = environment("qa");
+  let activate;
+  env.window.BaigePage = { onDeactivate() {}, onActivate(callback) { activate = callback; } };
+  for (const file of ["qa-session.js", "conversation-data.js", "pages/home.js"]) vm.runInContext(source(file), env.context);
+  const node = selector => env.document.querySelector(selector);
+  activate({ child: "对话" });
+  node("#historyToggle").emit("click");
+  assert.equal(node("#historyPanel").hidden, false);
+  activate({ child: "智能问数" });
+  assert.equal(node("#qaPending").hidden, false);
+  assert.equal(node("#conversationView").hidden, true);
+  assert.equal(node("#conversationActions").hidden, true);
+  assert.equal(node("#historyPanel").hidden, true);
 });
 
 test("knowledge question sources are delivered once with the queued question", () => {

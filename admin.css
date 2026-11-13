@@ -3,7 +3,16 @@
 .admin-shell { height: 100dvh; }
 .admin-topbar { z-index: 40; }
 .admin-topbar-meta { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
-.admin-context { color: var(--muted); font-size: 12px; }
+.admin-actor { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+.admin-actor select {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
 .admin-return {
   display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 11px;
   border: 1px solid var(--line); border-radius: 8px; background: var(--surface);

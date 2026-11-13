@@ -6,7 +6,8 @@
   <title>角色管理 · 百舸后台</title>
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="../admin.css" />
-  <link rel="stylesheet" href="../user-role-admin.css?v=20261112-iam-final" />
+  <link rel="stylesheet" href="../user-role-admin.css?v=20261112-iam-approval" />
+  <link rel="stylesheet" href="../iam-role-editor.css?v=20261113" />
 </head>
 <body class="module-page" data-page="iam-roles">
   <main class="module-main">
@@ -36,25 +37,19 @@
   <dialog class="iam-dialog" id="iamRoleDialog" aria-labelledby="iamRoleDialogTitle">
     <header class="iam-dialog-head"><h2 id="iamRoleDialogTitle">新建角色</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
     <div class="iam-dialog-body" id="iamRoleDialogBody"></div>
-    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamRoleSave">保存</button></footer>
-  </dialog>
-
-  <dialog class="iam-dialog iam-dialog--wide" id="iamMenuDialog" aria-labelledby="iamMenuTitle">
-    <header class="iam-dialog-head"><h2 id="iamMenuTitle">菜单权限</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
-    <div class="iam-dialog-body"><p class="iam-dialog-note" id="iamMenuName"></p><div class="iam-check-list" id="iamMenuList"></div></div>
-    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamMenuSave">保存</button></footer>
+    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" id="iamRoleCancel" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamRoleSave">保存</button></footer>
   </dialog>
 
   <dialog class="iam-dialog iam-dialog--role-users" id="iamRoleUsersDialog" aria-labelledby="iamRoleUsersTitle">
-    <header class="iam-dialog-head"><h2 id="iamRoleUsersTitle">已分配的用户列表</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
+    <header class="iam-dialog-head"><h2 id="iamRoleUsersTitle">角色成员</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
     <div class="iam-dialog-body iam-role-users-body">
       <div class="iam-role-users-filters">
         <label class="iam-field"><span>用户名称</span><input class="iam-input" id="iamRoleUserName" type="search" placeholder="输入用户名称" autocomplete="off" /></label>
         <label class="iam-field"><span>手机号码</span><input class="iam-input" id="iamRoleUserPhone" type="search" placeholder="输入手机号码" autocomplete="off" /></label>
         <div class="iam-toolbar-actions"><button class="iam-btn" id="iamRoleUserReset" type="button">重置</button><button class="iam-btn is-primary" id="iamRoleUserQuery" type="button">查询</button></div>
       </div>
-      <div class="iam-role-users-toolbar"><button class="iam-btn is-primary" id="iamAddRoleUsers" type="button">添加授权用户</button><button class="iam-btn is-warning" id="iamCancelRoleUsers" type="button">取消授权</button></div>
-      <div class="iam-role-users-table-wrap"><table class="iam-table iam-role-users-table"><thead><tr><th class="iam-assign-check"><input id="iamRoleUsersAll" type="checkbox" aria-label="选择本页全部用户" /></th><th>用户名称</th><th>用户昵称</th><th>所属部门</th><th>手机号码</th><th>创建时间</th><th>状态</th><th>操作</th></tr></thead><tbody id="iamRoleUsersRows"></tbody></table></div>
+      <div class="iam-role-users-toolbar"><span class="iam-inline-feedback" id="iamRoleUsersFeedback" role="status"></span><button class="iam-btn is-primary" id="iamAddRoleUsers" type="button">申请添加用户</button><button class="iam-btn is-danger" id="iamCancelRoleUsers" type="button">撤销授权</button></div>
+      <div class="iam-role-users-table-wrap"><table class="iam-table iam-role-users-table"><thead><tr><th class="iam-assign-check"><input id="iamRoleUsersAll" type="checkbox" aria-label="选择本页已分配用户" /></th><th>用户名称</th><th>用户昵称</th><th>所属部门</th><th>手机号码</th><th>创建时间</th><th>授权状态</th><th>操作</th></tr></thead><tbody id="iamRoleUsersRows"></tbody></table></div>
       <div class="iam-role-users-foot"><span id="iamRoleUsersSummary"></span><div class="iam-pager" id="iamRoleUsersPager"></div></div>
     </div>
   </dialog>
@@ -69,13 +64,20 @@
       </div>
       <div class="iam-assign-info" id="iamAddUsersInfo"></div>
       <div class="iam-select-users-table-wrap"><table class="iam-table iam-select-users-table"><thead><tr><th class="iam-assign-check"><input id="iamAddUsersAll" type="checkbox" aria-label="选择本页全部用户" /></th><th>用户名称</th><th>用户昵称</th><th>所属部门</th><th>手机号码</th><th>创建时间</th><th>状态</th></tr></thead><tbody id="iamAddUsersRows"></tbody></table></div>
+      <label class="iam-form-field iam-auth-reason"><span>申请理由 <em>*</em></span><textarea class="iam-input iam-reason-input" id="iamAddUsersReason" maxlength="240" placeholder="说明为这些用户授予角色的原因"></textarea></label>
+      <p class="iam-form-feedback" id="iamAddUsersFeedback" role="status"></p>
     </div>
-    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamAddUsersSave">确认</button></footer>
+    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamAddUsersSave">提交授权申请</button></footer>
   </dialog>
 
   <div class="iam-toast" id="iamToast" role="status" aria-live="polite"></div>
   <script src="../src/ui.js"></script>
-  <script src="../src/iam-store.js?v=20261112-iam-final"></script>
-  <script src="../src/pages/role-admin.js?v=20261112-iam-final"></script>
+  <script src="../src/data.js?v=20261113-role-editor"></script>
+  <script src="../src/feature-config.js?v=20261109-diagram-tools"></script>
+  <script src="../src/iam-menu-catalog.js?v=20261113"></script>
+  <script src="../src/iam-store.js?v=20261113-role-editor"></script>
+  <script src="../src/pages/iam-management.js?v=20261112-iam-approval"></script>
+  <script src="../src/pages/iam-role-menu-picker.js?v=20261113"></script>
+  <script src="../src/pages/role-admin.js?v=20261113-role-editor"></script>
 </body>
 </html>

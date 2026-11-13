@@ -1,0 +1,242 @@
+/* Role details and menu permissions share one editor. */
+.iam-dialog--role-editor { width: min(1112px, calc(100vw - 32px)); }
+.iam-dialog--role-editor .iam-dialog-head {
+  align-items: center;
+  padding: 20px 24px 16px;
+  border-bottom: 0;
+}
+.iam-dialog--role-editor .iam-dialog-head h2 { font-size: 20px; font-weight: 600; }
+.iam-dialog--role-editor .iam-dialog-close { background: var(--surface-subtle); }
+.iam-dialog--role-editor .iam-dialog-body { padding: 0 24px 20px; background: var(--surface); }
+.iam-dialog--role-editor .iam-dialog-foot { padding: 14px 24px; background: var(--canvas); }
+.iam-dialog--role-editor .iam-dialog-foot .iam-btn { min-width: 64px; min-height: 36px; }
+
+.iam-role-edit-grid {
+  display: grid;
+  grid-template-columns: minmax(255px, 36fr) minmax(0, 64fr);
+  align-items: start;
+  gap: 12px;
+}
+.iam-role-fields, .iam-role-authorization {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+.iam-role-fields { display: grid; gap: 20px; }
+.iam-role-field {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.iam-role-field > :first-child { color: var(--ink); font-size: 13px; text-align: end; }
+.iam-role-field em { color: #b4232c; font-style: normal; }
+.iam-role-fields .iam-input { width: 100%; height: 38px; font-size: 14px; }
+.iam-role-fields .iam-role-remark textarea { height: 92px; min-height: 66px; padding: 8px 10px; resize: vertical; }
+.iam-role-field.iam-role-remark { align-items: start; }
+.iam-role-field.iam-role-remark > :first-child { padding-top: 8px; }
+.iam-role-order {
+  position: relative;
+  display: flex;
+  width: min(100%, 232px);
+  align-items: center;
+}
+.iam-role-order input { padding-inline-end: 58px; appearance: textfield; }
+.iam-role-order input::-webkit-inner-spin-button { appearance: none; }
+.iam-role-order button {
+  flex: none;
+  width: 25px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 16px;
+  cursor: pointer;
+}
+.iam-role-order input + button { margin-inline-start: -53px; }
+.iam-role-order button:hover:enabled { background: var(--surface-subtle); color: var(--accent-hover); }
+.iam-role-order button:disabled { cursor: default; }
+.iam-role-status { display: inline-flex; justify-self: start; }
+.iam-role-status button {
+  position: relative;
+  min-width: 62px;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.iam-role-status button:first-child { border-radius: 6px 0 0 6px; }
+.iam-role-status button:last-of-type { margin-inline-start: -1px; border-radius: 0 6px 6px 0; }
+.iam-role-status button[aria-pressed="true"] {
+  z-index: 1;
+  border-color: var(--accent);
+  color: var(--accent-hover);
+  font-weight: 600;
+}
+.iam-role-status button:disabled { cursor: default; }
+.iam-role-feedback:empty { display: none; }
+.iam-role-feedback { margin: 8px 0 0; color: #b4232c; font-size: 12px; }
+.iam-dialog--role-editor .iam-menu-pending { margin: 10px 0 0; }
+.iam-role-review-fields { margin-top: 12px; }
+.iam-role-review-fields .iam-dialog-note { margin-bottom: 6px; }
+
+.iam-role-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+.iam-role-menu-heading h3 { margin: 0; color: var(--ink); font-size: 15px; font-weight: 600; }
+.iam-role-menu-tools { display: flex; flex-wrap: wrap; gap: 6px; }
+.iam-role-menu-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.iam-role-menu-switch::after {
+  content: "";
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 2px;
+  background: var(--surface);
+}
+.iam-role-menu-switch[aria-pressed="true"] {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+}
+.iam-role-menu-switch[aria-pressed="true"]::after { border-color: var(--surface); }
+.iam-role-menu-switch:hover:enabled:not([aria-pressed="true"]) { color: var(--accent-hover); border-color: var(--line-strong); }
+.iam-role-menu-switch:disabled { cursor: default; }
+
+.iam-role-menu-panes {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  height: clamp(230px, 49dvh, 450px);
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+}
+.iam-role-menu-pane { display: flex; min-width: 0; min-height: 0; flex-direction: column; }
+.iam-role-menu-pane + .iam-role-menu-pane { border-inline-start: 1px solid var(--line); }
+.iam-role-menu-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.iam-role-menu-text {
+  min-height: 26px;
+  padding: 0 7px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--surface-subtle);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.iam-role-menu-text:hover:enabled { color: var(--accent-hover); background: var(--accent-soft); }
+.iam-role-menu-text:disabled { color: var(--muted); cursor: default; }
+.iam-role-menu-search { position: relative; display: block; margin: 0 12px 8px; }
+.iam-role-menu-search input { width: 100%; height: 32px; padding-inline-end: 30px; font-size: 13px; }
+.iam-role-menu-search input::placeholder { color: var(--muted); }
+.iam-role-menu-search .icon {
+  position: absolute;
+  top: 8px;
+  inset-inline-end: 9px;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.iam-role-menu-tree, .iam-role-menu-selected {
+  min-height: 0;
+  flex: 1;
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: var(--line-strong) transparent;
+}
+.iam-role-menu-tree ul, .iam-role-menu-selected ul { margin: 0; padding: 0; list-style: none; }
+.iam-role-menu-tree > ul { padding: 0 8px 8px; }
+.iam-role-menu-tree li > ul { margin-inline-start: 12px; }
+.iam-role-menu-row {
+  display: flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 3px;
+  border-radius: 5px;
+  color: var(--ink);
+  font-size: 13px;
+}
+.iam-role-menu-row:hover { background: var(--canvas); }
+label.iam-role-menu-row, .iam-role-menu-branch label { cursor: pointer; }
+.iam-role-menu-branch label { display: flex; min-width: 0; align-items: center; gap: 6px; }
+.iam-role-menu-row span, .iam-role-menu-selected li {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.iam-role-menu-branch { font-weight: 500; }
+.iam-role-menu-row small { flex: none; margin-inline-start: auto; color: var(--muted); font-size: 11px; }
+.iam-role-menu-offset, .iam-role-menu-caret { width: 15px; flex: none; }
+.iam-role-menu-caret {
+  display: grid;
+  height: 23px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+.iam-role-menu-caret .icon { width: 12px; height: 12px; }
+.iam-role-menu-caret[aria-expanded="true"] .icon { transform: rotate(90deg); }
+.iam-role-menu-caret:disabled { cursor: default; }
+.iam-role-menu-row input { flex: none; width: 15px; height: 15px; margin: 0; accent-color: var(--accent); }
+.iam-role-menu-row input:disabled { cursor: default; }
+.iam-role-menu-selected li { padding: 6px 12px; color: var(--ink); font-size: 13px; }
+.iam-role-menu-empty { margin: 10px 12px; color: var(--muted); font-size: 12px; }
+.iam-dialog--role-editor :is(button, input, textarea):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 850px) {
+  .iam-role-edit-grid { grid-template-columns: minmax(220px, 33fr) minmax(0, 67fr); }
+  .iam-role-field { grid-template-columns: 66px minmax(0, 1fr); }
+  .iam-role-fields, .iam-role-authorization { padding: 10px; }
+}
+@media (max-width: 690px) {
+  .iam-role-edit-grid { grid-template-columns: 1fr; }
+  .iam-dialog--role-editor .iam-dialog-head, .iam-dialog--role-editor .iam-dialog-foot { padding-inline: 14px; }
+  .iam-dialog--role-editor .iam-dialog-body { padding-inline: 14px; }
+  .iam-role-fields { gap: 10px; }
+  .iam-role-menu-panes { height: 310px; }
+}

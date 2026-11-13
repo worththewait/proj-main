@@ -6,7 +6,7 @@
   <title>用户管理 · 百舸后台</title>
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="../admin.css" />
-  <link rel="stylesheet" href="../user-role-admin.css?v=20261112-iam-final" />
+  <link rel="stylesheet" href="../user-role-admin.css?v=20261113-user-roles" />
 </head>
 <body class="module-page" data-page="iam-users">
   <main class="module-main">
@@ -45,22 +45,27 @@
   <dialog class="iam-dialog iam-dialog--form" id="iamUserDialog" aria-labelledby="iamUserDialogTitle">
     <header class="iam-dialog-head"><h2 id="iamUserDialogTitle">新建用户</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
     <div class="iam-dialog-body" id="iamUserDialogBody"></div>
-    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamUserSave">新增</button></footer>
+    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamUserSave">创建用户</button></footer>
   </dialog>
 
   <dialog class="iam-dialog iam-dialog--assign" id="iamAssignDialog" aria-labelledby="iamAssignTitle">
     <header class="iam-dialog-head"><h2 id="iamAssignTitle">分配角色</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
     <div class="iam-dialog-body iam-assign-body">
       <div class="iam-assign-info" id="iamAssignInfo"></div>
-      <div class="iam-assign-table-wrap"><table class="iam-table iam-assign-table"><thead><tr><th class="iam-assign-check"><input id="iamAssignAll" type="checkbox" aria-label="选择本页全部角色" /></th><th>角色编号</th><th>角色名称</th><th>权限字符</th><th>创建时间</th></tr></thead><tbody id="iamAssignRows"></tbody></table></div>
+      <div class="iam-assign-table-wrap"><table class="iam-table iam-assign-table"><thead><tr><th class="iam-assign-check"><input id="iamAssignAll" type="checkbox" aria-label="选择本页可新增的角色" /></th><th>角色编号</th><th>角色名称</th><th>权限字符</th><th>创建时间</th><th>授权状态</th></tr></thead><tbody id="iamAssignRows"></tbody></table></div>
       <div class="iam-pager" id="iamAssignPager" role="group" aria-label="分配角色分页"></div>
+      <label class="iam-form-field iam-auth-reason" id="iamAssignReasonField" hidden><span>申请理由 <em>*</em></span><textarea class="iam-input iam-reason-input" id="iamAssignReason" maxlength="240" placeholder="说明需要申请或更换角色的原因"></textarea></label>
+      <p class="iam-form-feedback" id="iamAssignFeedback" role="status"></p>
     </div>
-    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamAssignSave">确认</button></footer>
+    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamAssignSave">提交授权申请</button></footer>
   </dialog>
 
   <div class="iam-toast" id="iamToast" role="status" aria-live="polite"></div>
   <script src="../src/ui.js"></script>
-  <script src="../src/iam-store.js?v=20261112-iam-final"></script>
-  <script src="../src/pages/user-admin.js?v=20261112-iam-final"></script>
+  <script src="../src/data.js?v=20261113-role-editor"></script>
+  <script src="../src/iam-menu-catalog.js?v=20261113"></script>
+  <script src="../src/iam-store.js?v=20261113-user-roles"></script>
+  <script src="../src/pages/iam-management.js?v=20261112-iam-approval"></script>
+  <script src="../src/pages/user-admin.js?v=20261113-user-roles"></script>
 </body>
 </html>

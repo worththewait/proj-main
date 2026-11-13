@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>角色授权审核 · 百舸后台</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="../admin.css" />
+  <link rel="stylesheet" href="../role-approval.css?v=20261113-account-preview" />
+</head>
+<body class="module-page role-approval-page" data-page="iam-role-approval">
+  <main class="module-main">
+    <div class="content-scroll">
+      <div class="content-inner approval-page">
+        <header class="approval-head">
+          <div>
+            <p class="approval-location">权限管理 <span aria-hidden="true">/</span> 角色授权审核</p>
+            <h1>角色授权审核</h1>
+          </div>
+          <p class="approval-actor" id="approvalActor"></p>
+        </header>
+        <section class="approval-panel" aria-label="角色授权申请列表">
+          <div class="approval-toolbar">
+            <div class="approval-tabs" role="group" aria-label="申请范围">
+              <button type="button" data-approval-scope="pending" aria-pressed="false">待审核 <span id="approvalPendingCount"></span></button>
+              <button type="button" data-approval-scope="all" aria-pressed="true">全部申请</button>
+            </div>
+            <form class="approval-filters" id="approvalFilters" role="search" aria-label="筛选授权申请">
+              <label>发起人<input id="approvalApplicant" type="search" placeholder="姓名或账号" autocomplete="off" /></label>
+              <label>授权对象<input id="approvalTarget" type="search" placeholder="用户、角色或申请编号" autocomplete="off" /></label>
+              <label>状态<select id="approvalStatus">
+                <option value="">全部状态</option>
+                <option value="pending">待审核</option>
+                <option value="approved">已通过</option>
+                <option value="rejected">已驳回</option>
+                <option value="withdrawn">已撤回</option>
+                <option value="invalid">已失效</option>
+              </select></label>
+              <button type="reset" class="secondary-button">重置</button>
+            </form>
+          </div>
+          <div class="approval-table-wrap" tabindex="0" role="region" aria-label="申请表格">
+            <table class="approval-table">
+              <thead>
+                <tr><th scope="col">申请事项</th><th scope="col">发起人</th><th scope="col">授权对象</th><th scope="col">提交时间</th><th scope="col">状态</th><th scope="col">操作</th></tr>
+              </thead>
+              <tbody id="approvalRows"></tbody>
+            </table>
+          </div>
+          <p class="approval-summary" id="approvalSummary" role="status"></p>
+        </section>
+        <p class="approval-notice" id="approvalNotice" role="status" hidden></p>
+      </div>
+    </div>
+  </main>
+
+  <dialog class="approval-drawer" id="approvalDrawer" aria-labelledby="approvalDrawerTitle">
+    <header class="approval-drawer-head">
+      <div><h2 id="approvalDrawerTitle" tabindex="-1">授权申请详情</h2><div id="approvalDrawerStatus"></div></div>
+      <button type="button" class="approval-close" data-approval-close aria-label="关闭申请详情"><span data-icon="close" aria-hidden="true"></span></button>
+    </header>
+    <div class="approval-drawer-scroll" id="approvalDrawerScroll">
+      <dl class="approval-meta" id="approvalMeta"></dl>
+      <section class="approval-details" aria-labelledby="approvalChangesTitle">
+        <h3 id="approvalChangesTitle">授权变更</h3>
+        <ul class="approval-items" id="approvalItems"></ul>
+      </section>
+      <section class="approval-details" aria-labelledby="approvalTimelineTitle">
+        <h3 id="approvalTimelineTitle">处理记录</h3>
+        <ol class="approval-timeline" id="approvalTimeline"></ol>
+      </section>
+      <div class="approval-review" id="approvalReviewFields" hidden>
+        <label for="approvalComment">审核意见</label>
+        <textarea id="approvalComment" maxlength="500" rows="3" placeholder="通过可留空，驳回请填写原因"></textarea>
+      </div>
+    </div>
+    <footer class="approval-drawer-foot">
+      <p id="approvalFeedback" class="approval-feedback" role="status" hidden></p>
+      <div class="approval-actions" id="approvalActions"></div>
+    </footer>
+  </dialog>
+
+  <dialog class="approval-menu-dialog" id="approvalMenuDialog" aria-labelledby="approvalMenuTitle">
+    <header class="approval-drawer-head">
+      <div><h2 id="approvalMenuTitle">账号菜单预览</h2><p class="approval-menu-account" id="approvalMenuAccount"></p></div>
+      <button type="button" class="approval-close" id="approvalMenuClose" aria-label="关闭菜单预览" autofocus><span data-icon="close" aria-hidden="true"></span></button>
+    </header>
+    <div class="approval-drawer-scroll" id="approvalMenuContent"></div>
+  </dialog>
+
+  <script src="../src/ui.js"></script>
+  <script src="../src/data.js?v=20261113-role-editor"></script>
+  <script src="../src/feature-config.js?v=20261109-diagram-tools"></script>
+  <script src="../src/iam-menu-catalog.js?v=20261113-account-preview"></script>
+  <script src="../src/iam-store.js?v=20261113-role-editor"></script>
+  <script src="../src/pages/role-approval.js?v=20261113-account-preview"></script>
+</body>
+</html>

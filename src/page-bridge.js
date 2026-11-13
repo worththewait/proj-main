@@ -3,6 +3,9 @@
   const pageId = document.body.dataset.page;
   const embedded = window.parent !== window;
   const { findNavItem, tools } = window.BaigeData;
+  const previewUserId = window.BaigePermissions?.previewUserId;
+  const rolePreview = typeof previewUserId === "string";
+  let allowedChildren = null;
   let activate = () => {};
   const deactivationListeners = new Set();
   let homeSettings = () => {};
@@ -35,7 +38,7 @@
     // 后台页面可以没有对应的客户端导航项，标题回落到页面自身的 <title>。
     const label = child || findNavItem(pageId)?.label || document.title.split(" · ")[0];
     document.title = `${label} · 百舸数智平台`;
-    activate({ child, focusSearch, ...(question ? { question, ...(sources.length ? { knowledgeBaseIds: sources } : {}) } : {}) });
+    activate({ child, focusSearch, ...(allowedChildren ? { allowedChildren } : {}), ...(question ? { question, ...(sources.length ? { knowledgeBaseIds: sources } : {}) } : {}) });
     if (pageId === "home" && openHomeSettings === true) homeSettings();
   }
 
@@ -47,14 +50,17 @@
     if (sources === null) question = "";
     // Tool-tab closing needs synchronous activation of its neighbouring tab.
     // Embedded questions are delivered once by the parent after activation.
-    if (id === pageId) show(child, focusSearch, embedded ? "" : question, sources?.length ? sources : undefined);
+    if (id === pageId && (!rolePreview || (allowedChildren && (!child || allowedChildren.includes(child))))) {
+      show(child, focusSearch, embedded ? "" : question, sources?.length ? sources : undefined);
+    }
     if (embedded) {
       window.parent.postMessage({ type: "baige:navigate", pageId, id, child, focusSearch, ...(question ? { question, ...(sources.length ? { knowledgeBaseIds: sources } : {}) } : {}) }, "*");
     } else if (id === pageId) {
       const hash = child ? `#${encodeURIComponent(child)}` : "";
       if (location.hash !== hash) location.hash = hash;
     } else {
-      location.href = `../index.html#${id}${child ? `/${encodeURIComponent(child)}` : ""}`;
+      const preview = rolePreview ? `?iam-user=${encodeURIComponent(previewUserId)}` : "";
+      location.href = `../index.html${preview}#${id}${child ? `/${encodeURIComponent(child)}` : ""}`;
     }
   }
 
@@ -62,7 +68,13 @@
     if (!embedded || event.source !== window.parent) return;
     const message = event.data;
     if (!message || message.pageId !== pageId) return;
-    if (message.type === "baige:activate") show(message.child, message.focusSearch === true, message.question, message.knowledgeBaseIds, message.openHomeSettings);
+    if (message.type === "baige:activate") {
+      if (rolePreview && pageId === "smart-tools") {
+        allowedChildren = Array.isArray(message.allowedChildren)
+          ? Object.freeze(message.allowedChildren.filter(name => validChild(pageId, name))) : null;
+      }
+      show(message.child, message.focusSearch === true, message.question, message.knowledgeBaseIds, message.openHomeSettings);
+    }
     else if (message.type === "baige:deactivate") for (const callback of deactivationListeners) callback();
   });
   window.addEventListener("hashchange", () => { if (!embedded) show(readChild()); });
@@ -87,7 +99,13 @@
     onDeactivate(callback) { deactivationListeners.add(callback); },
     onActivate(callback) {
       activate = callback;
-      show(readChild());
+      if (!embedded && rolePreview && findNavItem(pageId)) {
+        const child = readChild();
+        location.replace(`../index.html?iam-user=${encodeURIComponent(previewUserId)}#${pageId}${child ? `/${encodeURIComponent(child)}` : ""}`);
+        return;
+      }
+      // The parent authorizes preview routes, including frames with opaque file origins.
+      if (!rolePreview) show(readChild());
       if (embedded) window.parent.postMessage({ type: "baige:ready", pageId }, "*");
     },
   });

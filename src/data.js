@@ -14,13 +14,13 @@ const tools = [
 ];
 const navigation = [
  {id:"home",file:"pages/home.html?v=20261109-diagram-tools",label:"首页",icon:"home"},
- {id:"qa",file:"pages/qa.html?v=20261030-refined",label:"百舸问答",icon:"chat",children:["对话","智能问数"]},
+ {id:"qa",file:"pages/qa.html?v=20261113-role-editor",label:"百舸问答",icon:"chat",children:["对话","智能问数"]},
  {id:"knowledge",file:"pages/knowledge.html?v=20261110-file-column-balance",label:"知识库",icon:"book"},
  {id:"writing",file:"pages/writing.html?v=20261110-file-column-balance",label:"百舸写作",icon:"pen"},
  {id:"library",file:"pages/library.html",label:"百舸文库",icon:"file",children:["文库首页"],subnav:false,autoChild:false},
  {id:"intel",file:"pages/intel.html?v=20261106-news4",label:"百舸情报",icon:"globe"},
  {id:"analysis",file:"pages/analysis.html",label:"百舸分析",icon:"chart"},
- {id:"smart-tools",file:"pages/smart-tools.html?v=20261112-ocr",label:"智能工具",icon:"grid"},
+ {id:"smart-tools",file:"pages/smart-tools.html?v=20261113-role-editor",label:"智能工具",icon:"grid"},
  {id:"frontier",file:"pages/frontier.html",label:"前沿工具",icon:"compass",children:["全球鹰","智研通"]},
  {id:"digital",file:"pages/digital.html",label:"数智系统",icon:"layers",children:["标准编制","专利编制"],files:{"标准编制":"pages/digital-standard.html","专利编制":"pages/digital-patent.html"}},
  {id:"datasets",file:"pages/datasets.html",label:"高质量数据集",icon:"database",subnav:false,autoChild:false,children:["船海产业数据集","船舶领域标准数据集","船舶行业质量数据集","船舶行业科技成果数据","船舶行业科技文献数据","船舶行业文化传播数据","船舶行业教育培训数据","船舶行业试验测试数据"]},
@@ -113,6 +113,23 @@ const permissions = {
  }
 };
 const childNames = id => id === "smart-tools" ? tools.map(tool => tool.name) : (findNavItem(id)?.children || []);
+const roleMenuKey = (route, child = "") => child ? `${route}:${child}` : route;
+const roleMenuChildren = item => item.subnav === false ? [] : childNames(item.id);
+const legacyRoleMenu = (route, child = "") => route === "smart-tools" ? "tools"
+  : route === "qa" && child && child !== "对话" ? null : route;
+const previewUserId = window.location?.search ? new URLSearchParams(window.location.search).get("iam-user") : null;
+function rolePreviewCanOpen(item, child) {
+ if (item.id === "home") return true;
+ if (item.adminOnly) return false;
+ try {
+  const iam = window.BaigeIamStore || window.parent?.BaigeIamStore;
+  const menus = new Set(iam?.effectiveMenus(previewUserId));
+  const children = roleMenuChildren(item);
+  if (!children.length) return menus.has(item.id);
+  const canOpenChild = name => menus.has(roleMenuKey(item.id, name)) || menus.has(legacyRoleMenu(item.id, name));
+  return child ? canOpenChild(child) : children.some(canOpenChild);
+ } catch { return false; }
+}
 function applicationGrant(route, child = "") {
  try {
   const raw = window.localStorage?.getItem("baige.permission.grants.v1");
@@ -129,9 +146,11 @@ function baseCanOpen(id, child = "") {
  return names.length ? names.some(name => baseCanOpen(id, name)) : true;
 }
 function canOpen(id, child = "") {
- if (!findNavItem(id) || permissions.routes[id] === false) return false;
+ const item = findNavItem(id);
+ if (!item || permissions.routes[id] === false) return false;
  const names = childNames(id);
  if (child && !names.includes(child)) return false;
+ if (previewUserId !== null) return rolePreviewCanOpen(item, child);
  return applicationGrant(id, child) || baseCanOpen(id, child);
 }
 function accessSummary(id) {
@@ -140,6 +159,6 @@ function accessSummary(id) {
  return { total: names.length, granted,
   label: !granted ? "暂未开通" : granted === names.length ? "全部已开通" : `已开通 ${granted}/${names.length}` };
 }
-window.BaigeData = Object.freeze({navigation,tools,knowledgeScopes,knowledgeBases,knowledgeDirectory,findNavItem});
-window.BaigePermissions = Object.freeze({canOpen, baseCanOpen, childNames, summary: accessSummary});
+window.BaigeData = Object.freeze({navigation,tools,knowledgeScopes,knowledgeBases,knowledgeDirectory,findNavItem,roleMenuKey,roleMenuChildren,legacyRoleMenu});
+window.BaigePermissions = Object.freeze({canOpen, baseCanOpen, childNames, summary: accessSummary, previewUserId});
 })();

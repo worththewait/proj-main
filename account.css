@@ -7,6 +7,7 @@
 .topbar-home-button { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 10px; border: 1px solid #dbe2ef; border-radius: 6px; background: transparent; color: #526078; font-size: 12px; white-space: nowrap; }
 .topbar-home-button:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
 .topbar-home-button .icon { width: 14px; height: 14px; }
+.role-preview-label { color: var(--muted); font-size: 12px; white-space: nowrap; }
 .notification-dot { position: absolute; top: 4px; right: 5px; width: 6px; height: 6px; border-radius: 50%; background: #e34d4d; }
 #accountRoot { position: relative; display: flex; align-items: center; height: 100%; padding-left: 16px; border-left: 1px solid #edf0f5; flex-shrink: 0; }
 .account-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 40px; padding: 3px 5px 3px 8px; border: 0; border-radius: 7px; background: transparent; color: #526078; }

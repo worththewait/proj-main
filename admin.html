@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#f4f6fb" />
   <title>后台系统 · 百舸数智平台</title>
   <link rel="stylesheet" href="./styles.css?v=20261027-management" />
-  <link rel="stylesheet" href="./admin.css?v=20261027-admin" />
+  <link rel="stylesheet" href="./admin.css?v=20261112-iam-approval" />
 </head>
 <body class="admin-page">
   <div class="app-shell admin-shell">
@@ -16,7 +16,7 @@
         <span>百舸<span class="brand-subtitle">后台系统</span></span>
       </a>
       <div class="admin-topbar-meta">
-        <span class="admin-context">管理工作台</span>
+        <label class="admin-actor" for="iamActor"><span>演示身份</span><select id="iamActor"></select></label>
         <a class="admin-return" href="./index.html"><span data-icon="back" aria-hidden="true"></span>返回客户端</a>
       </div>
     </header>
@@ -52,6 +52,9 @@
         <button class="nav-item" type="button" data-admin-view="roles">
           <span data-icon="key" aria-hidden="true"></span><span class="nav-label">角色管理</span>
         </button>
+        <button class="nav-item" type="button" data-admin-view="role-approval">
+          <span data-icon="check" aria-hidden="true"></span><span class="nav-label">角色授权审核</span>
+        </button>
         <button class="nav-item" type="button" data-admin-view="access">
           <span data-icon="shield" aria-hidden="true"></span><span class="nav-label">权限审核</span>
         </button>
@@ -64,6 +67,9 @@
     </main>
   </div>
   <script src="./src/ui.js"></script>
-  <script src="./admin.js?v=20261112-iam"></script>
+  <script src="./src/data.js?v=20261113-role-editor"></script>
+  <script src="./src/iam-menu-catalog.js?v=20261113"></script>
+  <script src="./src/iam-store.js?v=20261113-role-editor"></script>
+  <script src="./admin.js?v=20261113-user-roles"></script>
 </body>
 </html>

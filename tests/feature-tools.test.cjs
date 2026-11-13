@@ -6,14 +6,15 @@ const path=require('node:path');
 const createDOM=require('./helpers/feature-dom.cjs');
 const project=path.join(__dirname,'..');
 
-function setup(realModel=false, integrations={}){
+function setup(realModel=false, integrations={}, previewMenus=null){
   const {document,Element}=createDOM();
   document.innerHTML=fs.readFileSync(path.join(project,'pages/smart-tools.html'),'utf8').match(/<body\b[^>]*>([\s\S]*?)<\/body>/)[1];
   let activate,deactivate,change;
   const navigations=[];
   const storage=new Map();
   const window={localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},addEventListener(){},confirm:()=>true,BaigePage:{onActivate(callback){activate=callback;},onDeactivate(callback){deactivate=callback;},navigate:(...args)=>navigations.push(args)},...integrations};
-  const context=vm.createContext({window,document,console});
+  if (previewMenus !== null) window.location={search:'?iam-user=u-demo'};
+  const context=vm.createContext({window,document,console,URLSearchParams});
   function load(file){vm.runInContext(fs.readFileSync(path.join(project,file),'utf8'),context,{filename:file});}
   load('src/data.js');load('src/ui.js');load('src/home-directory-icons.js');
   const categories=[{id:'documents',label:'资料处理'},{id:'writing',label:'写作创作'},{id:'research',label:'研究辅助'},{id:'empty',label:'待补充'}];
@@ -22,10 +23,29 @@ function setup(realModel=false, integrations={}){
   if(realModel){load('src/home-card-images.js');load('src/feature-config.js');}
   else window.BaigeFeatureConfig={read:()=>({categories:{tools:categories}}),catalog:()=>entries,get:id=>entries.find(entry=>entry.id===id),
     iconMarkup:entry=>`<span data-managed-icon="${entry.icon}"></span>`,subscribe(callback){change=callback;}};
-  load('src/tool-workspace.js');load('src/pages/smart-tools.js');activate({child:''});
+  load('src/tool-workspace.js');load('src/pages/smart-tools.js');
+  const activateTool=child=>activate({child,allowedChildren:previewMenus ?? undefined});
+  activateTool('');
   const get=id=>document.querySelector(`#${id}`);
-  return {get,document,Element,categories,entries,ui:window.BaigeUI,model:window.BaigeFeatureConfig,change:()=>change?.(),activate:child=>activate({child}),deactivate:()=>deactivate(),navigations};
+  return {get,document,Element,categories,entries,ui:window.BaigeUI,model:window.BaigeFeatureConfig,change:()=>change?.(),activate:activateTool,deactivate:()=>deactivate(),navigations};
 }
+
+test('role preview only exposes the granted tool in the catalog and workspace',()=>{
+  const menus=['OCR识别'];
+  const app=setup(true,{},menus);
+  assert.equal(app.get('totalTools').textContent,'1 个工具');
+  assert.ok(app.get('toolResults').querySelector('[data-tool="OCR识别"]'));
+  assert.equal(app.get('toolResults').querySelector('[data-tool="文档翻译"]'),null);
+  assert.equal(app.get('content').querySelector('.featured-tool[data-tool="文档翻译"]').hidden,true);
+  app.activate('文档翻译');
+  assert.equal(app.get('toolWorkspaceBar').querySelector('[data-workspace-tab="文档翻译"]'),null);
+  app.activate('OCR识别');
+  assert.ok(app.get('toolWorkspaceBar').querySelector('[data-workspace-tab="OCR识别"]'));
+  menus.length=0;
+  app.activate('');
+  assert.equal(app.get('totalTools').textContent,'0 个工具');
+  assert.equal(app.get('toolWorkspaceBar').querySelector('[data-workspace-tab="OCR识别"]'),null);
+});
 
 function assertOutlineIcon(node){
   const svg=node.querySelector('svg');

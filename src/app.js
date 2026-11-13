@@ -3,6 +3,8 @@
   const { navigation, tools, findNavItem } = window.BaigeData;
   const { icon, escapeHtml } = window.BaigeUI;
   const policy = window.BaigePermissions;
+  const previewUserId = policy.previewUserId;
+  const rolePreview = typeof previewUserId === "string";
   const navRoot = document.querySelector("#navigation");
   const host = document.querySelector("#pageHost");
   const shell = document.querySelector(".app-shell");
@@ -21,7 +23,7 @@
 
   function renderNavigation() {
     const sections = new Set();
-    navRoot.innerHTML = navigation.filter((item) => !item.adminOnly && (policy.canOpen(item.id) || discoverableGroups.has(item.id))).map((item) => {
+    navRoot.innerHTML = navigation.filter((item) => !item.adminOnly && (policy.canOpen(item.id) || (!rolePreview && discoverableGroups.has(item.id)))).map((item) => {
       const active = state.activeId === item.id;
       const expanded = state.expanded.has(item.id);
       // datasets exposes detail routes without showing eight items in the sidebar.
@@ -32,7 +34,7 @@
       return `${sectionLabel ? `<div class="nav-section-label">${sectionLabel}</div>` : ""}<div class="nav-group">
         <button class="nav-item ${active ? "is-active" : ""}" data-nav="${item.id}" title="${item.label}" ${hasSubnav ? `aria-expanded="${expanded}" aria-controls="sub-${item.id}"` : ""} ${active && (!state.activeChild || !hasSubnav) ? 'aria-current="page"' : ""}>
         ${icon(sidebarIcons[item.id] || item.icon)}<span class="nav-label">${item.label}</span>${hasSubnav ? `<span class="nav-chevron ${expanded ? "is-open" : ""}">${icon("chevron")}</span>` : ""}</button>
-        ${hasSubnav ? `<div class="subnav" id="sub-${item.id}" ${expanded ? "" : "hidden"}>${item.children.filter((child) => discoverableGroups.has(item.id) || policy.canOpen(item.id, child)).map((child) => {
+        ${hasSubnav ? `<div class="subnav" id="sub-${item.id}" ${expanded ? "" : "hidden"}>${item.children.filter((child) => (!rolePreview && discoverableGroups.has(item.id)) || policy.canOpen(item.id, child)).map((child) => {
           const locked = !policy.canOpen(item.id, child);
           return `<button class="subnav-item ${active && state.activeChild === child ? "is-active" : ""}" ${active && state.activeChild === child ? 'aria-current="page"' : ""} data-parent="${item.id}" data-child="${escapeHtml(child)}">${icon(childIcons.get(child) || item.icon)}<span class="nav-label">${escapeHtml(child)}</span>${locked ? '<span class="subnav-access">需申请</span>' : ""}</button>`;
         }).join("")}</div>` : ""}</div>`;
@@ -60,10 +62,12 @@
   }
 
   function activateFrame(page) {
-    if (!page.ready) return;
+    if (!page?.ready) return;
     page.element.contentWindow.postMessage({
       type: "baige:activate", pageId: state.activeId,
       child: state.activeChild, focusSearch: page.focusSearch,
+      ...(rolePreview && state.activeId === "smart-tools"
+        ? { allowedChildren: tools.filter(tool => policy.canOpen("smart-tools", tool.name)).map(tool => tool.name) } : {}),
       ...(page.question ? { question: page.question } : {}),
       ...(page.question && page.knowledgeBaseIds.length ? { knowledgeBaseIds: page.knowledgeBaseIds } : {}),
       ...(page.openHomeSettings ? { openHomeSettings: true } : {}),
@@ -84,7 +88,7 @@
         const currentHash = `#${state.activeId}${state.activeChild ? `/${encodeURIComponent(state.activeChild)}` : ""}`;
         if (location.hash !== currentHash) window.history.replaceState(null, "", currentHash);
       }
-      window.alert(`「${name}」暂未开通。请前往首页的「了解平台功能」申请权限。`);
+      window.alert(rolePreview ? `当前演示用户尚未获得「${name}」的访问权限。` : `「${name}」暂未开通。请前往首页的「了解平台功能」申请权限。`);
       return;
     }
     const item = findNavItem(route.id);
@@ -116,7 +120,8 @@
       const frame = document.createElement("iframe");
       frame.className = "page-frame";
       frame.title = route.child || item.label;
-      frame.src = `${pageFile}${route.child ? `#${encodeURIComponent(route.child)}` : ""}`;
+      const previewQuery = rolePreview ? `${pageFile.includes("?") ? "&" : "?"}iam-user=${encodeURIComponent(previewUserId)}` : "";
+      frame.src = `${pageFile}${previewQuery}${route.child ? `#${encodeURIComponent(route.child)}` : ""}`;
       page = { element: frame, file: pageFile, ready: false, focusSearch: false, question: "", knowledgeBaseIds: [], openHomeSettings: false };
       pages.set(item.id, page);
       host.append(frame);
@@ -208,6 +213,37 @@
   document.querySelector("#portalHomeTrigger")?.addEventListener("click", () => {
     location.href = "./portal.html";
   });
+  if (rolePreview) {
+    const iam = window.BaigeIamStore;
+    const account = document.querySelector("#accountRoot");
+    const label = document.createElement("span");
+    label.className = "role-preview-label";
+    label.setAttribute("role", "status");
+    const exit = document.createElement("a");
+    exit.className = "topbar-home-button";
+    exit.href = "./index.html";
+    exit.textContent = "退出预览";
+    account.hidden = true;
+    account.before(label, exit);
+    const updatePreview = () => {
+      const user = iam?.users().find(item => item.id === previewUserId);
+      const name = user?.nickname || user?.username || "用户不存在";
+      label.textContent = `权限预览 · ${name}${user?.status === "disabled" ? "（已停用）" : ""}`;
+      const canKeepActive = policy.canOpen(state.activeId, state.activeChild);
+      for (const [id, page] of pages) {
+        if (policy.canOpen(id) && (id !== state.activeId || canKeepActive)) continue;
+        page.element.remove();
+        pages.delete(id);
+      }
+      if (canKeepActive) {
+        renderNavigation();
+        if (state.activeId === "smart-tools") activateFrame(pages.get(state.activeId));
+      } else setPage("home");
+    };
+    updatePreview();
+    iam?.subscribe(updatePreview);
+    window.addEventListener("pageshow", (event) => { if (event.persisted) updatePreview(); });
+  }
   const route = readRoute();
   setPage(route.id, route.child, { fromHistory: true });
 })();
