@@ -221,7 +221,7 @@ test('unknown entities remain trackable and future delivery in summaries does no
 
 test('customization cancellation discards draft changes and saving applies the next draft', () => {
   const { nodes, selectors, evaluate } = interactions();
-  const cell = element({ tag: '新船订单' });
+  const cell = element({ tag: '绿色船舶' });
   const cancel = element();
   const save = element();
   nodes.cfgEntry = element();
@@ -230,44 +230,18 @@ test('customization cancellation discards draft changes and saving applies the n
   selectors['[data-cfgsave]'] = [save];
   evaluate('bind();');
   nodes.cfgEntry.onclick();
-  assert.equal(evaluate('subscribed.includes("新船订单")'), true);
+  assert.equal(evaluate('subscribed.includes("绿色船舶")'), true);
   cell.onclick();
-  assert.equal(evaluate('draftSubscribed.includes("新船订单")'), false);
-  assert.equal(evaluate('subscribed.includes("新船订单")'), true);
+  assert.equal(evaluate('draftSubscribed.includes("绿色船舶")'), false);
+  assert.equal(evaluate('subscribed.includes("绿色船舶")'), true);
   cancel.onclick();
-  assert.equal(evaluate('subscribed.includes("新船订单")'), true);
+  assert.equal(evaluate('subscribed.includes("绿色船舶")'), true);
   nodes.cfgEntry.onclick();
-  assert.equal(evaluate('draftSubscribed.includes("新船订单")'), true);
+  assert.equal(evaluate('draftSubscribed.includes("绿色船舶")'), true);
   cell.onclick();
   save.onclick();
-  assert.equal(evaluate('subscribed.includes("新船订单")'), false);
+  assert.equal(evaluate('subscribed.includes("绿色船舶")'), false);
   assert.equal(evaluate('view'), 'early');
-});
-
-test('one refresh updates both feeds and repeated refresh does not duplicate articles', () => {
-  const { nodes, timers, evaluate } = interactions();
-  nodes.btnPageRefresh = element();
-  evaluate('bind();');
-  const earlyBefore = evaluate("EARLY_BY_DAY['11-03'].length");
-  const liveBefore = evaluate('LIVE.length');
-  nodes.btnPageRefresh.onclick();
-  nodes.btnPageRefresh.onclick();
-  assert.equal(timers.filter((timer) => timer.delay === 620).length, 1, 'a pending refresh must not start a second request');
-  timers.find((timer) => timer.delay === 620).callback();
-  assert.equal(evaluate("EARLY_BY_DAY['11-03'].length"), earlyBefore + 2);
-  assert.equal(evaluate('LIVE.length'), liveBefore + 2);
-  assert.equal(evaluate('freshLive.size'), 2);
-  assert.match(evaluate('lastToast'), /早报 \+2.*实时 \+2/);
-  // A real render replaces this button, so bind the next click to a fresh view element.
-  nodes.btnPageRefresh = element();
-  evaluate('bind();');
-  nodes.btnPageRefresh.onclick();
-  timers.filter((timer) => timer.delay === 620).at(-1).callback();
-  assert.equal(evaluate("EARLY_BY_DAY['11-03'].length"), earlyBefore + 2);
-  assert.equal(evaluate('LIVE.length'), liveBefore + 2);
-  assert.equal(evaluate('lastToast'), '已是最新');
-  timers.find((timer) => timer.delay === 3600).callback();
-  assert.equal(evaluate('freshLive.size'), 0);
 });
 
 test('unfollowed plaza topics open chronological detail without implicitly following them', () => {
@@ -316,17 +290,4 @@ test('a different calendar year never relabels the demonstration articles as tha
   assert.equal(evaluate('liveDays(selDate).length'), 0);
   assert.match(evaluate('liveRail()'), /近日暂无实时情报/);
   assert.match(evaluate('emptyEarly()'), /回到最新一期/);
-});
-
-test('changing editions while refresh is pending never puts new articles in the old edition', () => {
-  const { nodes, timers, evaluate } = interactions();
-  nodes.btnPageRefresh = element();
-  evaluate('bind();');
-  const oldCount = evaluate("EARLY_BY_DAY['10-27'].length");
-  const currentCount = evaluate("EARLY_BY_DAY['11-03'].length");
-  nodes.btnPageRefresh.onclick();
-  evaluate('selDate = {y:2026,m:10,d:27};');
-  timers.find(timer => timer.delay === 620).callback();
-  assert.equal(evaluate("EARLY_BY_DAY['10-27'].length"), oldCount);
-  assert.equal(evaluate("EARLY_BY_DAY['11-03'].length"), currentCount + 2);
 });

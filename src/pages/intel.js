@@ -25,16 +25,21 @@ const INTEL_TABS = [
   { id: 'track', label: '情报跟踪' }
 ];
 
-/* ---------------- 定制内容：顺序即早报分组顺序 ---------------- */
-const SUB_ORDER = ['绿色船舶', 'LNG 加注', '甲醇燃料', '氨燃料', '运价指数', '新船订单', '新造船价格'];
-const DEFAULT_SUB = SUB_ORDER.slice();
+/* ---------------- 定制内容：标签集（样式不变，只换标签内容 ----------------
+   面板上的标签用于订阅偏好；早报条目的 grp 是发布分类，两者按下表对应。
+   「新船订单」这类发布分类归到「造船」标签下，勾选造船即同时包含新船订单。 */
+const GRP_TO_TAG = { '新船订单': '造船' };
+const tagOfGrp = g => GRP_TO_TAG[g] || g;
 
 const CFG_GROUPS = [
-  { id: 'ship',  name: '船舶与海工', tags: ['绿色船舶', '造船', '航运', '散货船', '集装箱船', '气体船', '油船', '海工装备', '修船', '智能航行'] },
-  { id: 'power', name: '动力与燃料', tags: ['LNG 加注', '甲醇燃料', '氨燃料', '替代燃料', '船用主机', '核动力'] },
-  { id: 'mkt',   name: '市场与价格', tags: ['运价指数', '新造船价格', '新船订单', '二手船价', '铁矿石', '原油'] },
-  { id: 'rule',  name: '规则与其他', tags: ['IMO 规则', '欧盟碳税', '部委动向', '政策', '财经', '人工智能'] }
+  { id: 'ship',  name: '船舶领域',   tags: ['造船', '航运', '散货船', '集装箱船', '气体船', '油船', '邮轮', '配套', '海工装备', '修船', '绿色船舶', '智能航行'] },
+  { id: 'power', name: '动力与规则', tags: ['LNG 加注', '甲醇燃料', '氨燃料', '替代燃料', 'IMO 规则', '欧盟碳税', '船用主机', 'VLCC', '新造船价格', '运价指数'] },
+  { id: 'more',  name: '更多领域',   tags: ['部委动向', '政策', '财经', '军事', '人工智能', '能源', '前沿科技', '铁矿石'] }
 ];
+
+/* 早报分组顺序仍是发布分类顺序，与改造前一致 */
+const SUB_ORDER = ['绿色船舶', 'LNG 加注', '甲醇燃料', '氨燃料', '运价指数', '新船订单', '新造船价格'];
+const DEFAULT_SUB = ['造船', '绿色船舶', 'LNG 加注', '甲醇燃料', '氨燃料', '运价指数', '新造船价格'];
 
 /* ---------------- 早报 ---------------- */
 /* 均为真实公开报道：src 为发布媒体，date/time 为真实发布时间（接口不提供原文链接） */
@@ -1693,7 +1698,6 @@ function renderShell() {
       return '<' + tag + ' class="intel-title-item"><button type="button" class="intel-tab' + (active ? ' active' : '') + '" aria-pressed="' + active + '" data-v="' + t.id + '">' + t.label + '</button></' + tag + '>';
     }).join('') + '</div>'
     + '<div class="intel-header-tools">'
-    + (view === 'early' && !detailItem && !detailTrack ? '<button class="intel-page-btn pg-refresh" id="btnPageRefresh" type="button"><span class="r-ic" aria-hidden="true">⟳</span>刷新</button>' : '')
     + '<button class="tab-fav" id="tabFav" title="我的收藏">' + icon('star') + '<span>收藏</span>'
     + (favs.length ? '<span class="n">' + favs.length + '</span>' : '')
     + '</button></div>';
@@ -1711,10 +1715,10 @@ function bindTabbar() {
 function earlyGroups() {
   const arr = [];
   const list = earlyOf(selDate);
-  [...new Set(SUB_ORDER.concat(CFG_GROUPS.flatMap(group => group.tags)))].forEach(g => {
-    if (subscribed.indexOf(g) < 0) return;
-    const items = list.filter(n => n.grp === g);
-    if (items.length) arr.push({ name: g, items: items });
+  SUB_ORDER.forEach(grp => {
+    if (subscribed.indexOf(tagOfGrp(grp)) < 0) return;
+    const items = list.filter(n => n.grp === grp);
+    if (items.length) arr.push({ name: grp, items: items });
   });
   return arr;
 }
@@ -2014,16 +2018,16 @@ function plazaBody() {
   if (plazaPage >= batches.length) plazaPage = 0;
   const list = batches[plazaPage];
 
-  /* 两列：左侧「主体·类型 + 标题」，右侧竖排「阶段标签」与「日期 + 关注」，
-     标签在上、日期与关注在下，行高按两条文字对齐。 */
+  /* 两列：左侧「主体·类型·阶段标签 + 标题」，右侧「日期 + 关注」一行。
+     阶段标签跟着主体走，右侧只剩一个操作，不再竖排两个色块。 */
   const rows = '<div class="pl-grid">' + list.map(e => {
     /* 广场也是「一件事一条」：标题取最近一次进展的主报道 */
     const lead = latestLead(e);
     return '<article class="pl-card">'
-      + '<span class="pl-subj"><b>' + e.subj.n + '</b><i>' + e.type + '</i></span>'
+      + '<span class="pl-subj"><b>' + e.subj.n + '</b><i>' + e.type + '</i>'
+      + (e.stage ? '<span class="tk-step">' + e.stage + '</span>' : '') + '</span>'
       + '<button type="button" class="pl-tt" data-plzadetail="' + e.key + '">' + lead.title + '</button>'
       + '<div class="pl-side">'
-      + (e.stage ? '<span class="tk-step">' + e.stage + '</span>' : '<span class="tk-step ph"></span>')
       + '<div class="pl-ops"><span class="pl-d">' + lead.d + '</span>'
       + '<button type="button" class="pl-follow" data-plzafollow="' + e.key + '">'
       + '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>关注</button></div>'
@@ -2259,39 +2263,6 @@ function bind() {
       render();
     };
   });
-  /* 页面刷新：早报和 7×24 走的是同一套纯透传代理，服务端各自没有前端轮询，
-     所以一次刷新就是把两路各重新拉一遍，不分开做。 */
-  const pgr = document.getElementById('btnPageRefresh');
-  if (pgr) pgr.onclick = function () {
-    if (pgr.classList.contains('spinning')) return;   /* 请求没回来之前不重复点 */
-    pgr.classList.add('spinning');
-    const refreshDay = dayKey(selDate);
-    const isToday = selDate.y === TODAY.y && dayKey(selDate) === dayKey(TODAY);
-    setTimeout(() => {
-      let nE = 0, nL = 0;
-      if (isToday && EARLY_PATCH.length) {
-        const key = refreshDay;
-        if (!EARLY_BY_DAY[key]) EARLY_BY_DAY[key] = [];
-        EARLY_PATCH.splice(0).forEach(x => { EARLY_BY_DAY[key].push(x); nE++; });
-      }
-      if (isToday && RT_FEED.length) {
-        const got = RT_FEED.splice(0);
-        got.forEach(x => { LIVE.push(x); freshLive.add(x.id); });
-        nL = got.length;
-      }
-      const parts = [];
-      if (nE) parts.push('早报 +' + nE);
-      if (nL) parts.push('实时 +' + nL);
-      if (!parts.length) { pgr.classList.remove('spinning'); toast('已是最新'); return; }
-      render();
-      toast('已刷新 · ' + parts.join(' · '));
-      /* 高亮只在这次刷新之后亮一会儿，不当成常驻的重要度标记 */
-      setTimeout(() => {
-        freshLive.clear();
-        document.querySelectorAll('.rl-row.fresh').forEach(el => el.classList.remove('fresh'));
-      }, 3600);
-    }, 620);
-  };
 
   bindTrack();
   bindDetail();
