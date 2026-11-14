@@ -117,13 +117,35 @@ const roleMenuKey = (route, child = "") => child ? `${route}:${child}` : route;
 const roleMenuChildren = item => item.subnav === false ? [] : childNames(item.id);
 const legacyRoleMenu = (route, child = "") => route === "smart-tools" ? "tools"
   : route === "qa" && child && child !== "对话" ? null : route;
-const previewUserId = window.location?.search ? new URLSearchParams(window.location.search).get("iam-user") : null;
-function rolePreviewCanOpen(item, child) {
- if (item.id === "home") return true;
- if (item.adminOnly) return false;
+const accountSessionKey = "baige.iam.client-account";
+const query = window.location?.search ? new URLSearchParams(window.location.search) : null;
+const previewUserId = query?.get("iam-user") ?? null;
+const onConsole = /(?:\/|^)index\.html$|\/$/.test(window.location?.pathname || "");
+const onModule = navigation.some(item => !item.adminOnly &&
+ [item.file, ...Object.values(item.files || {})].some(file => window.location?.pathname?.endsWith(`/${file.split("?")[0]}`)));
+let accountUserId = query?.get("iam-account") ?? null;
+if (previewUserId === null && (onConsole || onModule)) {
+ try {
+  accountUserId ??= window.sessionStorage.getItem(accountSessionKey);
+  if (onConsole && accountUserId) window.sessionStorage.setItem(accountSessionKey, accountUserId);
+ } catch { /* The explicit query also works when local files have no session storage. */ }
+}
+const roleUserId = previewUserId ?? accountUserId;
+const roleQuery = roleUserId === null ? "" : `${previewUserId === null ? "iam-account" : "iam-user"}=${encodeURIComponent(roleUserId)}`;
+let frameMenus = null;
+function accountFor(id) {
  try {
   const iam = window.BaigeIamStore || window.parent?.BaigeIamStore;
-  const menus = new Set(iam?.effectiveMenus(previewUserId));
+  return iam?.users().find(user => user.id === id) || null;
+ } catch { return null; }
+}
+function roleCanOpen(item, child) {
+ if (item.adminOnly) return false;
+ try {
+  if (!frameMenus && accountFor(roleUserId)?.status !== "normal") return false;
+  const iam = frameMenus ? null : window.BaigeIamStore || window.parent?.BaigeIamStore;
+  const menus = frameMenus || new Set(iam.effectiveMenus(roleUserId));
+  if (item.id === "home") return !frameMenus || frameMenus.has("home");
   const children = roleMenuChildren(item);
   if (!children.length) return menus.has(item.id);
   const canOpenChild = name => menus.has(roleMenuKey(item.id, name)) || menus.has(legacyRoleMenu(item.id, name));
@@ -150,7 +172,7 @@ function canOpen(id, child = "") {
  if (!item || permissions.routes[id] === false) return false;
  const names = childNames(id);
  if (child && !names.includes(child)) return false;
- if (previewUserId !== null) return rolePreviewCanOpen(item, child);
+ if (roleUserId !== null) return roleCanOpen(item, child);
  return applicationGrant(id, child) || baseCanOpen(id, child);
 }
 function accessSummary(id) {
@@ -160,5 +182,9 @@ function accessSummary(id) {
   label: !granted ? "暂未开通" : granted === names.length ? "全部已开通" : `已开通 ${granted}/${names.length}` };
 }
 window.BaigeData = Object.freeze({navigation,tools,knowledgeScopes,knowledgeBases,knowledgeDirectory,findNavItem,roleMenuKey,roleMenuChildren,legacyRoleMenu});
-window.BaigePermissions = Object.freeze({canOpen, baseCanOpen, childNames, summary: accessSummary, previewUserId});
+function setFrameMenus(keys) { frameMenus = new Set(keys); }
+window.BaigePermissions = Object.freeze({
+ canOpen, baseCanOpen, childNames, summary: accessSummary, previewUserId, accountUserId,
+ accountSessionKey, roleQuery, accountFor, setFrameMenus
+});
 })();

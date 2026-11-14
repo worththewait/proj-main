@@ -25,7 +25,11 @@
     candidateById=new Map(config.catalog.map(item=>[item.id,item]));
     for (const tab of commonTabs.querySelectorAll('[data-home-tab]')) tab.setAttribute('aria-pressed',String(tab.dataset.homeTab===selectedCommonTab));
     const mine=myFunctions();
-    const visibleIds=selectedCommonTab==='mine'?mine.ids:settings.recommendedIds;
+    const ids=selectedCommonTab==='mine'?mine.ids:settings.recommendedIds;
+    const visibleIds=access.roleScoped?ids.filter(id=>{
+      const item=candidateById.get(id);
+      return item && access.canOpen(item.route,item.child);
+    }):ids;
     commonFunctions.setAttribute('aria-label',selectedCommonTab==='mine'?'我的常用入口':'推荐功能入口');
     commonFunctions.setAttribute('data-count',String(visibleIds.length));
     commonFunctions.innerHTML=visibleIds.map(id=>{
@@ -38,7 +42,7 @@
       const image=window.BaigeHomeCardImages.isSafeImage(custom.image) && !window.BaigeFeatureConfig;
       const graphic=window.BaigeFeatureConfig ? window.BaigeFeatureConfig.iconMarkup(item) : image?`<img src="${escapeHtml(custom.image)}" alt="" width="48" height="48">`:(window.BaigeDirectoryIcons?.icon(item.icon)||icon(item.icon));
       return `<button class="home-common-card" type="button" data-tone="${item.tone}" data-home-route="${escapeHtml(item.route)}" data-home-child="${escapeHtml(item.child)}" aria-label="${escapeHtml(name)}，${action}"><span class="home-shortcut-icon${image?' is-custom':''}">${graphic}</span><span class="home-shortcut-name">${escapeHtml(name)}${status}</span><span class="home-shortcut-arrow" aria-hidden="true">${icon('arrow')}</span></button>`;
-    }).join('') || '<p class="home-recommend-empty">暂未配置推荐功能。</p>';
+    }).join('') || `<p class="home-recommend-empty">${access.roleScoped ? "暂无可用入口。" : "暂未配置推荐功能。"}</p>`;
   }
   function refresh() {
     settings=config.read();
@@ -46,6 +50,7 @@
     window.BaigeHomeCarousel?.setSlides(settings.slides);
   }
   const introTitle=document.querySelector('#dashboardIntroTitle');
+  const quickSection = quickForm.closest?.(".home-quick-section");
   introTitle.textContent='专业问题找百舸';
   introTitle.innerHTML='专业问题<span>找百舸</span>';
   document.querySelector('#dashboardIntroDescription').textContent='输入您的问题，百舸为您解答';
@@ -54,6 +59,11 @@
   function updateQuestion() {
     sendButton.disabled = !question.value.trim();
     questionFeedback.textContent = "";
+  }
+  function refreshQuestionAccess() {
+    if (!access.roleScoped || !quickSection) return;
+    quickSection.hidden = !access.canOpen("qa", "对话");
+    if (quickSection.hidden) window.BaigeHomeKnowledge?.dismiss();
   }
 
   function submitQuestion(event) {
@@ -97,9 +107,9 @@
     renderCommonFunctions();
   });
 
-  access.onChange(renderCommonFunctions);
+  access.onChange(() => { renderCommonFunctions(); refreshQuestionAccess(); });
   window.BaigeFeatureConfig?.subscribe(refresh);
   window.addEventListener('storage',event=>{if(event.key===config.storageKey||event.key==='baige.homepage.v1'||event.key===null)refresh();});
   window.BaigeHomeDashboard=Object.freeze({refresh});
-  updateQuestion();refresh();
+  updateQuestion();refreshQuestionAccess();refresh();
 })();

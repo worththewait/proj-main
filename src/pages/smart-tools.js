@@ -5,9 +5,9 @@
   const featureConfig=window.BaigeFeatureConfig;
   const { icon, escapeHtml, hydrate } = window.BaigeUI;
   const bridge = window.BaigePage;
-  const rolePreview = typeof window.BaigePermissions?.previewUserId === "string";
+  const roleScoped = Boolean(window.BaigePermissions?.roleQuery);
   let allowedTools = new Set();
-  const canOpenTool = name => !rolePreview || allowedTools.has(name);
+  const canOpenTool = name => !roleScoped || allowedTools.has(name);
   const content = document.querySelector("#content");
   const state = { category: "all", query: "" };
   let categories=[];
@@ -194,19 +194,22 @@
   });
   featureConfig?.subscribe(refreshConfiguration);
   bridge.onActivate(({ child, focusSearch, allowedChildren }) => {
-    if (rolePreview) allowedTools = new Set(allowedChildren);
+    if (roleScoped) allowedTools = new Set(allowedChildren);
     if (child && !canOpenTool(child)) child = "";
+    let removedTool = false;
     for (const [key, page] of toolWorkspace.pages) {
       if (key && !canOpenTool(key)) {
         page.panel.remove();
         toolWorkspace.pages.delete(key);
+        removedTool = true;
       }
     }
     refreshConfiguration();
     if (activeChild !== child) {
       toolWorkspace.show(child);
       activeChild = child;
-    } else toolWorkspace.revealActiveTab();
+    } else if (removedTool) toolWorkspace.renderTabs();
+    else toolWorkspace.revealActiveTab();
     if (child === "纠错校对") window.BaigeProofreadTool?.resume();
     else window.BaigeProofreadTool?.deactivate();
     if (child === "思维导图生成") window.BaigeMindmapTool?.resume();

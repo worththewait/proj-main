@@ -47,6 +47,18 @@ test('role preview only exposes the granted tool in the catalog and workspace',(
   assert.equal(app.get('toolWorkspaceBar').querySelector('[data-workspace-tab="OCR识别"]'),null);
 });
 
+test('removing a grant clears an inactive tool tab while the catalog stays open',()=>{
+  const menus=['OCR识别','文档翻译'];
+  const app=setup(true,{},menus);
+  app.activate('OCR识别');
+  app.activate('');
+  assert.ok(app.get('toolWorkspaceBar').querySelector('[data-workspace-tab="OCR识别"]'));
+  menus.shift();
+  app.activate('');
+  assert.equal(app.get('toolWorkspaceBar').querySelector('[data-workspace-tab="OCR识别"]'),null);
+  assert.ok(app.get('toolResults').querySelector('[data-tool="文档翻译"]'));
+});
+
 function assertOutlineIcon(node){
   const svg=node.querySelector('svg');
   assert.ok(svg, 'expected an SVG icon');

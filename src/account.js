@@ -3,7 +3,7 @@
   const root = document.querySelector("#accountRoot");
   if (!root) return;
   const { icon, escapeHtml } = window.BaigeUI;
-  const account = {
+  const defaultAccount = {
     name: "系统管理员",
     email: "admin@cimtec.net.cn",
     role: "超级管理员",
@@ -11,8 +11,31 @@
     dept: "中船综合院",
     phone: "",
   };
-  try { window.localStorage.setItem("baige.account.email", account.email); } catch { /* file:// */ }
-  window.BaigeAccountProfile = Object.freeze({ ...account });
+  const policy = window.BaigePermissions;
+  const iam = window.BaigeIamStore;
+  const accountId = policy?.accountUserId;
+  const accountScoped = typeof accountId === "string";
+  const roleScoped = Boolean(policy?.roleQuery);
+  function currentAccount() {
+    if (!accountScoped) return defaultAccount;
+    const user = policy.accountFor(accountId);
+    if (!user) return { name: "账号已不存在", email: "—", role: "—", organization: "—", status: "已删除" };
+    const enabled = user.status === "normal";
+    const roles = iam.roles().filter(role => enabled && role.status === "normal" && user.roleIds.includes(role.id));
+    return {
+      name: user.nickname || user.username,
+      email: user.username,
+      role: roles.map(role => role.name).join("、") || "暂无生效角色",
+      organization: user.department || "—",
+      status: enabled ? "正常" : "已停用",
+    };
+  }
+  let account = currentAccount();
+  if (!roleScoped) {
+    try { window.localStorage.setItem("baige.account.email", account.email); } catch { /* file:// */ }
+  }
+  function exposeAccount() { window.BaigeAccountProfile = Object.freeze({ ...account }); }
+  exposeAccount();
   const feedback = { content: "" };
   const paths = {
     person: '<circle cx="12" cy="7" r="4"/><path d="M4 21v-3a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v3Z"/>',
@@ -31,8 +54,8 @@
     ["profile", "person", "个人中心"], ["permission", "shield", "权限申请"],
     ["about", "info", "关于我们"], ["quick", "quick", "快捷入口设置"],
     ["admin", "admin", "后台系统"], ["logout", "logout", "退出登录"],
-  ];
-  root.innerHTML = `<button class="account-trigger" type="button" id="accountTrigger" aria-label="个人中心菜单" aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenu" title="个人中心"><span class="account-trigger-copy"><strong>${escapeHtml(account.organization)}</strong><small>演示账号</small></span><span class="account-trigger-avatar" aria-hidden="true">${accountIcon("person")}</span></button>
+  ].filter(([id]) => !accountScoped || !["permission", "quick", "admin"].includes(id));
+  root.innerHTML = `<button class="account-trigger" type="button" id="accountTrigger" aria-label="个人中心菜单" aria-haspopup="menu" aria-expanded="false" aria-controls="accountMenu" title="个人中心"><span class="account-trigger-copy"><strong>${escapeHtml(accountScoped ? account.name : account.organization)}</strong><small>演示账号</small></span><span class="account-trigger-avatar" aria-hidden="true">${accountIcon("person")}</span></button>
     <div class="account-menu" id="accountPopover" hidden>
       <div class="account-summary">${avatar}<div class="account-summary-copy"><strong class="account-email">${escapeHtml(account.email)}</strong><p class="account-role">${escapeHtml(account.role)}</p></div></div>
       <div class="account-menu-items" id="accountMenu" role="menu" aria-label="账户操作">${items.map(([id, symbol, label]) => `<button class="account-menu-item" type="button" role="menuitem" tabindex="-1" data-account-action="${id}">${accountIcon(symbol)}<span>${label}</span></button>`).join("")}</div>
@@ -123,6 +146,25 @@
       <div class="account-dialog-body"><p id="accountDialogDescription" class="account-dialog-intro">${description}</p>${content}</div>
       <footer class="account-dialog-footer">${footer || '<button class="primary-button" type="button" data-account-close>知道了</button>'}</footer>`;
   }
+  function renderProfile() {
+    const options = iam?.users().filter(user => user.status === "normal").map(user =>
+      `<option value="${escapeHtml(user.id)}">${escapeHtml(user.nickname && user.nickname !== user.username ? `${user.nickname}（${user.username}）` : user.username)}</option>`).join("");
+    const switchForm = iam ? `<form class="account-form account-switch" id="accountSwitchForm">
+      <label class="account-field"><span>切换演示账号</span><select id="accountSwitchUser"><option value="">平台默认演示账号</option>${options}</select></label>
+      <p class="account-feedback-status is-error" id="accountSwitchFeedback" role="status" hidden></p>
+      </form>` : "";
+    renderDialog("个人中心", "查看当前演示账号与生效角色。", `<dl class="account-profile"><div><dt>登录账号</dt><dd>${escapeHtml(account.email)}</dd></div><div><dt>用户角色</dt><dd>${escapeHtml(account.role)}</dd></div><div><dt>${accountScoped ? "所属部门" : "所属单位"}</dt><dd>${escapeHtml(account.organization)}</dd></div>${accountScoped ? `<div><dt>账号状态</dt><dd>${escapeHtml(account.status)}</dd></div>` : ""}</dl>${switchForm}`,
+      iam ? '<button class="secondary-button" type="button" data-account-close>关闭</button><button class="primary-button" type="submit" form="accountSwitchForm">切换账号</button>' : "");
+    const select = dialog.querySelector("#accountSwitchUser");
+    if (select && accountScoped && account.status === "正常") select.value = accountId;
+  }
+  function switchAccount(id) {
+    try {
+      if (id) window.sessionStorage.setItem(policy.accountSessionKey, id);
+      else window.sessionStorage.removeItem(policy.accountSessionKey);
+    } catch { /* The query parameter carries the account when storage is unavailable. */ }
+    window.location.href = `./index.html${id ? `?iam-account=${encodeURIComponent(id)}` : ""}#home`;
+  }
   function renderNoticePanels() {
     const items = noticeStore ? noticeStore.active() : [];
     if (selectedNoticeId && !items.some((item) => item.id === selectedNoticeId)) selectedNoticeId = null;
@@ -171,7 +213,7 @@
       return;
     }
     if (action === "profile") {
-      renderDialog("个人中心", "查看当前演示账户的基本信息。", `<dl class="account-profile"><div><dt>登录账号</dt><dd>${escapeHtml(account.email)}</dd></div><div><dt>用户角色</dt><dd>${escapeHtml(account.role)}</dd></div><div><dt>所属单位</dt><dd>${escapeHtml(account.organization)}</dd></div></dl><p class="account-notice">当前账号与角色为原型演示信息，实际账户资料待接入。</p>`);
+      renderProfile();
     } else if (action === "notifications") {
       openNoticeDialog();
       return;
@@ -182,7 +224,7 @@
     } else if (action === "feedback") {
       renderDialog("系统反馈", "告诉我们使用中遇到的问题或建议。", `<form class="account-form" id="accountFeedbackForm" novalidate><label class="account-field"><span class="account-field-label"><span>反馈内容（必填）</span><small id="accountFeedbackCount">${feedback.content.length} / 1000</small></span><textarea id="accountFeedbackContent" name="content" required maxlength="1000" placeholder="请描述遇到的问题、操作步骤或改进建议" aria-describedby="accountFeedbackHint accountFeedbackStatus">${escapeHtml(feedback.content)}</textarea></label><p class="account-feedback-hint" id="accountFeedbackHint">原型演示，反馈内容不会实际发送。</p><p class="account-feedback-status" id="accountFeedbackStatus" role="status" hidden></p></form>`, '<button class="secondary-button" type="button" data-account-close>取消</button><button class="primary-button" type="submit" form="accountFeedbackForm">提交反馈</button>');
     } else if (action === "logout") {
-      renderDialog("退出登录", "确认退出当前演示账户？", '<p class="account-exit-message">此操作仅演示退出登录流程，可随时返回演示。</p>', '<button class="secondary-button" type="button" data-account-close>取消</button><button class="primary-button" type="button" data-account-exit>确认退出</button>');
+      renderDialog("退出登录", "确认退出当前演示账户？", `<p class="account-exit-message">${accountScoped ? "退出后将返回平台默认演示账号。" : "此操作仅演示退出登录流程，可随时返回演示。"}</p>`, '<button class="secondary-button" type="button" data-account-close>取消</button><button class="primary-button" type="button" data-account-exit>确认退出</button>');
     }
     if (!dialog.open) dialog.showModal();
     const initial = action === "feedback" ? dialog.querySelector("#accountFeedbackContent") : dialog.querySelector("#accountDialogTitle");
@@ -205,6 +247,7 @@
     if (event.target.closest("[data-account-close]")) dialog.close();
     else if (event.target.closest("[data-account-feedback]")) openDialog("feedback", dialogTrigger);
     else if (event.target.closest("[data-account-exit]")) {
+      if (accountScoped) { switchAccount(""); return; }
       renderDialog("已退出演示", "退出登录流程演示已完成。", '<p class="account-exit-message">点击下方按钮返回平台，继续查看原型。</p>', '<button class="primary-button" type="button" data-account-close>返回演示</button>');
       dialog.querySelector("[data-account-close]").focus({ preventScroll: true });
     }
@@ -223,6 +266,19 @@
     dialog.querySelector("#accountFeedbackStatus").hidden = true;
   });
   dialog.addEventListener("submit", (event) => {
+    if (event.target.id === "accountSwitchForm") {
+      event.preventDefault();
+      const selected = dialog.querySelector("#accountSwitchUser").value;
+      if (selected && policy.accountFor(selected)?.status !== "normal") {
+        const message = dialog.querySelector("#accountSwitchFeedback");
+        message.textContent = "所选账号已停用或删除，请重新选择。";
+        message.hidden = false;
+        return;
+      }
+      if (selected !== (accountId ?? "")) switchAccount(selected);
+      else dialog.close();
+      return;
+    }
     if (event.target.id !== "accountFeedbackForm") return;
     event.preventDefault();
     const input = dialog.querySelector("#accountFeedbackContent");
@@ -233,5 +289,12 @@
     status.textContent = invalid ? "请填写反馈内容后再提交。" : "已完成反馈提交演示，内容未实际发送。";
     input.setAttribute("aria-invalid", String(invalid));
     if (invalid) input.focus();
+  });
+  if (accountScoped) iam?.subscribe(() => {
+    account = currentAccount();
+    exposeAccount();
+    trigger.querySelector("strong").textContent = account.name;
+    root.querySelector(".account-email").textContent = account.email;
+    root.querySelector(".account-role").textContent = account.role;
   });
 })();

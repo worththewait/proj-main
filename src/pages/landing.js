@@ -13,6 +13,10 @@
   const clearSearch = document.querySelector("#featureClear");
   const availableOnly = document.querySelector("#availableOnly");
   const searchSummary = document.querySelector("#featureSearchSummary");
+  if (access.roleScoped) {
+    availableOnly.checked = true;
+    availableOnly.closest(".home-available-filter").hidden = true;
+  }
 
   // Display copy belongs to the homepage; route and child names come from data.js.
   const profiles = {
@@ -120,7 +124,7 @@
     groupSwitch.innerHTML = [{ id: "all", label: "全部功能" }, ...groups].map((group) => `<button class="home-group-button" type="button" data-feature-group="${group.id}" aria-pressed="${group.id === active}">${escapeHtml(group.label)}</button>`).join("");
     const visible = entries.filter((entry) =>
       (active === "all" || entry.group === active) &&
-      (!availableOnly.checked || access.canOpen(entry.route, entry.child)) &&
+      (!(access.roleScoped || availableOnly.checked) || access.canOpen(entry.route, entry.child)) &&
       (!query || [entry.name, entry.description, entry.keywords].join(" ").toLowerCase().includes(query)));
     results.innerHTML = groups.map((group) => {
       const items = visible.filter((entry) => entry.group === group.id);
@@ -131,7 +135,9 @@
       </section>`;
     }).join("");
     searchSummary.textContent = query ? `找到 ${visible.length} 项功能` : availableOnly.checked ? `当前显示 ${visible.length} 项已开通功能` : "";
-    if (!visible.length) results.innerHTML = `<div class="home-feature-empty">${icon("search")}<h3>没有找到匹配的功能</h3><p>试试“翻译”“写作”等关键词，或重置筛选条件。</p><button type="button" data-reset-directory>重置筛选</button></div>`;
+    if (!visible.length) results.innerHTML = access.roleScoped && !query && active === "all"
+      ? '<div class="home-feature-empty"><h3>当前账号暂无已开通的功能</h3></div>'
+      : `<div class="home-feature-empty">${icon("search")}<h3>没有找到匹配的功能</h3><p>试试“翻译”“写作”等关键词，或重置筛选条件。</p><button type="button" data-reset-directory>重置筛选</button></div>`;
     if (focusGroup) [...groupSwitch.querySelectorAll("button")].find((button) => button.dataset.featureGroup === focusGroup)?.focus({ preventScroll: true });
   }
   function updateSearch() {
@@ -170,7 +176,7 @@
     }
     const reset = event.target.closest("[data-reset-directory]");
     if (reset && results.contains(reset)) {
-      search.value = ""; selectedGroup = "all"; beforeSearch = null; availableOnly.checked = false;
+      search.value = ""; selectedGroup = "all"; beforeSearch = null; availableOnly.checked = Boolean(access.roleScoped);
       renderDirectory();
       search.focus({ preventScroll: true });
     }
@@ -182,7 +188,8 @@
   renderDirectory();
   page.onDeactivate(() => access.deactivate());
   page.onActivate(() => {
-    renderDirectory();
+    if (access.roleScoped) access.refresh();
+    else renderDirectory();
     window.BaigeHomeDashboard?.refresh();
     window.BaigeHomeUpdates?.refresh();
     window.BaigeHomeCarousel?.activate();

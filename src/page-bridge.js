@@ -3,8 +3,9 @@
   const pageId = document.body.dataset.page;
   const embedded = window.parent !== window;
   const { findNavItem, tools } = window.BaigeData;
-  const previewUserId = window.BaigePermissions?.previewUserId;
-  const rolePreview = typeof previewUserId === "string";
+  const policy = window.BaigePermissions;
+  const roleQuery = policy?.roleQuery || (typeof policy?.previewUserId === "string" ? `iam-user=${encodeURIComponent(policy.previewUserId)}` : "");
+  const roleScoped = Boolean(roleQuery);
   let allowedChildren = null;
   let activate = () => {};
   const deactivationListeners = new Set();
@@ -18,6 +19,13 @@
   function readChild() {
     try { return validChild(pageId, decodeURIComponent(location.hash.slice(1))); }
     catch { return ""; }
+  }
+  const navItem = findNavItem(pageId);
+  if (!embedded && roleScoped && navItem) {
+    const fileChild = Object.entries(navItem.files || {}).find(([, file]) => location.pathname?.endsWith(`/${file}`))?.[0];
+    const child = fileChild || readChild();
+    location.replace(`../index.html?${roleQuery}#${pageId}${child ? `/${encodeURIComponent(child)}` : ""}`);
+    return;
   }
   function validQuestion(id, child, question) {
     if (id !== "qa" || child !== "对话" || typeof question !== "string") return "";
@@ -50,7 +58,7 @@
     if (sources === null) question = "";
     // Tool-tab closing needs synchronous activation of its neighbouring tab.
     // Embedded questions are delivered once by the parent after activation.
-    if (id === pageId && (!rolePreview || (allowedChildren && (!child || allowedChildren.includes(child))))) {
+    if (id === pageId && (!roleScoped || (allowedChildren && (!child || allowedChildren.includes(child))))) {
       show(child, focusSearch, embedded ? "" : question, sources?.length ? sources : undefined);
     }
     if (embedded) {
@@ -59,8 +67,7 @@
       const hash = child ? `#${encodeURIComponent(child)}` : "";
       if (location.hash !== hash) location.hash = hash;
     } else {
-      const preview = rolePreview ? `?iam-user=${encodeURIComponent(previewUserId)}` : "";
-      location.href = `../index.html${preview}#${id}${child ? `/${encodeURIComponent(child)}` : ""}`;
+      location.href = `../index.html${roleScoped ? `?${roleQuery}` : ""}#${id}${child ? `/${encodeURIComponent(child)}` : ""}`;
     }
   }
 
@@ -69,10 +76,11 @@
     const message = event.data;
     if (!message || message.pageId !== pageId) return;
     if (message.type === "baige:activate") {
-      if (rolePreview && pageId === "smart-tools") {
+      if (roleScoped && pageId === "smart-tools") {
         allowedChildren = Array.isArray(message.allowedChildren)
           ? Object.freeze(message.allowedChildren.filter(name => validChild(pageId, name))) : null;
       }
+      if (roleScoped && pageId === "home" && Array.isArray(message.roleMenus)) policy.setFrameMenus(message.roleMenus);
       show(message.child, message.focusSearch === true, message.question, message.knowledgeBaseIds, message.openHomeSettings);
     }
     else if (message.type === "baige:deactivate") for (const callback of deactivationListeners) callback();
@@ -99,13 +107,8 @@
     onDeactivate(callback) { deactivationListeners.add(callback); },
     onActivate(callback) {
       activate = callback;
-      if (!embedded && rolePreview && findNavItem(pageId)) {
-        const child = readChild();
-        location.replace(`../index.html?iam-user=${encodeURIComponent(previewUserId)}#${pageId}${child ? `/${encodeURIComponent(child)}` : ""}`);
-        return;
-      }
       // The parent authorizes preview routes, including frames with opaque file origins.
-      if (!rolePreview) show(readChild());
+      if (!roleScoped) show(readChild());
       if (embedded) window.parent.postMessage({ type: "baige:ready", pageId }, "*");
     },
   });

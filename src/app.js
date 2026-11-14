@@ -5,6 +5,7 @@
   const policy = window.BaigePermissions;
   const previewUserId = policy.previewUserId;
   const rolePreview = typeof previewUserId === "string";
+  const roleScoped = Boolean(policy.roleQuery);
   const navRoot = document.querySelector("#navigation");
   const host = document.querySelector("#pageHost");
   const shell = document.querySelector(".app-shell");
@@ -23,7 +24,7 @@
 
   function renderNavigation() {
     const sections = new Set();
-    navRoot.innerHTML = navigation.filter((item) => !item.adminOnly && (policy.canOpen(item.id) || (!rolePreview && discoverableGroups.has(item.id)))).map((item) => {
+    navRoot.innerHTML = navigation.filter((item) => !item.adminOnly && (policy.canOpen(item.id) || (!roleScoped && discoverableGroups.has(item.id)))).map((item) => {
       const active = state.activeId === item.id;
       const expanded = state.expanded.has(item.id);
       // datasets exposes detail routes without showing eight items in the sidebar.
@@ -34,7 +35,7 @@
       return `${sectionLabel ? `<div class="nav-section-label">${sectionLabel}</div>` : ""}<div class="nav-group">
         <button class="nav-item ${active ? "is-active" : ""}" data-nav="${item.id}" title="${item.label}" ${hasSubnav ? `aria-expanded="${expanded}" aria-controls="sub-${item.id}"` : ""} ${active && (!state.activeChild || !hasSubnav) ? 'aria-current="page"' : ""}>
         ${icon(sidebarIcons[item.id] || item.icon)}<span class="nav-label">${item.label}</span>${hasSubnav ? `<span class="nav-chevron ${expanded ? "is-open" : ""}">${icon("chevron")}</span>` : ""}</button>
-        ${hasSubnav ? `<div class="subnav" id="sub-${item.id}" ${expanded ? "" : "hidden"}>${item.children.filter((child) => (!rolePreview && discoverableGroups.has(item.id)) || policy.canOpen(item.id, child)).map((child) => {
+        ${hasSubnav ? `<div class="subnav" id="sub-${item.id}" ${expanded ? "" : "hidden"}>${item.children.filter((child) => (!roleScoped && discoverableGroups.has(item.id)) || policy.canOpen(item.id, child)).map((child) => {
           const locked = !policy.canOpen(item.id, child);
           return `<button class="subnav-item ${active && state.activeChild === child ? "is-active" : ""}" ${active && state.activeChild === child ? 'aria-current="page"' : ""} data-parent="${item.id}" data-child="${escapeHtml(child)}">${icon(childIcons.get(child) || item.icon)}<span class="nav-label">${escapeHtml(child)}</span>${locked ? '<span class="subnav-access">需申请</span>' : ""}</button>`;
         }).join("")}</div>` : ""}</div>`;
@@ -61,13 +62,17 @@
     return [...new Set(ids)];
   }
 
+  const toolGrants = () => tools.filter(tool => policy.canOpen("smart-tools", tool.name)).map(tool => tool.name);
+
   function activateFrame(page) {
     if (!page?.ready) return;
     page.element.contentWindow.postMessage({
       type: "baige:activate", pageId: state.activeId,
       child: state.activeChild, focusSearch: page.focusSearch,
-      ...(rolePreview && state.activeId === "smart-tools"
-        ? { allowedChildren: tools.filter(tool => policy.canOpen("smart-tools", tool.name)).map(tool => tool.name) } : {}),
+      ...(roleScoped && state.activeId === "smart-tools"
+        ? { allowedChildren: page.allowedTools } : {}),
+      ...(roleScoped && state.activeId === "home"
+        ? { roleMenus: ["home", ...window.BaigeIamStore.effectiveMenus(previewUserId ?? policy.accountUserId)] } : {}),
       ...(page.question ? { question: page.question } : {}),
       ...(page.question && page.knowledgeBaseIds.length ? { knowledgeBaseIds: page.knowledgeBaseIds } : {}),
       ...(page.openHomeSettings ? { openHomeSettings: true } : {}),
@@ -81,6 +86,7 @@
   function setPage(id, child = "", { fromHistory = false, focusSearch = false, question = "", knowledgeBaseIds, openHomeSettings = false } = {}) {
     const route = normalizeRoute(id, child);
     if (!route) return;
+    if (roleScoped && !policy.canOpen("home")) return;
     if (!policy.canOpen(route.id, route.child)) {
       const name = route.child || findNavItem(route.id).label;
       if (!pages.size) setPage("home");
@@ -88,7 +94,7 @@
         const currentHash = `#${state.activeId}${state.activeChild ? `/${encodeURIComponent(state.activeChild)}` : ""}`;
         if (location.hash !== currentHash) window.history.replaceState(null, "", currentHash);
       }
-      window.alert(rolePreview ? `当前演示用户尚未获得「${name}」的访问权限。` : `「${name}」暂未开通。请前往首页的「了解平台功能」申请权限。`);
+      window.alert(roleScoped ? `当前演示用户尚未获得「${name}」的访问权限。` : `「${name}」暂未开通。请前往首页的「了解平台功能」申请权限。`);
       return;
     }
     const item = findNavItem(route.id);
@@ -120,14 +126,16 @@
       const frame = document.createElement("iframe");
       frame.className = "page-frame";
       frame.title = route.child || item.label;
-      const previewQuery = rolePreview ? `${pageFile.includes("?") ? "&" : "?"}iam-user=${encodeURIComponent(previewUserId)}` : "";
-      frame.src = `${pageFile}${previewQuery}${route.child ? `#${encodeURIComponent(route.child)}` : ""}`;
+      const accountQuery = roleScoped ? `${pageFile.includes("?") ? "&" : "?"}${policy.roleQuery}` : "";
+      frame.src = `${pageFile}${accountQuery}${route.child ? `#${encodeURIComponent(route.child)}` : ""}`;
       page = { element: frame, file: pageFile, ready: false, focusSearch: false, question: "", knowledgeBaseIds: [], openHomeSettings: false };
       pages.set(item.id, page);
       host.append(frame);
     } else {
       page.element.title = route.child || item.label;
     }
+    page.child = route.child;
+    if (roleScoped && route.id === "smart-tools") page.allowedTools = toolGrants();
     page.focusSearch ||= focusSearch;
     // Keep the question out of URL/history and discard it after one delivery.
     const sources = validSources(knowledgeBaseIds);
@@ -213,36 +221,55 @@
   document.querySelector("#portalHomeTrigger")?.addEventListener("click", () => {
     location.href = "./portal.html";
   });
-  if (rolePreview) {
+  if (roleScoped) {
     const iam = window.BaigeIamStore;
-    const account = document.querySelector("#accountRoot");
-    const label = document.createElement("span");
-    label.className = "role-preview-label";
-    label.setAttribute("role", "status");
-    const exit = document.createElement("a");
-    exit.className = "topbar-home-button";
-    exit.href = "./index.html";
-    exit.textContent = "退出预览";
-    account.hidden = true;
-    account.before(label, exit);
-    const updatePreview = () => {
-      const user = iam?.users().find(item => item.id === previewUserId);
+    const accountUnavailable = document.querySelector("#clientAccountUnavailable");
+    let label;
+    if (rolePreview) {
+      const account = document.querySelector("#accountRoot");
+      label = document.createElement("span");
+      label.className = "role-preview-label";
+      label.setAttribute("role", "status");
+      const exit = document.createElement("a");
+      exit.className = "topbar-home-button";
+      exit.href = "./index.html";
+      exit.textContent = "退出预览";
+      account.hidden = true;
+      account.before(label, exit);
+    }
+    let available = true;
+    const updateAccountAccess = () => {
+      const user = policy.accountFor(previewUserId ?? policy.accountUserId);
       const name = user?.nickname || user?.username || "用户不存在";
-      label.textContent = `权限预览 · ${name}${user?.status === "disabled" ? "（已停用）" : ""}`;
+      if (label) label.textContent = `权限预览 · ${name}${user?.status === "disabled" ? "（已停用）" : ""}`;
+      const wasAvailable = available;
+      available = policy.canOpen("home");
+      if (accountUnavailable) {
+        accountUnavailable.hidden = available;
+        accountUnavailable.textContent = user ? "当前演示账号已停用。" : "当前演示账号已不存在。";
+      }
       const canKeepActive = policy.canOpen(state.activeId, state.activeChild);
       for (const [id, page] of pages) {
-        if (policy.canOpen(id) && (id !== state.activeId || canKeepActive)) continue;
+        if (policy.canOpen(id, page.child)) {
+          if (id !== "smart-tools") continue;
+          const nextTools = toolGrants();
+          const revokedTool = page.allowedTools.some(name => !nextTools.includes(name));
+          page.allowedTools = nextTools;
+          if (id === state.activeId || !revokedTool) continue;
+        }
         page.element.remove();
         pages.delete(id);
       }
-      if (canKeepActive) {
+      if (!available) renderNavigation();
+      else if (!wasAvailable || !canKeepActive) setPage("home");
+      else {
         renderNavigation();
-        if (state.activeId === "smart-tools") activateFrame(pages.get(state.activeId));
-      } else setPage("home");
+        if (state.activeId === "smart-tools" || state.activeId === "home") activateFrame(pages.get(state.activeId));
+      }
     };
-    updatePreview();
-    iam?.subscribe(updatePreview);
-    window.addEventListener("pageshow", (event) => { if (event.persisted) updatePreview(); });
+    updateAccountAccess();
+    iam?.subscribe(updateAccountAccess);
+    window.addEventListener("pageshow", (event) => { if (event.persisted) updateAccountAccess(); });
   }
   const route = readRoute();
   setPage(route.id, route.child, { fromHistory: true });

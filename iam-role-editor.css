@@ -84,9 +84,23 @@
 .iam-role-status button:disabled { cursor: default; }
 .iam-role-feedback:empty { display: none; }
 .iam-role-feedback { margin: 8px 0 0; color: #b4232c; font-size: 12px; }
+.iam-role-save-warning:not([hidden]) {
+  margin: 0 auto 0 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--warning-bg, #fff6e5);
+  color: var(--warning-text, #8a570c);
+  font-size: 13px;
+}
 .iam-dialog--role-editor .iam-menu-pending { margin: 10px 0 0; }
 .iam-role-review-fields { margin-top: 12px; }
 .iam-role-review-fields .iam-dialog-note { margin-bottom: 6px; }
+.iam-role-impact { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); }
+.iam-role-impact summary { color: var(--ink); font-size: 13px; font-weight: 600; cursor: pointer; }
+#iamRoleReviewImpactList { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 6px 14px; max-height: 150px; margin: 8px 0 0; padding: 0; overflow: auto; list-style: none; }
+#iamRoleReviewImpactList li { display: grid; gap: 2px; padding-block: 5px; font-size: 12px; overflow-wrap: anywhere; }
+#iamRoleReviewImpactList li span { color: var(--muted); }
+.iam-role-impact-compare { margin-top: 8px; background: var(--surface); }
 
 .iam-role-menu-heading {
   display: flex;

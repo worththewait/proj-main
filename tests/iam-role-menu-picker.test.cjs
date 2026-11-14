@@ -36,16 +36,21 @@ function mount({ selected = [], disabled = false } = {}) {
   ];
   const window = {
     BaigeUI: { escapeHtml: String, icon: () => "" },
-    BaigeIamMenuCatalog: {
-      groups: () => groups,
-      expand: keys => keys.flatMap(key => {
-        const children = groups.flatMap(group => group.items).filter(item => item.legacyKey === key);
-        return children.length ? children.map(item => item.key) : [key];
-      }),
-    },
     BaigeIamStore: { isPrivilegedMenu: key => key === "review" },
   };
-  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../src/pages/iam-role-menu-picker.js"), "utf8"), { window });
+  const context = vm.createContext({ window });
+  const run = file => vm.runInContext(fs.readFileSync(path.join(__dirname, "..", file), "utf8"), context);
+  run("src/data.js");
+  run("src/iam-menu-catalog.js");
+  window.BaigeIamMenuCatalog = {
+    ...window.BaigeIamMenuCatalog,
+    groups: () => groups,
+    expand: keys => keys.flatMap(key => {
+      const children = groups.flatMap(group => group.items).filter(item => item.legacyKey === key);
+      return children.length ? children.map(item => item.key) : [key];
+    }),
+  };
+  run("src/pages/iam-role-menu-picker.js");
   const picker = window.BaigeIamRoleMenuPicker.mount(target, { selected, disabled });
   const keys = () => [...picker.keys()];
   const click = (action, branch) => events.click({ target: {

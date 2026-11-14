@@ -1,5 +1,6 @@
 /* 后管端：沿用客户端顶栏、侧栏和内容区结构，只保留后台入口。 */
 .admin-page { background: var(--canvas); }
+.admin-page.admin-responsive-view { min-width: 0; }
 .admin-shell { height: 100dvh; }
 .admin-topbar { z-index: 40; }
 .admin-topbar-meta { display: flex; align-items: center; gap: 18px; flex-shrink: 0; }
@@ -27,7 +28,30 @@
 .admin-version { color: var(--muted); font-size: 11px; }
 .admin-main { padding: 0; overflow: hidden; }
 .admin-frame { display: block; width: 100%; height: 100%; border: 0; background: var(--canvas); }
+.iam-requests-drawer {
+  position: fixed; inset: 0 0 0 auto; width: min(680px, 100vw); max-width: none;
+  height: 100dvh; max-height: none; margin: 0; padding: 0; overflow: hidden;
+  border: 0; border-inline-start: 1px solid var(--line); border-radius: 12px 0 0 12px;
+  background: var(--surface);
+}
+.iam-requests-drawer::backdrop { background: rgb(29 36 51 / .24); }
+.iam-requests-drawer iframe { display: block; width: 100%; height: 100%; border: 0; }
+@media (max-width: 540px) {
+  .iam-requests-drawer { border-radius: 0; border-inline-start: 0; }
+}
 .admin-sidebar .nav-section-label:first-child { padding-top: 4px; }
 @media (max-width: 1120px) {
   .admin-shell { grid-template-columns: 210px minmax(0, 1fr); }
+}
+@media (max-width: 900px) {
+  .admin-responsive-view .admin-shell { grid-template-columns: 58px minmax(0, 1fr); }
+  .admin-responsive-view .admin-sidebar { padding-inline: 8px; }
+  .admin-responsive-view .admin-sidebar .nav-item { justify-content: center; padding-inline: 0; }
+  .admin-responsive-view .admin-sidebar :is(.nav-label, .nav-section-label, .sidebar-footer) { display: none; }
+}
+@media (max-width: 540px) {
+  .admin-responsive-view .admin-topbar { gap: 8px; padding-inline: 10px; }
+  .admin-responsive-view .admin-topbar-meta { gap: 6px; }
+  .admin-responsive-view .admin-actor > span, .admin-responsive-view .brand-subtitle { display: none; }
+  .admin-responsive-view .admin-return { padding-inline: 7px; }
 }

@@ -43,6 +43,8 @@
 .account-profile > div { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 20px; padding: 11px 0; }
 .account-profile dt { color: var(--muted); font-size: 13px; }
 .account-profile dd { margin: 0; font-size: 14px; overflow-wrap: anywhere; }
+.account-switch { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+.client-account-unavailable { margin: 24px; color: var(--muted); font-size: 14px; }
 .account-notice { margin-top: 20px; padding: 12px 14px; border-radius: 8px; background: var(--surface-subtle); color: var(--muted); font-size: 12px; line-height: 1.8; }
 .account-welcome-notice { margin-top: 18px; padding: 18px; border-radius: 10px; background: #f5f7fc; }
 .account-welcome-notice > small { display: block; margin-bottom: 8px; color: var(--accent); font-size: 11px; }

@@ -57,6 +57,26 @@
     return [...new Set(keys.flatMap(key => legacyGroups.get(key) || [key]))];
   }
 
+  function tree(menuGroups) {
+    return menuGroups.map(group => {
+      const children = [];
+      const parents = new Map();
+      for (const item of group.items) {
+        if (!item.parentId) {
+          children.push(item);
+          continue;
+        }
+        if (!parents.has(item.parentId)) {
+          const parent = { id: `${group.id}/${item.parentId}`, label: item.parentLabel, children: [] };
+          parents.set(item.parentId, parent);
+          children.push(parent);
+        }
+        parents.get(item.parentId).children.push(item);
+      }
+      return { id: group.id, label: group.label, children };
+    });
+  }
+
   function grantedGroups(keys) {
     const granted = new Set(expand(keys));
     return groups().map(group => ({
@@ -69,5 +89,5 @@
     return labels.get(key) || findNavItem(key)?.label || key;
   }
 
-  window.BaigeIamMenuCatalog = Object.freeze({ groups, expand, grantedGroups, label });
+  window.BaigeIamMenuCatalog = Object.freeze({ groups, tree, expand, grantedGroups, label });
 })();

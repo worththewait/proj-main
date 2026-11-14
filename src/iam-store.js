@@ -181,14 +181,90 @@
     return value.users.filter((user) => user.roleIds.includes(roleId)).sort((a, b) => a.id.localeCompare(b.id));
   }
 
-  function snapshot(value, type, items) {
-    return JSON.stringify(items.map(({ userId, roleId }) => {
+  function directDependencies(value, type, items) {
+    return items.map(({ userId, roleId }) => {
       const user = findUser(value, userId);
       const role = findRole(value, roleId);
       if (type === "membership") return [userSnapshot(user), roleSnapshot(role), Boolean(user?.roleIds.includes(roleId))];
-      if (type === "enable-user") return [userSnapshot(user), user ? userRoles(value, user).map((memberRole) => [memberRole.id, roleSnapshot(memberRole)]) : []];
-      return [roleSnapshot(role), roleMembers(value, roleId).map((member) => [member.id, userSnapshot(member)])];
+      if (userId) return [userSnapshot(user)];
+      return [roleSnapshot(role), ids(roleMembers(value, roleId).map(member => member.id))];
+    });
+  }
+
+  function affectedUserIds(value, items) {
+    return ids(items.flatMap(item => item.userId ? [item.userId] : roleMembers(value, item.roleId).map(user => user.id)));
+  }
+
+  const isRevision = revision => Number.isInteger(revision) && revision >= 0;
+  const isState = value => value === "normal" || value === "disabled";
+  const isUserDependency = row => Array.isArray(row) && row.length === 2 && isState(row[0]) && isRevision(row[1]);
+  const isRoleDependency = row => Array.isArray(row) && row.length === 3
+    && isState(row[0]) && isRevision(row[1]) && Array.isArray(row[2]) && row[2].every(key => typeof key === "string");
+
+  function recordedDependencies(request) {
+    try {
+      const saved = JSON.parse(request.snapshot);
+      const version = request.snapshotVersion;
+      const baseline = version === 2 ? JSON.parse(saved[0]) : saved;
+      if (!Array.isArray(baseline) || baseline.length !== request.items.length) return null;
+      const oldAccountStates = new Map(version === 2 ? saved[1].map(([id, status]) => [id, status]) : []);
+      const rows = request.items.map(({ userId }, index) => {
+        const target = baseline[index];
+        if (version !== 2 || request.type === "membership") return target;
+        // Older disable/delete requests saved account state in the supplemental rows.
+        if (userId) return [oldAccountStates.get(userId)];
+        return [target[0], ids(target[1].map(([id]) => id))];
+      });
+      const valid = rows.every((row, index) => {
+        if (!Array.isArray(row)) return false;
+        if (request.type === "membership") {
+          return row.length === 3 && isUserDependency(row[0]) && isRoleDependency(row[1]) && typeof row[2] === "boolean";
+        }
+        const item = request.items[index];
+        if (item.userId) return row.length === 1 && isUserDependency(row[0]);
+        return row.length === 2 && isRoleDependency(row[0]) && Array.isArray(row[1])
+          && JSON.stringify(row[1]) === JSON.stringify(ids(item.affectedUserIds));
+      });
+      return valid ? rows : null;
+    } catch { return null; }
+  }
+
+  function matchesDependencies(value, request) {
+    return JSON.stringify(recordedDependencies(request)) === JSON.stringify(directDependencies(value, request.type, request.items));
+  }
+
+  function accountMenus(value, user) {
+    return user?.status === "normal" ? expandedMenus(["home", ...effectiveRoleMenus(value, user)]) : [];
+  }
+
+  function userIdentity(user) {
+    return { id: user.id, name: userName(user), username: user.username || "", department: user.department || "" };
+  }
+
+  function changedUserIdentities(request) {
+    if (!Array.isArray(request.impact)) return {};
+    const value = read();
+    return Object.fromEntries(request.impact.flatMap(person => {
+      const user = findUser(value, person?.id);
+      if (!user) return [];
+      const current = userIdentity(user);
+      const changed = current.name !== person.name || current.username !== person.username || current.department !== person.department;
+      return changed ? [[person.id, current]] : [];
     }));
+  }
+
+  function impact(value, type, items) {
+    const proposed = { users: clone(value.users), roles: clone(value.roles) };
+    applyRequest(proposed, { type, items });
+    return affectedUserIds(value, items).map(id => {
+      const user = findUser(value, id);
+      const after = findUser(proposed, id);
+      return {
+        ...userIdentity(user),
+        status: user.status, requestedStatus: after?.status || "deleted",
+        currentMenus: accountMenus(value, user), requestedMenus: accountMenus(proposed, after),
+      };
+    });
   }
 
   function invalidate(request, comment = "申请对象、角色权限或成员状态已变更，请重新提交。") {
@@ -197,39 +273,107 @@
     request.comment = comment;
   }
 
-  function invalidateStale(value) {
+  function snapshotBlockReason(request) {
+    if (request.status !== "pending") return "";
+    if (![2, 3].includes(request.snapshotVersion)) return "旧版申请缺少完整权限快照，请撤回后重新提交。";
+    const affected = ids(request.items.flatMap(item => item.userId ? [item.userId] : item.affectedUserIds || []));
+    const complete = recordedDependencies(request) && Array.isArray(request.impact) && request.impact.length === affected.length
+      && affected.every(id => request.impact.some(person => person?.id === id
+        && Array.isArray(person.currentMenus) && Array.isArray(person.requestedMenus)));
+    return complete ? "" : "申请缺少完整权限快照，请撤回后重新提交。";
+  }
+
+  const roleChangeTypes = new Set(["menus", "enable-role", "disable-role", "delete-role"]);
+
+  function findPendingRoleChange(value, roleIds) {
+    if (!roleIds.size) return null;
+    return value.requests.find(request => request.status === "pending" && roleChangeTypes.has(request.type)
+      && request.items.some(item => roleIds.has(item.roleId))
+      && (snapshotBlockReason(request) || matchesDependencies(value, request))) || null;
+  }
+
+  function pendingRoleChange(roleId) {
+    return clone(findPendingRoleChange(read(), new Set([roleId])));
+  }
+
+  function blockingRoleChangeFor(value, request) {
+    if (request.status !== "pending" || request.type !== "membership") return null;
+    const addedRoleIds = new Set(request.items.filter(item => item.operation === "add").map(item => item.roleId));
+    return findPendingRoleChange(value, addedRoleIds);
+  }
+
+  function blockingRoleChange(request) {
+    return clone(blockingRoleChangeFor(read(), request));
+  }
+
+  function roleChangeBlockMessage(request) {
+    const role = request.items[0]?.roleName;
+    return `${role ? `「${role}」` : "该角色"}有待审核的角色变更，请先处理该申请。`;
+  }
+
+  function roleChangeBlockError(request) {
+    const error = new Error(roleChangeBlockMessage(request));
+    error.requestId = request.id;
+    return error;
+  }
+
+  function approvalBlockReason(request) {
+    const integrity = snapshotBlockReason(request);
+    if (integrity) return integrity;
+    const blocking = blockingRoleChange(request);
+    return blocking ? roleChangeBlockMessage(blocking) : "";
+  }
+
+  function pendingAssignments(value, roleId) {
+    return ids(value.requests.filter(request => request.status === "pending" && request.type === "membership"
+      && request.items.some(item => item.roleId === roleId && item.operation === "add")).map(request => request.id));
+  }
+
+  function invalidateStale(value, directlyInvalidated = []) {
+    const direct = new Set(directlyInvalidated);
     for (const request of value.requests) {
-      if (request.status === "pending" && request.snapshot !== snapshot(value, request.type, request.items)) invalidate(request);
+      if (request.status !== "pending") continue;
+      if (direct.has(request.id)) {
+        invalidate(request, "角色菜单已更新，请按最新配置重新提交分配申请。");
+      } else if (!snapshotBlockReason(request) && !matchesDependencies(value, request)) invalidate(request);
     }
   }
 
   const pairKey = ({ userId, roleId }) => JSON.stringify([userId, roleId]);
+  const requestTargets = items => items.map(item => JSON.stringify(item.userId ? ["user", item.userId] : ["role", item.roleId]));
+  function checkRequestConflict(value, items) {
+    const targets = new Set(requestTargets(items));
+    const pending = value.requests.find(request => request.status === "pending"
+      && requestTargets(request.items).some(key => targets.has(key)));
+    if (!pending) return;
+    const error = new Error("该对象已有待审核申请，请先处理原申请。");
+    error.requestId = pending.id;
+    throw error;
+  }
+
   function recordRequest(value, type, items, { source, reason } = {}) {
     const person = requireActor("admin");
     const explanation = text(reason);
     if (!explanation) throw new Error("请填写申请理由。");
     invalidateStale(value);
-    const pending = value.requests.filter((request) => request.status === "pending" && request.type === type);
-    const identity = type === "membership" ? pairKey : (item) => item.userId || item.roleId;
-    const proposed = new Set(items.map(identity));
-    if (pending.some((request) => request.items.some((item) => proposed.has(identity(item))))) {
-      throw new Error("已有同一对象的待审核申请，请先查看原申请。");
-    }
+    checkRequestConflict(value, items);
     const request = {
       id: uid("iam"), type, status: "pending", source: text(source) || "角色授权", reason: explanation,
       createdAt: now(), applicant: { id: person.id, name: person.name }, items,
-      snapshot: snapshot(value, type, items),
+      snapshotVersion: 3, snapshot: JSON.stringify(directDependencies(value, type, items)), impact: impact(value, type, items),
     };
     value.requests.unshift(request);
     return request;
   }
 
-  function membershipItem(value, pair, operation) {
+  function membershipItem(value, pair, operation, initialUserId) {
     const user = findUser(value, pair.userId);
     if (!user) throw new Error("所选用户不存在。");
     const role = validateRole(value, pair.roleId);
     const adding = operation === "add";
-    if (adding && (user.status !== "normal" || role.status !== "normal")) throw new Error("请选择启用的用户和角色。");
+    if (adding && (role.status !== "normal" || (user.status !== "normal" && user.id !== initialUserId))) {
+      throw new Error("请选择启用的用户和角色。");
+    }
     if (user.roleIds.includes(role.id) === adding) {
       throw new Error(adding ? "用户已拥有该角色，无需再次申请。" : "用户尚未拥有要移除的角色。");
     }
@@ -241,10 +385,12 @@
     };
   }
 
-  function membershipRequest(value, { add = [], remove = [], source, reason }) {
-    if (!add.length) throw new Error("请选择至少一个要新增的角色或用户。");
+  function membershipRequest(value, { add = [], remove = [], source, reason }, initialUserId) {
+    if (!add.length && !remove.length) throw new Error("请选择至少一项角色变更。");
+    const blocking = findPendingRoleChange(value, new Set(add.map(item => item.roleId)));
+    if (blocking) throw roleChangeBlockError(blocking);
     const items = [
-      ...add.map((pair) => membershipItem(value, pair, "add")),
+      ...add.map((pair) => membershipItem(value, pair, "add", initialUserId)),
       ...remove.map((pair) => membershipItem(value, pair, "remove")),
     ];
     if (new Set(items.map(pairKey)).size !== items.length) throw new Error("同一用户角色关系不能在一张申请中重复变更。");
@@ -271,23 +417,22 @@
 
   function createUserWithRequest(input, roleIds = [], meta) {
     requireActor("admin");
+    const selectedRoles = ids(roleIds);
+    if (!selectedRoles.length) throw new Error("请至少选择一个角色。");
     const value = read();
     const user = createUser(value, input);
-    const add = ids(roleIds).map((roleId) => ({ userId: user.id, roleId }));
-    const request = add.length ? membershipRequest(value, { ...meta, add }) : null;
+    const add = selectedRoles.map((roleId) => ({ userId: user.id, roleId }));
+    const request = membershipRequest(value, { ...meta, add }, user.id);
     write(value);
     return clone({ user, request });
   }
 
-  function addUser(input) { return createUserWithRequest(input).user; }
+  function addUser(input, roleIds, meta) { return createUserWithRequest(input, roleIds, meta).user; }
 
   function applyUserDetails(user, patch) {
     if (Object.hasOwn(patch, "roleIds")) throw new Error("角色变更须提交授权审批。");
     if (patch.status !== undefined && patch.status !== user.status) {
-      if (patch.status !== "disabled") throw new Error("重新启用用户须提交审批。");
-      if (isProtectedUser(user.id)) throw new Error("预设审核员不能停用。");
-      user.status = "disabled";
-      user.stateRevision = (user.stateRevision || 0) + 1;
+      throw new Error("用户状态变更须提交审批。");
     }
     for (const key of ["username", "nickname", "department", "phone", "email", "gender", "position", "remark"]) {
       if (Object.hasOwn(patch, key)) user[key] = patch[key];
@@ -306,7 +451,7 @@
   }
 
   function saveUserEdit(id, patch, { add = [], remove = [], originalRoles, source, reason } = {}) {
-    const person = requireActor("admin");
+    requireActor("admin");
     const value = read();
     const user = findUser(value, id);
     if (!user) throw new Error("用户已删除，请刷新列表。");
@@ -317,34 +462,10 @@
     if (changed && !text(reason)) throw new Error("请填写申请原因。");
     if ([...add, ...remove].some(pair => pair.userId !== id)) throw new Error("只能编辑当前用户的角色。");
     applyUserDetails(user, patch);
-    const request = add.length ? membershipRequest(value, { add, remove, source, reason }) : null;
-    if (!add.length && remove.length) {
-      const touched = new Set(remove.map(pairKey));
-      if (value.requests.some(request => request.type === "membership" && request.status === "pending"
-        && request.items.some(item => touched.has(pairKey(item))))) {
-        throw new Error("已有同一对象的待审核申请，请先查看原申请。");
-      }
-      applyRevocation(value, remove, person, { source, reason: text(reason) });
-    }
+    const request = changed ? membershipRequest(value, { add, remove, source, reason }) : null;
     invalidateStale(value);
     write(value);
     return clone(request);
-  }
-
-  function removeUser(id) {
-    requireActor("admin");
-    if (isProtectedUser(id)) throw new Error("预设审核员不能删除。");
-    const value = read();
-    value.users = value.users.filter((user) => user.id !== id);
-    for (const role of value.roles) role.userIds = role.userIds.filter((userId) => userId !== id);
-    invalidateStale(value);
-    write(value);
-  }
-
-  function toggleUser(id) {
-    requireActor("admin");
-    if (findUser(read(), id)?.status === "disabled") throw new Error("重新启用用户须提交审批。");
-    return updateUser(id, { status: "disabled" });
   }
 
   function addRole({ name, code, order = 1, status }) {
@@ -367,90 +488,111 @@
     }
   }
 
-  function disableRole(role) {
-    role.status = "disabled";
-    role.scopeRevision = (role.scopeRevision || 0) + 1;
-  }
-
   function updateRole(id, patch) {
     requireActor("admin");
     const value = read();
     const role = validateRole(value, id);
     if (Object.hasOwn(patch, "userIds") || Object.hasOwn(patch, "menuPermissions")) throw new Error("角色授权须通过专用审批入口办理。");
-    applyRoleDetails(role, patch);
     if (patch.status !== undefined && patch.status !== role.status) {
-      if (patch.status !== "disabled") throw new Error("重新启用角色须提交审批。");
-      disableRole(role);
+      throw new Error("角色状态变更须提交审批。");
     }
+    applyRoleDetails(role, patch);
     invalidateStale(value);
     write(value);
     return true;
   }
 
-  function removeRole(id) {
-    requireActor("admin");
-    const value = read();
-    validateRole(value, id);
-    value.roles = value.roles.filter((role) => role.id !== id);
-    for (const user of value.users) user.roleIds = user.roleIds.filter((roleId) => roleId !== id);
-    invalidateStale(value);
-    write(value);
-  }
-
-  function toggleRole(id) {
-    requireActor("admin");
-    if (findRole(read(), id)?.status === "disabled") throw new Error("重新启用角色须提交审批。");
-    return updateRole(id, { status: "disabled" });
-  }
-
   function affectedByRole(value, role) {
     const members = roleMembers(value, role.id);
-    return { affectedUserIds: members.map((user) => user.id), affectedUsers: members.map((user) => ({ id: user.id, name: userName(user) })) };
+    return {
+      affectedUserIds: members.map(user => user.id),
+      affectedUsers: members.map(user => ({ id: user.id, name: userName(user), username: user.username, department: user.department, status: user.status })),
+    };
   }
 
-  function applyMenuEdit(value, role, menuPermissions, meta, person, restore = false) {
+  function roleChange(value, role, menuPermissions, status, deleting = false) {
     const current = roleMenus(role);
-    const next = ids(menuPermissions);
-    if (next.some((key) => !current.includes(key) && isPrivilegedMenu(key))) {
-      throw new Error("预设后台权限不能通过普通角色添加。");
+    const next = menuPermissions === undefined ? current : ids(menuPermissions);
+    if (JSON.stringify(next.filter(isPrivilegedMenu)) !== JSON.stringify(current.filter(isPrivilegedMenu))) {
+      throw new Error("预设后台权限不能在此变更。");
     }
-    const before = expandedMenus(current);
-    const after = expandedMenus(next);
-    const changed = JSON.stringify(before) !== JSON.stringify(after);
-    if (!restore && !changed) return null;
+    const before = expandedMenus(current).filter(key => !isPrivilegedMenu(key));
+    const after = expandedMenus(next).filter(key => !isPrivilegedMenu(key));
+    const menusChanged = JSON.stringify(before) !== JSON.stringify(after);
+    const statusChanged = status !== role.status;
+    if (!deleting && !statusChanged && !menusChanged) return null;
+    const operation = deleting ? "delete" : statusChanged ? (status === "normal" ? "enable" : "disable") : "menus";
+    const type = operation === "menus" ? "menus" : `${operation}-role`;
     const item = {
-      roleId: role.id, roleName: role.name, operation: restore ? "enable" : "menus",
-      currentMenus: restore ? [] : current, requestedMenus: changed ? next : current, ...affectedByRole(value, role),
+      roleId: role.id, roleName: role.name, operation, ...affectedByRole(value, role),
+      currentMenus: statusChanged || deleting ? (role.status === "normal" ? before : []) : before,
+      requestedMenus: statusChanged || deleting ? (!deleting && status === "normal" ? after : []) : after,
+      nextRoleMenus: menusChanged ? next : current,
+      ...(menusChanged && statusChanged ? { currentConfiguredMenus: before, requestedConfiguredMenus: after } : {}),
     };
-    if (restore) {
-      item.restoreMenus = item.requestedMenus;
-      item.requestedMenus = item.restoreMenus.filter((key) => !isPrivilegedMenu(key));
-      return recordRequest(value, "enable-role", [item], meta);
-    }
-    if (after.some((key) => !before.includes(key)) && item.affectedUserIds.length) {
-      return recordRequest(value, "menus", [item], meta);
-    }
-    role.menuPermissions = next;
-    role.scopeRevision = (role.scopeRevision || 0) + 1;
-    value.events.unshift({ type: "change-menus", actor: person.id, at: now(), items: [item] });
-    return null;
+    return { type, items: [item], requiresApproval: type !== "menus" || item.affectedUserIds.length > 0 };
+  }
+
+  function roleEditStatus(role, status) {
+    if (status !== undefined && status !== "normal" && status !== "disabled") throw new Error("角色状态无效。");
+    return status ?? role.status;
+  }
+
+  function rolePreviewToken(value, { type, items }, invalidatedRequests, affected) {
+    const [{ roleId, nextRoleMenus }] = items;
+    return JSON.stringify([roleId, type, nextRoleMenus, directDependencies(value, type, items), invalidatedRequests, affected]);
+  }
+
+  function previewRoleChange(id, menuPermissions, status) {
+    const value = read();
+    const role = validateRole(value, id);
+    const change = roleChange(value, role, menuPermissions, roleEditStatus(role, status));
+    if (!change) return { changed: false, requiresApproval: false, impact: [], invalidatedRequests: [] };
+    const { type, items, requiresApproval } = change;
+    const invalidatedRequests = requiresApproval ? [] : pendingAssignments(value, id);
+    const affected = requiresApproval ? impact(value, type, items) : [];
+    return {
+      ...items[0], changed: true, requiresApproval, invalidatedRequests,
+      impact: affected, token: rolePreviewToken(value, change, invalidatedRequests, affected),
+    };
   }
 
   function saveRoleEdit(id, patch, menuPermissions, meta = {}) {
     const person = requireActor("admin");
     const value = read();
     const role = validateRole(value, id);
+    if (Object.hasOwn(patch, "userIds") || Object.hasOwn(patch, "menuPermissions")) throw new Error("角色授权须通过专用审批入口办理。");
     if (meta.originalMenus && JSON.stringify(ids(meta.originalMenus)) !== JSON.stringify(roleMenus(role))) {
       throw new Error("菜单权限已更新，请重新打开后再编辑。");
     }
     if (meta.originalStatus && role.status !== meta.originalStatus) {
       throw new Error("角色状态已更新，请重新打开后再编辑。");
     }
-    const restore = patch.status === "normal" && role.status === "disabled";
+    const change = roleChange(value, role, menuPermissions, roleEditStatus(role, patch.status));
+    const invalidatedRequests = change && !change.requiresApproval ? pendingAssignments(value, role.id) : [];
+    if (meta.expectedImpact !== undefined) {
+      const affected = change?.requiresApproval ? impact(value, change.type, change.items) : [];
+      if (!change || meta.expectedImpact !== rolePreviewToken(value, change, invalidatedRequests, affected)) {
+        throw new Error("涉及用户、权限或待审申请已更新，请核对最新信息后再提交。");
+      }
+    }
     applyRoleDetails(role, patch);
-    if (patch.status === "disabled" && role.status !== "disabled") disableRole(role);
-    const request = applyMenuEdit(value, role, menuPermissions, meta, person, restore);
-    invalidateStale(value);
+    let request = null;
+    if (change?.requiresApproval) {
+      change.items[0].roleName = role.name;
+      request = recordRequest(value, change.type, change.items, meta);
+    } else if (change) {
+      invalidateStale(value);
+      checkRequestConflict(value, change.items);
+      const { currentMenus, requestedMenus } = change.items[0];
+      applyRequest(value, change);
+      value.events.push({
+        id: uid("iam-event"), type: "role-menus-saved", createdAt: now(),
+        actor: { id: person.id, name: person.name }, roleId: role.id,
+        previousMenus: currentMenus, nextMenus: requestedMenus,
+      });
+    }
+    invalidateStale(value, invalidatedRequests);
     write(value);
     return clone(request);
   }
@@ -459,27 +601,40 @@
     return saveRoleEdit(roleId, {}, menuPermissions, meta);
   }
 
-  function requestEnable(kind, id, meta) {
+  function requestLifecycle(kind, id, operation, meta) {
     requireActor("admin");
+    if (!["enable", "disable", "delete"].includes(operation)) throw new Error("状态变更类型无效。");
     const value = read();
-    let item;
+    const enabling = operation === "enable";
+    const deleting = operation === "delete";
+    const nextStatus = enabling ? "normal" : "disabled";
+    let items;
     if (kind === "user") {
       const user = findUser(value, id);
       if (!user) throw new Error("所选用户不存在。");
-      if (user.status !== "disabled") throw new Error("用户已启用。");
-      item = { userId: id, userName: userName(user), operation: "enable", currentMenus: [], requestedMenus: effectiveRoleMenus(value, user) };
+      if (!enabling && isProtectedUser(id)) throw new Error("预设审核员不能停用或删除。");
+      if (!deleting && user.status === nextStatus) throw new Error(enabling ? "用户已启用。" : "用户已停用。");
+      items = [{
+        userId: id, userName: userName(user), operation,
+        currentMenus: accountMenus(value, user), requestedMenus: enabling ? accountMenus(value, { ...user, status: nextStatus }) : [],
+      }];
     } else if (kind === "role") {
       const role = validateRole(value, id);
-      if (role.status !== "disabled") throw new Error("角色已启用。");
-      item = { roleId: id, roleName: role.name, operation: "enable", currentMenus: [],
-        requestedMenus: roleMenus(role).filter((key) => !isPrivilegedMenu(key)), ...affectedByRole(value, role) };
+      if (!deleting && role.status === nextStatus) throw new Error(enabling ? "角色已启用。" : "角色已停用。");
+      items = roleChange(value, role, undefined, nextStatus, deleting).items;
     } else {
-      throw new Error("启用对象类型无效。");
+      throw new Error("状态变更对象类型无效。");
     }
-    const request = recordRequest(value, `enable-${kind}`, [item], meta);
+    const request = recordRequest(value, `${operation}-${kind}`, items, meta);
     write(value);
     return clone(request);
   }
+
+  const requestEnable = (kind, id, meta) => requestLifecycle(kind, id, "enable", meta);
+  const removeUser = (id, meta) => requestLifecycle("user", id, "delete", meta);
+  const removeRole = (id, meta) => requestLifecycle("role", id, "delete", meta);
+  const toggleUser = (id, meta) => requestLifecycle("user", id, findUser(read(), id)?.status === "disabled" ? "enable" : "disable", meta);
+  const toggleRole = (id, meta) => requestLifecycle("role", id, findRole(read(), id)?.status === "disabled" ? "enable" : "disable", meta);
 
   function applyMembership(value, { userId, roleId }, adding) {
     const user = findUser(value, userId);
@@ -492,36 +647,14 @@
     }
   }
 
-  function applyRevocation(value, pairs, person, details = {}) {
-    const checked = pairs.map(({ userId, roleId }) => {
-      const user = findUser(value, userId);
-      if (!user) throw new Error("所选用户不存在。");
-      const role = validateRole(value, roleId);
-      return { userId, userName: userName(user), roleId, roleName: role.name, operation: "remove" };
-    });
-    const touched = new Set(checked.map(pairKey));
-    for (const item of checked) applyMembership(value, item, false);
-    for (const request of value.requests) {
-      if (request.status === "pending" && request.type === "membership" && request.items.some((item) => touched.has(pairKey(item)))) {
-        invalidate(request, "相关授权已撤销，请重新提交申请。");
-      }
-    }
-    if (checked.length) value.events.unshift({ type: "revoke", actor: person.id, at: now(), items: checked, ...details });
-  }
-
-  function revokeMembership(pairs) {
-    const person = requireActor("admin");
-    const value = read();
-    applyRevocation(value, pairs, person);
-    if (pairs.length) {
-      invalidateStale(value);
-      write(value);
-    }
+  function revokeMembership(pairs, meta) {
+    return requestMembership({ ...meta, add: [], remove: pairs });
   }
 
   function isBeneficiary(request, person) {
-    return Boolean(person.userId && request.items.some((item) =>
-      item.userId === person.userId || item.affectedUserIds?.includes(person.userId)));
+    if (!person.userId) return false;
+    const inImpact = Array.isArray(request.impact) && request.impact.some(user => user?.id === person.userId);
+    return inImpact || request.items.some(item => item.userId === person.userId || item.affectedUserIds?.includes(person.userId));
   }
 
   function canReviewRequest(id) {
@@ -542,38 +675,73 @@
     for (const item of request.items) {
       if (request.type === "membership") {
         applyMembership(value, item, item.operation === "add");
-      } else if (request.type === "enable-user") {
+      } else if (request.type === "delete-user") {
+        value.users = value.users.filter(user => user.id !== item.userId);
+        for (const role of value.roles) role.userIds = role.userIds.filter(id => id !== item.userId);
+      } else if (request.type === "enable-user" || request.type === "disable-user") {
         const user = findUser(value, item.userId);
-        user.status = "normal";
+        user.status = request.type === "enable-user" ? "normal" : "disabled";
         user.stateRevision = (user.stateRevision || 0) + 1;
+      } else if (request.type === "delete-role") {
+        value.roles = value.roles.filter(role => role.id !== item.roleId);
+        for (const user of value.users) user.roleIds = user.roleIds.filter(id => id !== item.roleId);
       } else {
         const role = findRole(value, item.roleId);
-        if (request.type === "menus") role.menuPermissions = item.requestedMenus.slice();
-        else {
-          role.status = "normal";
-          if (item.restoreMenus) role.menuPermissions = item.restoreMenus.slice();
-        }
+        const nextMenus = item.nextRoleMenus || item.restoreMenus || (request.type === "menus" ? item.requestedMenus : null);
+        if (nextMenus) role.menuPermissions = nextMenus.slice();
+        if (request.type === "enable-role") role.status = "normal";
+        if (request.type === "disable-role") role.status = "disabled";
         role.scopeRevision = (role.scopeRevision || 0) + 1;
       }
     }
   }
 
-  function reviewRequest(id, decision, comment) {
+  function buildReviewPreview(value, request) {
+    const affected = impact(value, request.type, request.items);
+    return { impact: affected, token: JSON.stringify([request.id, affected]) };
+  }
+
+  function reviewPreview(id) {
+    const value = read();
+    const request = value.requests.find(item => item.id === id && item.status === "pending");
+    if (!request || snapshotBlockReason(request) || !matchesDependencies(value, request)) return null;
+    return buildReviewPreview(value, request);
+  }
+
+  function reviewRequest(id, decision, comment, expectedToken) {
     const person = requireActor("reviewer");
     const value = read();
     const request = pendingRequest(value, id);
     if (request.applicant.id === person.id || isBeneficiary(request, person)) throw new Error("审核员不能处理本人发起或本人受益的申请。");
     if (decision !== "approved" && decision !== "rejected") throw new Error("审核结果无效。");
+    const integrity = snapshotBlockReason(request);
+    if (decision === "approved" && integrity) throw new Error(integrity);
     const reason = text(comment);
     if (decision === "rejected" && !reason) throw new Error("请填写驳回原因。");
+    const stale = !integrity && !matchesDependencies(value, request);
+    let reviewedImpact;
+    if (decision === "approved" && !stale) {
+      const blocking = blockingRoleChangeFor(value, request);
+      if (blocking) throw roleChangeBlockError(blocking);
+      const preview = buildReviewPreview(value, request);
+      if (expectedToken !== undefined && expectedToken !== preview.token) {
+        const error = new Error("申请影响已更新，请核对最新权限后重新审核。");
+        error.code = "IAM_REVIEW_CHANGED";
+        throw error;
+      }
+      reviewedImpact = preview.impact;
+    }
     request.reviewer = { id: person.id, name: person.name };
     request.reviewedAt = now();
     request.comment = reason;
-    if (request.snapshot !== snapshot(value, request.type, request.items)) {
+    if (stale) {
       invalidate(request);
     } else {
       request.status = decision;
-      if (decision === "approved") applyRequest(value, request);
+      if (decision === "approved") {
+        request.approvedImpact = reviewedImpact;
+        applyRequest(value, request);
+      }
     }
     invalidateStale(value);
     write(value);
@@ -604,8 +772,9 @@
 
   window.BaigeIamStore = Object.freeze({
     KEY, ACTOR_KEY, DEPARTMENT_TREE, actors, actor, setActor, withWriteLock,
-    users, roles, requests, effectiveMenus, isProtectedRole, isProtectedUser, isPrivilegedMenu,
+    users, roles, requests, effectiveMenus, changedUserIdentities, isProtectedRole, isProtectedUser, isPrivilegedMenu,
     addUser, createUserWithRequest, updateUser, saveUserEdit, removeUser, toggleUser, addRole, updateRole, removeRole, toggleRole,
-    requestMembership, changeRoleMenus, saveRoleEdit, requestEnable, canReviewRequest, reviewRequest, withdrawRequest, revokeMembership, subscribe,
+    requestMembership, changeRoleMenus, previewRoleChange, saveRoleEdit, requestLifecycle, requestEnable, pendingRoleChange,
+    canReviewRequest, approvalBlockReason, blockingRoleChange, reviewPreview, reviewRequest, withdrawRequest, revokeMembership, subscribe,
   });
 })();

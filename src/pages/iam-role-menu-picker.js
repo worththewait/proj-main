@@ -1,33 +1,13 @@
 (() => {
   "use strict";
 
-  function menuTree(groups) {
-    return groups.map(group => {
-      const children = [];
-      const parents = new Map();
-      for (const item of group.items) {
-        if (!item.parentId) {
-          children.push(item);
-          continue;
-        }
-        if (!parents.has(item.parentId)) {
-          const parent = { id: `${group.id}/${item.parentId}`, label: item.parentLabel, children: [] };
-          parents.set(item.parentId, parent);
-          children.push(parent);
-        }
-        parents.get(item.parentId).children.push(item);
-      }
-      return { id: group.id, label: group.label, children };
-    });
-  }
-
   const leaves = node => node.children ? node.children.flatMap(leaves) : [node];
   const branches = node => node.children ? [node, ...node.children.flatMap(branches)] : [];
 
   function mount(target, { selected = [], disabled = false, onChange = () => {} } = {}) {
     const catalog = window.BaigeIamMenuCatalog;
     const { escapeHtml: escape, icon } = window.BaigeUI;
-    const groups = menuTree(catalog.groups());
+    const groups = catalog.tree(catalog.groups());
     const entries = groups.flatMap(leaves);
     const items = new Map(entries.map(item => [item.key, item]));
     const nodes = new Map(groups.flatMap(branches).map(node => [node.id, node]));

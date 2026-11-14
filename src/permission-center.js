@@ -2,7 +2,7 @@
   "use strict";
 
   const store = window.BaigePermissionStore;
-  if (!store) return;
+  if (!store || window.BaigePermissions?.roleQuery) return;
   const { escapeHtml: escape, icon } = window.BaigeUI;
   const data = window.BaigeData;
   const accountProfile = window.BaigeAccountProfile || store.currentApplicant();

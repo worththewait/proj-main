@@ -10,7 +10,7 @@
   const closeButton = document.querySelector("#closeHomeAccess");
 
   const policy = window.BaigePermissions;
-  const rolePreview = typeof policy.previewUserId === "string";
+  const roleScoped = Boolean(policy.roleQuery);
   const permissionStore = window.BaigePermissionStore;
   const pendingApplications = new Set();
   const listeners = new Set();
@@ -38,7 +38,7 @@
   }
 
   function isPending(destination) {
-    if (rolePreview) return false;
+    if (roleScoped) return false;
     if (pendingApplications.has(destination.key)) return true;
     try {
       return Boolean(permissionStore?.hasPending(
@@ -106,7 +106,7 @@
     if (!currentRequest) return;
     const pending = isPending(currentRequest);
     document.querySelector("#homeAccessTitle").textContent = pending ? "申请待审批" : "暂无该功能权限";
-    if (rolePreview) {
+    if (roleScoped) {
       description.textContent = `当前演示用户尚未获得「${currentRequest.name}」的访问权限。`;
       applyButton.hidden = true;
       feedback.textContent = "";
@@ -158,7 +158,7 @@
   }
 
   async function apply() {
-    if (rolePreview) return;
+    if (roleScoped) return;
     const destination = currentRequest;
     if (!destination || busy || isPending(destination)) return;
     const integration = window.BaigeRequestAccess;
@@ -224,13 +224,17 @@
       try { callback({ route: "", child: "", status: "changed" }); } catch { /* noop */ }
     });
   });
-  if (rolePreview) window.BaigeIamStore?.subscribe(() => {
+  function updateRoleAccess() {
     if (currentRequest && policy.canOpen(currentRequest.route, currentRequest.child)) close(true);
     listeners.forEach((callback) => callback({ route: "", child: "", status: "changed" }));
-  });
+  }
+  if (roleScoped) {
+    window.BaigeIamStore?.subscribe(updateRoleAccess);
+  }
 
   window.BaigeHomeAccess = Object.freeze({
-    canOpen,
+    canOpen, roleScoped,
+    refresh() { if (roleScoped) updateRoleAccess(); },
     summary: policy.summary,
     status,
     navigate,

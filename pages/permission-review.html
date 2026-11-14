@@ -6,7 +6,8 @@
   <title>权限审核 · 百舸后台</title>
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="../admin.css" />
-  <link rel="stylesheet" href="../permission-review.css?v=20261104-no-stats" />
+  <link rel="stylesheet" href="../permission-review.css?v=20261114-pagination" />
+  <link rel="stylesheet" href="../admin-pagination.css?v=20261114" />
 </head>
 <body class="module-page" data-page="permission-review">
   <main class="module-main">
@@ -28,7 +29,7 @@
             <tbody id="prTable"></tbody>
           </table>
         </div>
-        <footer class="pr-foot"><span id="prSummary"></span><span>审批结果会实时同步到申请人的「我的申请」</span></footer>
+        <footer class="pr-foot admin-pagination-footer"><div class="admin-pagination-notes"><span id="prSummary" role="status"></span><span>审批结果会实时同步到申请人的「我的申请」</span></div><nav class="admin-pagination" id="prPager" aria-label="权限申请分页"></nav></footer>
       </div>
     </div>
   </main>
@@ -49,6 +50,7 @@
 
   <script src="../src/ui.js"></script>
   <script src="../src/permission-store.js?v=20261102-permission"></script>
-  <script src="../src/pages/permission-review.js?v=20261104-no-stats"></script>
+  <script src="../src/pages/admin-pagination.js?v=20261114"></script>
+  <script src="../src/pages/permission-review.js?v=20261114-pagination"></script>
 </body>
 </html>

@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数据摆渡 · 百舸后台</title>
+  <link rel="stylesheet" href="../styles.css" />
+  <link rel="stylesheet" href="../user-role-admin.css?v=20261114-pagination" />
+  <link rel="stylesheet" href="../data-transfer.css?v=20261114-library-separators" />
+  <link rel="stylesheet" href="../data-transfer-export.css?v=20261114-export-categories" />
+  <link rel="stylesheet" href="../data-transfer-history.css?v=20261114-export-manifest" />
+</head>
+<body class="module-page transfer-body">
+  <main class="module-main">
+    <div class="content-scroll">
+      <div class="content-inner transfer-page">
+        <div class="transfer-workspace">
+          <header class="transfer-title">
+            <div class="transfer-title-copy">
+              <div class="transfer-title-line">
+                <h1>数据摆渡</h1>
+                <span class="transfer-environment" id="transferEnvironment">内网 · 演示环境</span>
+              </div>
+              <p>外网导出摆渡包，内网核对归属后导入。</p>
+            </div>
+            <div class="transfer-entry" id="transferImportEntry">
+              <button class="primary-button" type="button" id="transferChooseFile" aria-describedby="transferFileFormat"><span data-icon="upload" aria-hidden="true"></span>选择摆渡包</button>
+              <span id="transferFileFormat">支持 JSON 格式，单个摆渡包不超过 5 MB</span>
+              <input type="file" id="transferFile" accept=".json,application/json" hidden />
+            </div>
+            <div class="transfer-entry" id="transferExportEntry" hidden>
+              <button class="primary-button" type="button" id="transferDownload" disabled><span data-icon="download" aria-hidden="true"></span>下载摆渡包</button>
+            </div>
+          </header>
+
+          <nav class="transfer-tabs" aria-label="摆渡操作">
+            <button id="transferExportTab" type="button" aria-pressed="false" aria-controls="transferExport">导出</button>
+            <button id="transferImportTab" type="button" aria-pressed="true" aria-controls="transferImport">导入</button>
+            <button id="transferHistoryTab" type="button" aria-pressed="false" aria-controls="transferHistory">摆渡记录<span class="transfer-tab-count" id="transferHistoryCount" hidden></span></button>
+          </nav>
+
+          <section id="transferExport" hidden></section>
+
+          <section id="transferImport" aria-label="导入">
+            <p class="transfer-feedback is-error" id="transferImportError" role="alert" hidden></p>
+
+            <section class="transfer-panel" id="transferPreview" aria-labelledby="transferImportTitle">
+              <header class="transfer-review-header">
+                <div class="transfer-review-heading">
+                  <h2 id="transferImportTitle">导入清单</h2>
+                  <div class="transfer-package">
+                    <span class="transfer-package-icon"><span data-icon="file" aria-hidden="true"></span></span>
+                    <div class="transfer-package-copy">
+                      <span class="transfer-subline">当前摆渡包</span>
+                      <strong id="transferPackageName">外网摆渡示例包</strong>
+                      <span class="transfer-subline" id="transferPackageInfo"></span>
+                    </div>
+                  </div>
+                  <button class="primary-button" type="button" id="transferConfirm">开始导入</button>
+                </div>
+                <div class="transfer-review-overview">
+                  <div id="transferImportCount" class="transfer-review-counts" role="status"></div>
+                  <p id="transferReviewNotes" class="transfer-review-notes"></p>
+                </div>
+              </header>
+              <div class="transfer-review-tools">
+                <div class="transfer-review-list-head">
+                  <span id="transferVisibleCount" role="status"></span>
+                  <button type="button" class="transfer-link" id="transferPreviewAll" hidden>查看全部</button>
+                  <button type="button" class="transfer-link" id="transferBulkToggle" hidden>批量新建</button>
+                </div>
+                <div class="transfer-review-filters">
+                  <label class="transfer-search">
+                    <span data-icon="search" aria-hidden="true"></span>
+                    <input id="transferSearch" class="iam-input" type="search" placeholder="搜索归属、库或文件" aria-label="搜索分类、归属、库或文档" />
+                  </label>
+                  <select id="transferQueues" class="iam-input" aria-label="筛选导入状态"></select>
+                </div>
+              </div>
+              <div class="transfer-bulk" id="transferBulk" hidden>
+                <label><input id="transferSelectPending" type="checkbox" /> 全选当前清单中可新建的库</label>
+                <div>
+                  <button class="iam-btn" id="transferBulkCancel" type="button">取消</button>
+                  <button class="iam-btn is-primary" id="transferNewSelected" type="button" disabled>设为新建</button>
+                </div>
+                <span class="transfer-subline" id="transferBulkCount"></span>
+              </div>
+              <div class="transfer-review-items" id="transferImportRows"></div>
+            </section>
+
+            <section class="transfer-panel transfer-task" id="transferProgress" aria-labelledby="transferProgressTitle" hidden>
+              <header class="transfer-panel-header">
+                <div><h2 id="transferProgressTitle" tabindex="-1">导入进度</h2><p id="transferProgressMeta"></p></div>
+                <span class="transfer-task-badge"><span class="transfer-dot" aria-hidden="true"></span>导入中</span>
+              </header>
+              <div class="transfer-progress-body">
+                <div class="transfer-progress-label"><strong id="transferProgressPhase"></strong><span id="transferProgressPercent"></span></div>
+                <progress id="transferProgressBar" max="100" value="0" aria-label="导入进度"></progress>
+                <div class="transfer-progress-meta"><span id="transferProgressCount"></span><span id="transferProgressElapsed"></span></div>
+                <p id="transferCurrentFile"></p>
+              </div>
+              <div class="transfer-task-files">
+                <h3>最近处理</h3>
+                <ul id="transferRecentFiles"></ul>
+              </div>
+            </section>
+
+            <section class="transfer-panel transfer-task" id="transferResult" aria-labelledby="transferResultTitle" hidden>
+              <header class="transfer-panel-header">
+                <div><h2 id="transferResultTitle" tabindex="-1">导入结果</h2><p id="transferResultMeta"></p></div>
+                <button class="iam-btn" type="button" id="transferViewHistory">查看摆渡记录</button>
+              </header>
+              <div id="transferResultFeedback" class="transfer-result-feedback" role="status"></div>
+              <div class="transfer-list-toolbar">
+                <div id="transferResultQueues" class="transfer-queues" role="group" aria-label="按导入结果查看"></div>
+              </div>
+              <div id="transferResultRows"></div>
+            </section>
+          </section>
+
+          <section id="transferHistory" hidden></section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <dialog class="iam-dialog transfer-dialog" id="transferTargetDialog" aria-labelledby="transferTargetTitle">
+    <header class="iam-dialog-head">
+      <h2 id="transferTargetTitle">选择导入位置</h2>
+      <button class="iam-dialog-close" type="button" id="transferCloseTarget" aria-label="关闭"><span data-icon="close" aria-hidden="true"></span></button>
+    </header>
+    <div class="iam-dialog-body">
+      <p class="transfer-target-source" id="transferTargetSource"></p>
+      <input class="iam-input" id="transferTargetSearch" type="search" placeholder="搜索同归属下的内网知识库" aria-label="搜索同归属下的内网知识库" />
+      <div id="transferTargetOptions" class="transfer-target-options"></div>
+    </div>
+    <footer class="iam-dialog-foot transfer-dialog-footer">
+      <button class="iam-btn" type="button" data-target-choice="skip">本次跳过</button>
+      <button class="iam-btn" type="button" id="transferNewTarget" data-target-choice="new">新建同名库</button>
+    </footer>
+  </dialog>
+
+  <script src="../src/ui.js"></script>
+  <script src="../src/data-transfer-demo.js?v=20261114-permission-examples"></script>
+  <script src="../src/pages/data-transfer-export.js?v=20261114-transfer-categories"></script>
+  <script src="../src/pages/data-transfer-history.js?v=20261114-export-manifest"></script>
+  <script src="../src/pages/data-transfer.js?v=20261114-unmatched-people"></script>
+</body>
+</html>

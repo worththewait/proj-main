@@ -5,9 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>角色管理 · 百舸后台</title>
   <link rel="stylesheet" href="../styles.css" />
-  <link rel="stylesheet" href="../admin.css" />
-  <link rel="stylesheet" href="../user-role-admin.css?v=20261112-iam-approval" />
-  <link rel="stylesheet" href="../iam-role-editor.css?v=20261113" />
+  <link rel="stylesheet" href="../admin.css?v=20261113-requests-drawer" />
+  <link rel="stylesheet" href="../user-role-admin.css?v=20261114-pagination" />
+  <link rel="stylesheet" href="../iam-role-editor.css?v=20261113-approval-simple" />
+  <link rel="stylesheet" href="../iam-menu-comparison.css?v=20261113" />
+  <link rel="stylesheet" href="../admin-pagination.css?v=20261114" />
 </head>
 <body class="module-page" data-page="iam-roles">
   <main class="module-main">
@@ -21,14 +23,14 @@
           <div class="iam-toolbar-actions"><button class="iam-btn" id="iamRoleReset" type="button">重置</button><button class="iam-btn is-primary" id="iamRoleQuery" type="button">查询</button></div>
         </div>
         <section class="iam-panel iam-list-card">
-          <div class="iam-list-head"><h2>角色列表<small id="iamRoleCount"></small></h2><button class="iam-btn is-primary" id="iamNewRole" type="button"><span data-icon="plus" aria-hidden="true"></span>新建角色</button></div>
+          <div class="iam-list-head"><h2>角色列表<small id="iamRoleCount"></small></h2><div class="iam-list-head-actions"><button class="iam-btn" id="iamRoleRequests" type="button" aria-haspopup="dialog">我的申请</button><button class="iam-btn is-primary" id="iamNewRole" type="button"><span data-icon="plus" aria-hidden="true"></span>新建角色</button></div></div>
           <div class="iam-table-wrap">
             <table class="iam-table">
               <thead><tr><th>角色编号</th><th>角色名称</th><th>权限字符</th><th>显示顺序</th><th>创建时间</th><th>状态</th><th>操作</th></tr></thead>
               <tbody id="iamRoleRows"></tbody>
             </table>
           </div>
-          <div class="iam-list-foot"><span id="iamRoleSummary"></span><span>数据为浏览器本地演示</span></div>
+          <div class="iam-list-foot admin-pagination-footer"><div class="admin-pagination-notes"><span id="iamRoleSummary" role="status"></span><span>数据为浏览器本地演示</span></div><nav class="admin-pagination" id="iamRolePager" aria-label="角色列表分页"></nav></div>
         </section>
       </div>
     </div>
@@ -37,7 +39,7 @@
   <dialog class="iam-dialog" id="iamRoleDialog" aria-labelledby="iamRoleDialogTitle">
     <header class="iam-dialog-head"><h2 id="iamRoleDialogTitle">新建角色</h2><button class="iam-dialog-close" type="button" data-iam-close aria-label="关闭">×</button></header>
     <div class="iam-dialog-body" id="iamRoleDialogBody"></div>
-    <footer class="iam-dialog-foot"><button class="iam-btn" type="button" id="iamRoleCancel" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamRoleSave">保存</button></footer>
+    <footer class="iam-dialog-foot"><p class="iam-role-save-warning" id="iamRoleSaveWarning" role="status" hidden></p><button class="iam-btn" type="button" id="iamRoleCancel" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamRoleSave">保存</button></footer>
   </dialog>
 
   <dialog class="iam-dialog iam-dialog--role-users" id="iamRoleUsersDialog" aria-labelledby="iamRoleUsersTitle">
@@ -48,9 +50,10 @@
         <label class="iam-field"><span>手机号码</span><input class="iam-input" id="iamRoleUserPhone" type="search" placeholder="输入手机号码" autocomplete="off" /></label>
         <div class="iam-toolbar-actions"><button class="iam-btn" id="iamRoleUserReset" type="button">重置</button><button class="iam-btn is-primary" id="iamRoleUserQuery" type="button">查询</button></div>
       </div>
-      <div class="iam-role-users-toolbar"><span class="iam-inline-feedback" id="iamRoleUsersFeedback" role="status"></span><button class="iam-btn is-primary" id="iamAddRoleUsers" type="button">申请添加用户</button><button class="iam-btn is-danger" id="iamCancelRoleUsers" type="button">撤销授权</button></div>
+      <div class="iam-role-users-toolbar"><span class="iam-inline-feedback" id="iamRoleUsersFeedback" role="status"></span><button class="iam-btn is-primary" id="iamAddRoleUsers" type="button">申请添加用户</button><button class="iam-btn" id="iamCancelRoleUsers" type="button">申请撤销授权</button></div>
+      <p class="iam-role-change-notice" id="iamRoleUsersChange" role="status" hidden></p>
       <div class="iam-role-users-table-wrap"><table class="iam-table iam-role-users-table"><thead><tr><th class="iam-assign-check"><input id="iamRoleUsersAll" type="checkbox" aria-label="选择本页已分配用户" /></th><th>用户名称</th><th>用户昵称</th><th>所属部门</th><th>手机号码</th><th>创建时间</th><th>授权状态</th><th>操作</th></tr></thead><tbody id="iamRoleUsersRows"></tbody></table></div>
-      <div class="iam-role-users-foot"><span id="iamRoleUsersSummary"></span><div class="iam-pager" id="iamRoleUsersPager"></div></div>
+      <div class="admin-pagination-footer is-dialog"><span id="iamRoleUsersSummary" role="status"></span><nav class="admin-pagination" id="iamRoleUsersPager" aria-label="角色成员分页"></nav></div>
     </div>
   </dialog>
 
@@ -63,8 +66,10 @@
         <div class="iam-toolbar-actions"><button class="iam-btn" id="iamAddUserReset" type="button">重置</button><button class="iam-btn is-primary" id="iamAddUserQuery" type="button">查询</button></div>
       </div>
       <div class="iam-assign-info" id="iamAddUsersInfo"></div>
-      <div class="iam-select-users-table-wrap"><table class="iam-table iam-select-users-table"><thead><tr><th class="iam-assign-check"><input id="iamAddUsersAll" type="checkbox" aria-label="选择本页全部用户" /></th><th>用户名称</th><th>用户昵称</th><th>所属部门</th><th>手机号码</th><th>创建时间</th><th>状态</th></tr></thead><tbody id="iamAddUsersRows"></tbody></table></div>
-      <label class="iam-form-field iam-auth-reason"><span>申请理由 <em>*</em></span><textarea class="iam-input iam-reason-input" id="iamAddUsersReason" maxlength="240" placeholder="说明为这些用户授予角色的原因"></textarea></label>
+      <p class="iam-role-change-notice" id="iamAddUsersChange" role="status" hidden></p>
+      <div class="iam-select-users-table-wrap"><table class="iam-table iam-select-users-table"><thead><tr><th class="iam-assign-check"><input id="iamAddUsersAll" type="checkbox" aria-label="选择本页可分配的用户" /></th><th>用户名称</th><th>用户昵称</th><th>所属部门</th><th>手机号码</th><th>创建时间</th><th>状态</th></tr></thead><tbody id="iamAddUsersRows"></tbody></table></div>
+      <div class="admin-pagination-footer is-dialog"><span id="iamAddUsersSummary" role="status"></span><nav class="admin-pagination" id="iamAddUsersPager" aria-label="候选用户分页"></nav></div>
+      <label class="iam-form-field iam-auth-reason"><span>申请原因 <em>*</em></span><textarea class="iam-input iam-reason-input" id="iamAddUsersReason" maxlength="240" placeholder="说明为这些用户授予角色的原因"></textarea></label>
       <p class="iam-form-feedback" id="iamAddUsersFeedback" role="status"></p>
     </div>
     <footer class="iam-dialog-foot"><button class="iam-btn" type="button" data-iam-close>取消</button><button class="iam-btn is-primary" type="button" id="iamAddUsersSave">提交授权申请</button></footer>
@@ -74,10 +79,12 @@
   <script src="../src/ui.js"></script>
   <script src="../src/data.js?v=20261113-role-editor"></script>
   <script src="../src/feature-config.js?v=20261109-diagram-tools"></script>
-  <script src="../src/iam-menu-catalog.js?v=20261113"></script>
-  <script src="../src/iam-store.js?v=20261113-role-editor"></script>
-  <script src="../src/pages/iam-management.js?v=20261112-iam-approval"></script>
-  <script src="../src/pages/iam-role-menu-picker.js?v=20261113"></script>
-  <script src="../src/pages/role-admin.js?v=20261113-role-editor"></script>
+  <script src="../src/iam-menu-catalog.js?v=20261113-menu-comparison"></script>
+  <script src="../src/pages/iam-menu-comparison.js?v=20261113-review-checks"></script>
+  <script src="../src/iam-store.js?v=20261113-role-pending"></script>
+  <script src="../src/pages/iam-management.js?v=20261114-role-list"></script>
+  <script src="../src/pages/iam-role-menu-picker.js?v=20261113-menu-comparison"></script>
+  <script src="../src/pages/admin-pagination.js?v=20261114"></script>
+  <script src="../src/pages/role-admin.js?v=20261114-pagination"></script>
 </body>
 </html>

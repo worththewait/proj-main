@@ -1,4 +1,5 @@
 /* 后台用户管理与角色管理 */
+body.module-page:is([data-page="iam-users"], [data-page="iam-roles"]) { min-width: 0; }
 .iam-page { padding: 18px 24px 34px; color: var(--ink); }
 .iam-crumb { display: flex; align-items: center; gap: 7px; margin: 0 0 12px; color: var(--muted); font-size: 12px; }
 .iam-crumb span { color: #aeb8c8; }
@@ -44,6 +45,7 @@
 .iam-btn:disabled { border-color: var(--line); background: var(--surface-subtle); color: var(--muted); cursor: not-allowed; }
 .iam-list-card { overflow: hidden; }
 .iam-list-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 15px 16px 13px; }
+.iam-list-head-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .iam-list-head h2 { margin: 0; color: var(--ink); font-size: 19px; font-weight: 650; }
 .iam-list-head small { margin-left: 7px; color: var(--muted); font-size: 11.5px; font-weight: 400; }
 .iam-table-wrap { overflow-x: auto; }
@@ -56,14 +58,22 @@
 .iam-dept-name { display: inline-block; padding: 2px 7px; border-radius: 4px; background: #f1f4f9; color: #5d6c82; font-size: 11px; }
 .iam-phone { font-variant-numeric: tabular-nums; color: #56657c; }
 .iam-time { font-variant-numeric: tabular-nums; color: #64748b; white-space: nowrap; }
-.iam-status-cell { display: flex; align-items: center; gap: 7px; }
+.iam-status-switch {
+  display: inline-flex; flex-direction: row-reverse; align-items: center; justify-content: space-between; gap: 5px;
+  min-width: 68px; min-height: 28px; padding: 3px 8px 3px 3px; border: 0; border-radius: 6px;
+  background: var(--surface-subtle); color: var(--muted); font: inherit; font-size: 12px; font-weight: 550;
+  white-space: nowrap; cursor: pointer;
+}
+.iam-status-switch::after { content: ""; flex: none; width: 20px; height: 20px; border: 1px solid var(--line-strong); border-radius: 4px; background: var(--surface); }
+.iam-status-switch[aria-checked="true"] { flex-direction: row; padding: 3px 3px 3px 8px; background: var(--accent); color: var(--surface); }
+.iam-status-switch[aria-checked="true"]::after { border-color: var(--surface); }
+.iam-status-switch:hover:enabled { background: var(--accent-soft); color: var(--accent-hover); }
+.iam-status-switch[aria-checked="true"]:hover:enabled { background: var(--accent-hover); color: var(--surface); }
+.iam-status-switch:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.iam-status-switch:disabled { cursor: default; }
 .iam-status-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 35px; height: 22px; padding: 0 6px; border-radius: 4px; background: #eef4ff; color: #245bff; font-size: 10.5px; }
 .iam-status-pill.is-disabled { background: #f2f4f7; color: #7a8799; }
 .iam-status-pill.is-pending { background: #fff4dc; color: #8c5b08; }
-.iam-switch { position: relative; width: 32px; height: 18px; padding: 0; border: 0; border-radius: 9px; background: #cbd5e3; cursor: pointer; }
-.iam-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: .15s; }
-.iam-switch[aria-pressed="true"] { background: #245bff; }
-.iam-switch[aria-pressed="true"]::after { transform: translateX(14px); }
 .iam-actions { display: flex; align-items: center; gap: 5px; }
 .iam-icon-action { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid transparent; border-radius: 5px; background: var(--surface); cursor: pointer; }
 .iam-icon-action .icon { width: 15px; height: 15px; }
@@ -219,6 +229,12 @@
 .iam-user-role-options label:has(:disabled) { color: var(--muted); cursor: default; }
 .iam-user-role-options input { flex: none; margin: 0; accent-color: var(--accent); }
 .iam-user-role-options p { margin: 6px 8px; color: var(--muted); font-size: 13px; }
+.iam-role-option:not([hidden]) { display: flex; align-items: center; gap: 4px; }
+.iam-role-option label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.iam-role-option > span { flex: none; padding-inline-end: 6px; font-size: 12px; }
+.iam-role-change-notice { margin: 0 0 10px; padding: 8px 10px; border-radius: 6px; background: #fff4dc; color: #8c5b08; font-size: 12px; }
+.iam-role-change-notice .iam-request-link { margin-inline-start: 4px; }
+.iam-assign-info[hidden] { display: none; }
 .iam-inline-field .iam-user-role-reason { height: 66px; }
 .iam-inline-field .iam-user-role-reason::placeholder { color: var(--muted); }
 @media (max-width: 760px) {
@@ -242,12 +258,6 @@
 .iam-assign-table td { height: 48px; font-size: 12.5px; }
 .iam-assign-check { width: 48px; text-align: center !important; }
 .iam-assign-check input { width: 15px; height: 15px; accent-color: var(--accent); }
-.iam-pager { display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding: 14px 0 2px; }
-.iam-page-btn { display: grid; place-items: center; min-width: 31px; height: 31px; padding: 0 7px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); color: #4b5b71; font: inherit; font-size: 12px; cursor: pointer; }
-.iam-page-btn:hover:not(:disabled) { border-color: #9fbcf3; color: var(--accent); }
-.iam-page-btn.is-active { border-color: var(--accent); background: #eef4ff; color: var(--accent); }
-.iam-page-btn:disabled { color: #c3ccda; cursor: not-allowed; }
-.iam-page-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (max-width: 620px) {
   .iam-dialog--assign { width: calc(100vw - 24px); }
   .iam-assign-body { padding: 14px; }
@@ -267,8 +277,6 @@
 .iam-role-users-table td { height: 46px; }
 .iam-status-pill.is-green { background: #edf8f1; color: #1f7a4c; }
 .iam-icon-action.is-auth { border-color: #f1df9f; color: #b2840e; background: #fffaf0; }
-.iam-role-users-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; color: var(--muted); font-size: 11.5px; }
-.iam-role-users-foot .iam-pager { padding: 0; }
 @media (max-width: 700px) {
   .iam-dialog--role-users { width: calc(100vw - 24px); }
   .iam-role-users-body { padding: 12px; }

@@ -10,6 +10,7 @@
   let currentId = "";
   let decisions = {};
   let toastTimer = null;
+  const pager = window.BaigeAdminPagination.create(get("prPager"), render);
 
   function statusHtml(status) {
     return `<span class="pr-status ${escape(status)}">${escape(STATUS[status] || status)}</span>`;
@@ -38,7 +39,8 @@
   };
   function renderTable() {
     const rows = filtered();
-    get("prTable").innerHTML = rows.length ? rows.map((request) => { const reviewed = request.status !== "pending"; return `<tr data-pr-id="${escape(request.id)}"><td class="pr-id">${escape(request.id)}</td><td class="pr-applicant"><strong>${escape(applicantName(request))}</strong><small>${escape(request.applicant?.email || "")}</small></td><td><div class="pr-items">${escape(itemSummary(request))}</div></td><td>${escape(request.createdAt || "")}</td><td>${statusHtml(request.status)}</td><td>${escape(request.comment || "—")}</td><td><button class="pr-action ${reviewed ? "is-view" : "is-audit"}" type="button" data-pr-open="${escape(request.id)}"><span class="pr-action-icon">${reviewed ? actionIcons.view : actionIcons.audit}</span><span>${reviewed ? "查看" : "审核"}</span></button></td></tr>`; }).join("") : `<tr><td colspan="7" class="pr-empty">没有符合条件的申请</td></tr>`;
+    const pageRows = pager.slice(rows);
+    get("prTable").innerHTML = pageRows.length ? pageRows.map((request) => { const reviewed = request.status !== "pending"; return `<tr data-pr-id="${escape(request.id)}"><td class="pr-id">${escape(request.id)}</td><td class="pr-applicant"><strong>${escape(applicantName(request))}</strong><small>${escape(request.applicant?.email || "")}</small></td><td><div class="pr-items">${escape(itemSummary(request))}</div></td><td>${escape(request.createdAt || "")}</td><td>${statusHtml(request.status)}</td><td>${escape(request.comment || "—")}</td><td><button class="pr-action ${reviewed ? "is-view" : "is-audit"}" type="button" data-pr-open="${escape(request.id)}"><span class="pr-action-icon">${reviewed ? actionIcons.view : actionIcons.audit}</span><span>${reviewed ? "查看" : "审核"}</span></button></td></tr>`; }).join("") : `<tr><td colspan="7" class="pr-empty">没有符合条件的申请</td></tr>`;
     const statusValue = get("prStatus").value;
     get("prSummary").textContent = `共 ${rows.length} 条申请${statusValue ? ` · 当前筛选：${STATUS[statusValue] || statusValue}` : ""}`;
   }
@@ -149,13 +151,17 @@
     if (!button) return;
     setGroup(button.dataset.prGroup, button.dataset.prGroupAll);
   });
-  for (const id of ["prApplicant", "prFunction"]) get(id).addEventListener("input", render);
-  get("prStatus").addEventListener("change", render);
+  function applyFilters() {
+    pager.reset();
+    render();
+  }
+  for (const id of ["prApplicant", "prFunction"]) get(id).addEventListener("input", applyFilters);
+  get("prStatus").addEventListener("change", applyFilters);
   get("prReset").addEventListener("click", () => {
     get("prApplicant").value = "";
     get("prFunction").value = "";
     get("prStatus").value = "";
-    render();
+    applyFilters();
   });
   dialog.addEventListener("click", (event) => {
     if (event.target.closest("[data-pr-close]")) { dialog.close(); return; }

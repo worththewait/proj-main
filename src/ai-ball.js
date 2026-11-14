@@ -1,6 +1,6 @@
 (() => {
   "use strict";
-  if (window.__baigeAiBallInited || typeof window.BaigePermissions?.previewUserId === "string") return;
+  if (window.__baigeAiBallInited || window.BaigePermissions?.roleQuery) return;
   window.__baigeAiBallInited = true;
 
   const ENTRIES_KEY = "qb-entries";

@@ -14,7 +14,7 @@ function element() {
     setAttribute() {}, querySelectorAll() { return []; }, focus() {}, append() {}, before() {}, remove() { this.removed = true; },
   };
 }
-function app({denyFrontier = false, hash = '', preview = false} = {}) {
+function app({denyFrontier = false, hash = '', preview = false, account = false, fromSession = false} = {}) {
   const nodes = new Map();
   const doc = element();
   doc.querySelector = selector => {
@@ -34,10 +34,13 @@ function app({denyFrontier = false, hash = '', preview = false} = {}) {
   const location = {hash};
   let updatePermissions = () => {};
   let menus = [];
-  if (preview) {
-    win.location = {search: '?iam-user=u-demo'};
+  let status = 'normal';
+  if (preview || account) {
+    win.location = {pathname: '/index.html', search: preview ? '?iam-user=u-demo' : fromSession ? '' : '?iam-account=u-demo'};
+    win.sessionStorage = {getItem: key => fromSession && key === 'baige.iam.client-account' ? 'u-demo' : null};
+    win.localStorage = {getItem: () => JSON.stringify({'admin@cimtec.net.cn': {'writing:': true}})};
     win.BaigeIamStore = {
-      users: () => [{id: 'u-demo', nickname: '演示用户', status: 'normal'}],
+      users: () => status ? [{id: 'u-demo', nickname: '演示用户', status}] : [],
       effectiveMenus: () => menus,
       subscribe(callback) { updatePermissions = callback; },
     };
@@ -56,8 +59,27 @@ function app({denyFrontier = false, hash = '', preview = false} = {}) {
     if (selector === '[data-nav]' && dataset.nav) return {dataset};
     return null;
   }}});
-  return {nav, frames, alerts, location, click, win, setMenus(value) { menus = value; updatePermissions(); }};
+  return {nav, frames, alerts, location, click, win, accountRoot: doc.querySelector('#accountRoot'),
+    setMenus(value) { menus = value; updatePermissions(); },
+    setStatus(value) { status = value; updatePermissions(); },
+  };
 }
+
+test('a disabled or deleted preview account loses the default home entry and its loaded frame', () => {
+  const a = app({preview: true, hash: '#home'});
+  assert.match(a.nav.innerHTML, /data-nav="home"/);
+  const home = a.frames[0];
+  a.setStatus('disabled');
+  assert.equal(a.win.BaigePermissions.canOpen('home'), false);
+  assert.equal(home.removed, true);
+  assert.doesNotMatch(a.nav.innerHTML, /data-nav="home"/);
+  a.setStatus('');
+  assert.equal(a.win.BaigePermissions.canOpen('home'), false);
+  a.setStatus('normal');
+  assert.match(a.nav.innerHTML, /data-nav="home"/);
+  assert.notEqual(a.frames.at(-1), home);
+  assert.equal(a.alerts.length, 0);
+});
 
 test('sidebar shows granted and unavailable children with clear status', () => {
   const a = app();
@@ -173,4 +195,45 @@ test('role preview sends current child grants to the mounted tool catalog', () =
   assert.deepEqual(Array.from(tools.messages.at(-1).allowedChildren), ['OCR识别']);
   a.setMenus(['smart-tools:OCR识别', 'smart-tools:文档翻译']);
   assert.deepEqual(Array.from(tools.messages.at(-1).allowedChildren), ['文档翻译', 'OCR识别']);
+});
+
+test('a selected IAM account uses approved permissions in the normal client and ignores legacy grants', () => {
+  const client = app({hash: '#writing', account: true});
+  assert.equal(client.win.BaigePermissions.accountUserId, 'u-demo');
+  assert.equal(client.win.BaigePermissions.previewUserId, null);
+  assert.equal(client.accountRoot.hidden, false);
+  assert.equal(client.location.hash, '#home');
+  assert.doesNotMatch(client.nav.innerHTML, /data-nav="writing"/);
+  client.setMenus(['writing']);
+  assert.match(client.nav.innerHTML, /data-nav="writing"/);
+  client.click({nav: 'writing'});
+  const writing = client.frames.at(-1);
+  assert.match(writing.src, /[?&]iam-account=u-demo/);
+  client.setStatus('disabled');
+  assert.equal(writing.removed, true);
+  assert.doesNotMatch(client.nav.innerHTML, /data-nav="(?:home|writing)"/);
+  client.setStatus('normal');
+  assert.match(client.nav.innerHTML, /data-nav="writing"/);
+});
+
+test('an account selected for the tab stays scoped when the console is reopened without a query', () => {
+  const client = app({account: true, fromSession: true});
+  assert.equal(client.win.BaigePermissions.accountUserId, 'u-demo');
+  assert.equal(client.win.BaigePermissions.canOpen('writing'), false);
+  assert.match(client.frames[0].src, /[?&]iam-account=u-demo/);
+});
+
+test('a revoked child removes its hidden frame even while another child remains granted', () => {
+  const client = app({account: true});
+  client.setMenus(['digital:标准编制', 'digital:专利编制', 'smart-tools:OCR识别', 'smart-tools:文档翻译']);
+  client.click({parent: 'digital', child: '标准编制'});
+  const digital = client.frames.at(-1);
+  client.click({nav: 'smart-tools'});
+  const toolCatalog = client.frames.at(-1);
+  client.click({nav: 'home'});
+  client.setMenus(['digital:专利编制', 'smart-tools:OCR识别']);
+  assert.equal(digital.removed, true);
+  assert.equal(toolCatalog.removed, true);
+  assert.match(client.nav.innerHTML, /data-child="专利编制"/);
+  assert.doesNotMatch(client.nav.innerHTML, /data-child="标准编制"/);
 });

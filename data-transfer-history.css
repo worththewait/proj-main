@@ -1,0 +1,256 @@
+.transfer-history-panel {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+}
+.transfer-history-header h2 { font-size: 18px; }
+.transfer-history-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px 16px;
+  min-height: 38px;
+}
+.transfer-history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.transfer-history-search { position: relative; width: min(260px, 100%); }
+.transfer-history-search > .icon {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.transfer-history-search .iam-input {
+  padding-left: 32px;
+  width: 100%;
+}
+.transfer-history-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.transfer-history-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  width: 100%;
+  min-width: 680px;
+  font-size: 13px;
+}
+.transfer-history-table :is(th, td) {
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  padding: 8px 12px;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+  vertical-align: middle;
+}
+.transfer-history-table thead th {
+  background: var(--surface-subtle);
+  color: var(--muted);
+  font-size: 12px;
+  padding-block: 10px;
+  white-space: nowrap;
+}
+.transfer-history-table tbody tr:last-child td { border-bottom: 0; }
+.transfer-history-table tbody tr:hover td { background: var(--canvas); }
+.transfer-history-table th:nth-child(1) { width: 28%; }
+.transfer-history-table th:nth-child(2) { width: 10%; }
+.transfer-history-table th:nth-child(3) { width: 18%; }
+.transfer-history-table th:nth-child(4) { width: 12%; }
+.transfer-history-table th:nth-child(6) { width: 12%; }
+.transfer-history-table th, .transfer-history-table strong { font-weight: 600; }
+.transfer-history-table small, .transfer-history-date {
+  color: var(--muted);
+}
+.transfer-history-table small {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+}
+.transfer-history-file-copy {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 7px;
+}
+.transfer-history-file-copy > .icon { width: 15px; height: 15px; margin-top: 2px; color: var(--muted); }
+.transfer-history-file-copy strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transfer-history-table .transfer-history-empty {
+  padding: 30px 16px;
+  text-align: center;
+  color: var(--muted);
+}
+.transfer-history-empty strong { display: block; color: var(--ink); }
+.transfer-history-date, .transfer-history-outcome, .transfer-history-progress { font-variant-numeric: tabular-nums; }
+.transfer-history-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.transfer-history-status::before {
+  content: "";
+  flex: 0 0 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.transfer-history-status.is-running { color: var(--accent-hover); }
+.transfer-history-status.is-good { color: var(--success); }
+.transfer-history-status.is-warning { color: var(--pending); }
+.transfer-history-status.is-blocked { color: var(--danger); }
+.transfer-history-progress {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.transfer-history-progress progress {
+  flex: 1;
+  min-width: 32px;
+  max-width: 180px;
+  height: 7px;
+  accent-color: var(--accent);
+}
+.transfer-history-link {
+  border: 0;
+  background: transparent;
+  color: var(--accent-hover);
+  font: inherit;
+  white-space: nowrap;
+  padding: 2px 0;
+}
+.transfer-history-link:hover { text-decoration: underline; }
+.transfer-history-footer {
+  padding: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.transfer-history-storage {
+  padding: 8px 16px;
+  color: var(--pending);
+  background: var(--pending-soft);
+}
+.iam-dialog.transfer-history-dialog {
+  width: min(820px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+}
+.transfer-history-dialog .iam-dialog-close .icon { width: 16px; height: 16px; }
+.transfer-history-dialog .iam-dialog-body { background: var(--surface); }
+.transfer-history-dialog .iam-dialog-foot { flex-wrap: wrap; }
+.transfer-history-detail-title, .transfer-history-detail-heading {
+  display: flex;
+  gap: 8px 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.transfer-history-detail-title strong { font-size: 15px; overflow-wrap: anywhere; }
+.transfer-history-detail-title > .icon { color: var(--accent-hover); width: 17px; height: 17px; }
+.transfer-history-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin: 12px 0 10px;
+  font-size: 13px;
+}
+.transfer-history-meta > div { display: flex; flex-wrap: wrap; gap: 2px 8px; }
+.transfer-history-meta dt { color: var(--muted); }
+.transfer-history-meta dd { margin: 0; overflow-wrap: anywhere; }
+.transfer-history-detail-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--muted);
+  padding: 8px 10px;
+  background: var(--canvas);
+  border-radius: 6px;
+  font-size: 13px;
+}
+.transfer-history-error { color: var(--danger); }
+.transfer-history-detail-heading {
+  justify-content: space-between;
+  margin: 14px 0 8px;
+}
+.transfer-history-detail-heading h3 { font-size: 15px; }
+.transfer-history-unmatched, .transfer-history-new-libraries { margin-top: 14px; }
+.transfer-history-new-libraries summary { color: var(--ink); cursor: pointer; font-weight: 600; }
+.transfer-history-new-libraries ul { margin: 4px 0 0; padding-left: 20px; font-size: 13px; }
+.transfer-history-unmatched h3 { color: var(--pending); }
+.transfer-history-unmatched ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.transfer-history-unmatched li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.transfer-history-unmatched strong { color: var(--ink); }
+.transfer-history-file-table { min-width: 520px; }
+.transfer-history-file-table thead th:nth-child(1) { width: 34%; }
+.transfer-history-file-table thead th:nth-child(2) { width: 39%; }
+.transfer-history-file-table.is-export thead th:first-child { width: 62%; }
+.transfer-history-file-table td { vertical-align: top; }
+.transfer-history-owner th {
+  background: var(--surface-subtle);
+  font-weight: 600;
+}
+.transfer-history-destination th { padding-block: 6px; color: var(--ink); }
+.transfer-history-destination th .icon { width: 15px; height: 15px; margin-right: 6px; color: var(--muted); }
+.transfer-history-file-table :is(.transfer-history-owner, .transfer-history-destination) th small {
+  display: inline-block;
+  margin: 0 0 0 8px;
+  font-weight: 400;
+}
+@media (max-width: 680px) {
+  .transfer-history-toolbar { align-items: stretch; }
+  .transfer-history-search { flex-basis: 100%; }
+  .transfer-history-meta { grid-template-columns: 1fr; }
+}
+@media (max-width: 740px) {
+  .transfer-history-table, .transfer-history-table tbody { display: block; min-width: 0; }
+  .transfer-history-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+  .transfer-history-table tr {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px 12px;
+    border-top: 1px solid var(--line);
+    padding: 12px;
+  }
+  .transfer-history-table tbody tr:first-child { border-top: 0; }
+  .transfer-history-table :is(td, td:first-child, td:last-child) {
+    min-width: 0;
+    border: 0;
+    padding: 0;
+  }
+  .transfer-history-table td:first-child, .transfer-history-table td:last-child { grid-column: 1 / -1; }
+  .transfer-history-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--muted);
+    font-size: 12px;
+  }
+  .transfer-history-table .transfer-history-empty { padding: 16px 0; }
+  .transfer-history-file-table :is(.transfer-history-owner, .transfer-history-destination) { display: block; padding: 0; }
+  .transfer-history-owner { background: var(--surface-subtle); }
+  .transfer-history-file-table :is(.transfer-history-owner, .transfer-history-destination) th { border: 0; padding: 8px 12px; }
+}

@@ -21,7 +21,7 @@
   function actionText(slide) {
     const label = destination(slide)?.label || '功能';
     const state = access?.status ? access.status(slide.route, slide.child) : window.BaigePermissions.canOpen(slide.route, slide.child) ? 'granted' : 'locked';
-    return state === 'locked' ? `申请使用${label}` : state === 'pending' ? '查看权限申请' : `进入${label}`;
+    return state === 'locked' ? (access?.roleScoped ? `${label}未开通` : `申请使用${label}`) : state === 'pending' ? '查看权限申请' : `进入${label}`;
   }
   function contentMarkup(slide) {
     const source = safeImage(slide) ? slide.image : art[slide.art] || art.ship;
