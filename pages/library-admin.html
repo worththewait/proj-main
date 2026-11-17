@@ -1214,8 +1214,9 @@
 <div class="toast" id="toast"></div>
 <div class="wm"></div>
 
+<script src="../src/library-category-store.js?v=20261117-types"></script>
 <script src="../src/library-data.js?v=20261026-library"></script>
-<script src="../src/library-store.js?v=20261029-person-addon"></script>
+<script src="../src/library-store.js?v=20261117-types"></script>
 <script>
 /* ══════════════════════════════════════
    DATA — 三类知识库各自的数据
@@ -1553,7 +1554,7 @@ function libRenderFileList() {
   const files = all.slice((libFilePage - 1) * libFileSize, libFilePage * libFileSize);
   const countEl = document.getElementById('libKbFileListCount');
   if (!all.length) {
-    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-sec);padding:40px 0">暂无文件，点击右上角「上传文件」开始录入</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--text-sec);padding:40px 0">' + (BaigeLibraryStore.managerTypes(BaigeLibraryStore.getManageDept()).length ? '暂无文件，点击右上角「上传文件」开始录入' : '本部门暂无负责分类') + '</td></tr>';
     if (countEl) countEl.textContent = '共 0 条数据';
     const pager = document.getElementById('libKbFileListPager');
     if (pager) pager.innerHTML = '';
@@ -1987,7 +1988,7 @@ function renderFileList() {
   const countEl = document.getElementById('kbFileListCount');
   if (!tbody) return;
   if (files.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-sec);padding:40px 0">暂无文件，点击右上角「上传文件」开始录入</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--text-sec);padding:40px 0">' + (BaigeLibraryStore.managerTypes(BaigeLibraryStore.getManageDept()).length ? '暂无文件，点击右上角「上传文件」开始录入' : '本部门暂无负责分类') + '</td></tr>';
     if (countEl) countEl.textContent = '共 0 条数据';
     return;
   }

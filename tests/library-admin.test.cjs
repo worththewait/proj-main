@@ -16,7 +16,8 @@ test("百舸文库 links only to the user-facing library; admin demo remains ava
   assert.deepEqual(Array.from(item.children), ["文库首页"]);
   assert.equal(item.subnav, false);
   assert.equal(item.files, undefined);
-  assert.equal(item.file, "pages/library.html");
+  assert.ok(item.file.startsWith("pages/library.html"), item.file);
+  assert.match(item.file, /\?v=\d{8}-[a-z0-9-]+$/);
   assert.ok(fs.existsSync(path.join(__dirname, "../pages/library-admin.html")));
 });
 

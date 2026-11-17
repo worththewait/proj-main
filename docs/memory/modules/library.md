@@ -1,13 +1,13 @@
 # 百舸文库（客户端阅读与后管文档权限）
 
-- 状态：共享浏览器文档元数据的原型。客户端 `index.html#library` → `pages/library.html`（只露出文库首页）；后管 `admin.html#files` 与 `admin.html#perm` → `pages/library-admin.html?embed=admin&view=files|perm`。独立后管页默认文件管理。
+- 状态：共享浏览器文档元数据的原型。客户端 `index.html#library` → `pages/library.html`（只露出文库首页）；后管 `admin.html#files`、`admin.html#perm`、`admin.html#category`，前两者 → `pages/library-admin.html?embed=admin&view=files|perm`，第三者 → `pages/library-category.html`。独立后管页默认文件管理。
 - 主实现：`src/pages/library.js`、`pages/library-admin.html` 页内控制器、`src/library-store.js`、`src/library-data.js`。来源和详细生产语义见 `docs/知识库与百舸文库需求交接.md` 第 3–5 节。代码基线 2026-11-17，`c7b7c22`。
 
 ## 业务对象和职责
 
 - 对象是单篇文档，区别于客户端知识库的库卡片、原问答的来源 ID、门户「最新动态/我的收藏」、个人功能申请、IAM 账号菜单。百舸文库后台保留自己的涉密表和文件操作约定，不跟随前台文件表组件修改。
 - 八分类：智库成果、船舶标准、行业专利、三方研报、规则规范、专业书籍、期刊论文、其他。六个组织部门可作为授权对象，其中经研（经济研究中心）管智库成果、三方研报，标准（船级社规范所）管船舶标准，知产（技术经济中心）管行业专利，数智（情报研究所）管规则规范、专业书籍、期刊论文、其他。未知分类规整到「其他」。管理归属由分类确定，来源独立为 `upload | crawl`。
-- 后台「当前部门」只列四个管理视角。默认优先沿用可管理的前台部门，否则经研。文件管理只展示本管理部门的上传文档；权限管理展示本管理部门在职责范围内的上传、爬虫文档。读者的部门/个人与管理部门分开保存，均用于模拟。
+- 后台「当前部门」来自分类归属配置：负责至少一个分类的部门都可进入，已有四个视角保持原顺序，新接手部门追加在后。默认优先沿用可管理的前台部门，否则经研。文件管理只展示本管理部门的上传文档；权限管理展示本管理部门负责分类的上传与爬虫文档；本部门已无负责分类时文件管理空态提示「本部门暂无负责分类」，仍可作为授权对象。分类归属配置见 [分类归属](library-category.md)。
 
 ## 客户端检索与阅读
 
@@ -34,4 +34,5 @@
 
 - 文档 `baige.library.docs.v4`（兼容 `baige.library.docs.v3`）保存本地数值 ID、文档分类/来源/归属、标题等元数据、解析和涉密状态、命中词及各对象权限/到期。前台身份键 `baige.library.dept.v1`、`baige.library.user.v1`，后管独立 `baige.library.manage-dept.v1`，写入事件 `baige:library-store`。原件、审批凭据、稳定版本 ID、下载审计和真实文档访问控制待接入。
 - 数据摆渡有自己的样例文库与存储，当前不会落这个文库 store，见 [数据摆渡](data-transfer.md)。文库权限也不会从三元角色或旧部门库数据审批取得。
-- `tests/library-admin.test.cjs` 锁定两层入口和后台交互，`tests/library-store.test.cjs` 覆盖归属、两轴数据、目标级公开、个人加授、默认恢复与 V3 兼容，`tests/library-data.test.cjs` 覆盖分类和阅览演示内容。
+- 分类归属键 `baige.library.category-owner.v1`（配置与留痕），文档归属由它推导；类型库在该配置里增删，`BaigeLibraryStore.categories`、`managerTypes(dept)` 与前台分类导航都以它为准；类型可暂为未分配，存量文档仍由原部门管理。该键变更会清空文库文档缓存，跨标签页亦然。
+- `tests/library-category.test.cjs` 锁定类型库增删、部门多选、未分配与版本冲突、权限收回，`tests/library-admin.test.cjs` 锁定两层入口和后台交互，`tests/library-store.test.cjs` 覆盖归属、两轴数据、目标级公开、个人加授、默认恢复与 V3 兼容，`tests/library-data.test.cjs` 覆盖分类和阅览演示内容。

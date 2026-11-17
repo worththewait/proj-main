@@ -37,6 +37,12 @@
   const FALLBACK_CATEGORIES = ["智库成果", "船舶标准", "行业专利", "三方研报", "规则规范", "专业书籍", "期刊论文", "其他"];
   const CATEGORIES = (window.BaigeLibraryData?.categories || []).map((item) => item.name);
   const TYPES = CATEGORIES.length ? CATEGORIES : FALLBACK_CATEGORIES;
+  /* 分类可在「分类归属」里新增，写作 TYPES 之外的后备分类。 */
+  function allTypes() {
+    const store = window.BaigeLibraryCategoryStore;
+    const list = store ? (store.types ? store.types() : store.categories?.()) : null;
+    return Array.isArray(list) && list.length ? list.slice() : TYPES.slice();
+  }
   const PERMISSION_TITLES = [
     "2026年全球造船业市场展望", "IMO 2050碳减排目标评估", "液化天然气动力船舶推进技术",
     "船舶绿色化转型路径研究", "智能船舶系统集成测试规范", "海事数字化转型案例集",
@@ -47,6 +53,14 @@
   const AUTHORS = ["张海宁", "李明远", "王振国", "陈晓峰", "刘洋", "E. Roberts", "课题组", "周慕云"];
 
   let cache = null;
+
+  // 分类归属调整后，文档的负责部门随之变化，缓存需要重新载入。
+  window.addEventListener("baige:library-category", () => { cache = null; });
+  // 其他标签页改了归属时，旧页面再次提交也要按最新分工判断。
+  window.addEventListener("storage", (event) => {
+    const key = window.BaigeLibraryCategoryStore?.KEY;
+    if (key && event.key === key) cache = null;
+  });
 
   function readStorage(key) {
     try { return localStorage.getItem(key); } catch { return null; }
@@ -74,20 +88,46 @@
   function normalizePersonMap(value) {
     return value && typeof value === "object" ? { ...value } : {};
   }
+  /* 归属部门以「分类归属」配置为准，未加载配置时回落到内置分工。 */
+  function ownerFor(category) {
+    const store = window.BaigeLibraryCategoryStore;
+    if (store) return store.ownerFor(category);
+    const fallback = LIBRARY_MANAGERS.find((manager) => manager.types.includes(category)) || LIBRARY_MANAGERS[LIBRARY_MANAGERS.length - 1];
+    return fallback.dept;
+  }
   function managerForCategory(category) {
-    return LIBRARY_MANAGERS.find((manager) => manager.types.includes(category)) || LIBRARY_MANAGERS[LIBRARY_MANAGERS.length - 1];
+    const dept = ownerFor(category);
+    return { label: managerLabel(dept), dept, types: managerTypes(dept) };
+  }
+  function managerDepts() {
+    const owning = DEPARTMENTS.filter((dept) => managerTypes(dept).length > 0);
+    // 已知管理视角保持原有顺序，新接手的部门追加在后。
+    const known = LIBRARY_MANAGERS.map((manager) => manager.dept).filter((dept) => owning.includes(dept));
+    return [...known, ...owning.filter((dept) => !known.includes(dept))];
+  }
+  function managerList() {
+    return managerDepts().map((dept) => ({ label: managerLabel(dept), dept, types: managerTypes(dept) }));
   }
   function normalizeDoc(doc, id) {
-    const category = TYPES.includes(doc.category) ? doc.category : "其他";
-    const ownerDept = managerForCategory(category).dept;
+    const category = allTypes().includes(doc.category) ? doc.category : "其他";
     const previousOwner = DEPARTMENTS.includes(doc.ownerDept) ? doc.ownerDept : "";
+    // 类型转为「未分配」时，已有文档仍由原部门管理。
+    const ownerDept = ownerFor(category) || previousOwner;
     const accessMode = doc.accessMode === "limited" ? "limited" : "public";
     const permissions = doc.permissions
       ? normalizePermissions(doc.permissions, ownerDept, accessMode)
       : accessMode === "limited" ? limitedPermissions(ownerDept) : blankPermissions(ownerDept);
     const permissionExpiry = normalizeExpiry(doc.permissionExpiry);
-    // Re-home documents by their type and keep the responsible department's owner access.
-    if (previousOwner !== ownerDept) {
+    const explicitDept = doc.explicitDept && typeof doc.explicitDept === "object" ? { ...doc.explicitDept } : {};
+    const publicDeptMap = accessMode === "limited" ? normalizePersonMap(doc.publicDept) : {};
+    // 归属变更时只收回「因归属自动获得」的 4 级；显式单独授予的权限保留。
+    const autoOwner = DEPARTMENTS.includes(doc.autoOwner) ? doc.autoOwner : previousOwner;
+    if (autoOwner && autoOwner !== ownerDept && !explicitDept[autoOwner] && Number(permissions[autoOwner]) === 4) {
+      permissions[autoOwner] = 3;
+      permissionExpiry[autoOwner] = null;
+      delete publicDeptMap[autoOwner];
+    }
+    if (ownerDept) {
       permissions[ownerDept] = 4;
       permissionExpiry[ownerDept] = null;
     }
@@ -117,7 +157,9 @@
       origin: doc.origin || "library",
       permissions,
       permissionExpiry,
-      publicDept: accessMode === "limited" ? normalizePersonMap(doc.publicDept) : {},
+      autoOwner: ownerDept,
+      explicitDept,
+      publicDept: publicDeptMap,
       publicPerson: accessMode === "limited" ? normalizePersonMap(doc.publicPerson) : {},
       personPermissions: normalizePersonMap(doc.personPermissions),
       personPermissionExpiry: normalizePersonMap(doc.personPermissionExpiry),
@@ -284,7 +326,7 @@
       }
       const personPermissions = { ...(doc.personPermissions || {}) };
       Object.keys(publicPerson).forEach((personId) => { personPermissions[personId] = 4; });
-      return { ...doc, permissions, personPermissions, publicDept, publicPerson };
+      return { ...doc, permissions, personPermissions, publicDept, publicPerson, autoOwner: ownerDept };
     });
   }
 
@@ -342,8 +384,7 @@
     return PEOPLE.filter((person) => person.dept === dept);
   }
   function managerTypes(dept) {
-    const manager = LIBRARY_MANAGERS.find((item) => item.dept === dept);
-    return manager ? manager.types.slice() : [];
+    return allTypes().filter((category) => ownerFor(category) === dept);
   }
   function managerLabel(dept) {
     const manager = LIBRARY_MANAGERS.find((item) => item.dept === dept);
@@ -351,13 +392,13 @@
   }
   function getManageDept() {
     const stored = readStorage(MANAGE_KEY);
-    if (LIBRARY_MANAGERS.some((manager) => manager.dept === stored)) return stored;
+    if (managerDepts().includes(stored)) return stored;
     const current = getCurrentDept();
-    if (LIBRARY_MANAGERS.some((manager) => manager.dept === current)) return current;
-    return LIBRARY_MANAGERS[0].dept;
+    if (managerDepts().includes(current)) return current;
+    return managerDepts()[0] || LIBRARY_MANAGERS[0].dept;
   }
   function setManageDept(dept) {
-    if (!LIBRARY_MANAGERS.some((manager) => manager.dept === dept)) return;
+    if (!managerDepts().includes(dept)) return;
     writeStorage(MANAGE_KEY, dept);
   }
   // Department uploads are only visible to, and manageable by, their owning department.
@@ -365,17 +406,15 @@
     if (!DEPARTMENTS.includes(dept)) return [];
     return loadDocs().filter((doc) => doc.source === "upload" && doc.ownerDept === dept);
   }
-  // Permission management also covers crawled documents of the department's types.
+  // Permission management covers uploads and crawled documents of the department's categories.
   function managedDocs(dept) {
-    const manager = LIBRARY_MANAGERS.find((item) => item.dept === dept);
-    if (!manager) return [];
-    return loadDocs().filter((doc) => doc.ownerDept === dept && manager.types.includes(doc.category));
+    if (!DEPARTMENTS.includes(dept)) return [];
+    return loadDocs().filter((doc) => doc.ownerDept === dept);
   }
   function canManageDoc(id, dept) {
-    const manager = LIBRARY_MANAGERS.find((item) => item.dept === dept);
-    if (!manager) return false;
+    if (!DEPARTMENTS.includes(dept)) return false;
     const doc = loadDocs().find((item) => Number(item.id) === Number(id));
-    return Boolean(doc && doc.source === "upload" && doc.ownerDept === dept && manager.types.includes(doc.category));
+    return Boolean(doc && doc.source === "upload" && doc.ownerDept === dept);
   }
   function getCurrentUser() {
     const dept = getCurrentDept();
@@ -432,6 +471,7 @@
     let count = 0;
     loadDocs().forEach((doc) => {
       if (!set.has(Number(doc.id)) || dept === doc.ownerDept) return;
+      doc.explicitDept = { ...(doc.explicitDept || {}), [dept]: true };
       const max = doc.accessMode === "limited" ? 3 : 4;
       const value = Math.max(0, Math.min(max, Number(level) || 0));
       const expiry = value > 0 && expiresAt && !Number.isNaN(Date.parse(expiresAt)) ? new Date(expiresAt).toISOString() : null;
@@ -548,9 +588,11 @@
   }
 
   window.BaigeLibraryStore = Object.freeze({
-    categories: TYPES,
+    get categories() { return allTypes(); },
     departments: DEPARTMENTS.slice(),
-    managers: LIBRARY_MANAGERS.map(({ label, dept, types }) => ({ label, dept, types: types.slice() })),
+    get managers() { return managerList(); },
+    ownerFor,
+    managerDepts,
     people: PEOPLE.map((person) => ({ ...person })),
     peopleForDept,
     managerForCategory,

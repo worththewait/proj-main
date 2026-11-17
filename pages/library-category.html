@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分类归属 · 后台系统</title>
+  <link rel="stylesheet" href="../styles.css?v=20261027-management">
+  <link rel="stylesheet" href="../library-category.css?v=20261117-types">
+</head>
+<body class="module-page lc-admin-page">
+  <main class="module-main">
+    <div class="content-scroll">
+      <div class="content-inner lc-admin">
+        <header class="lc-head">
+          <div>
+            <h1>分类归属</h1>
+            <p>维护一份类型库，并为每个部门勾选负责的类型。部门列表里的「类型管理」读取同一份类型库，可多选；保存即生效。</p>
+          </div>
+        </header>
+
+        <section class="lc-panel" aria-labelledby="lcTableTitle">
+          <header class="lc-panel-head">
+            <h2 id="lcTableTitle">部门列表</h2>
+            <button class="primary-button lc-add" type="button" id="lcTypes">类型管理</button>
+          </header>
+          <div class="lc-table-wrap">
+            <table class="lc-table">
+              <thead>
+                <tr>
+                  <th scope="col" class="col-dept">部门</th>
+                  <th scope="col" class="col-types">负责类型</th>
+                  <th scope="col" class="col-ops">操作</th>
+                </tr>
+              </thead>
+              <tbody id="lcBody"></tbody>
+            </table>
+          </div>
+          <p class="lc-foot-note" id="lcNote"></p>
+        </section>
+
+        <section class="lc-panel lc-history" aria-labelledby="lcHistoryTitle">
+          <header class="lc-panel-head"><h2 id="lcHistoryTitle">最近调整</h2></header>
+          <ul class="lc-history-list" id="lcHistory"></ul>
+        </section>
+
+        <p class="lc-denied" id="lcDenied" hidden>
+          <strong>没有配置权限</strong>
+          分类归属由平台指定人员统一维护，部门管理员可在文件管理与权限管理中处理本部门文档。
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <div class="lc-mask" id="lcMask" hidden></div>
+
+  <form class="lc-modal" id="lcTypeModal" role="dialog" aria-modal="true" aria-labelledby="lcTypeTitle" novalidate hidden>
+    <header class="lc-modal-head">
+      <h2 id="lcTypeTitle">类型管理</h2>
+      <button class="lc-close" type="button" id="lcTypeClose" aria-label="关闭">×</button>
+    </header>
+    <div class="lc-modal-body">
+      <div class="lc-add-row">
+        <input class="lc-input" id="lcNewType" type="text" maxlength="12" placeholder="新增类型，2–12 个字" autocomplete="off">
+        <button class="primary-button lc-add-type" type="submit" id="lcAddType">添加</button>
+      </div>
+      <p class="lc-error" id="lcTypeError" role="alert"></p>
+      <ul class="lc-type-list" id="lcTypeList"></ul>
+    </div>
+    <footer class="lc-modal-foot">
+      <button class="secondary-button" type="button" id="lcTypeDone">完成</button>
+    </footer>
+  </form>
+
+  <form class="lc-modal" id="lcDeptModal" role="dialog" aria-modal="true" aria-labelledby="lcDeptTitle" novalidate hidden>
+    <header class="lc-modal-head">
+      <h2 id="lcDeptTitle">类型管理</h2>
+      <button class="lc-close" type="button" id="lcDeptClose" aria-label="关闭">×</button>
+    </header>
+    <div class="lc-modal-body">
+      <p class="lc-tip">可多选。勾选后由本部门负责；取消勾选转为未分配，已有文档仍由原部门管理。</p>
+      <div class="lc-check-grid" id="lcDeptTypes"></div>
+      <p class="lc-error" id="lcDeptError" role="alert"></p>
+    </div>
+    <footer class="lc-modal-foot">
+      <button class="secondary-button" type="button" id="lcDeptCancel">取消</button>
+      <button class="primary-button" type="button" id="lcDeptSave">保存</button>
+    </footer>
+  </form>
+
+  <div class="lc-toast" id="lcToast" role="status" hidden></div>
+
+  <script src="../src/ui.js?v=20261109-diagram-tools"></script>
+  <script src="../src/library-category-store.js?v=20261117-types"></script>
+  <script src="../src/library-data.js?v=20261117-category"></script>
+  <script src="../src/library-store.js?v=20261117-types"></script>
+  <script src="../src/pages/library-category.js?v=20261117-types"></script>
+</body>
+</html>

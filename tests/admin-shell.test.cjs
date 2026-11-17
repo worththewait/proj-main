@@ -10,10 +10,11 @@ test("back-office shell exposes data transfer alongside the existing navigation"
   const html = read("admin.html");
   assert.match(html, /id="adminNav"/);
   assert.match(html, /id="adminFrame"/);
-  assert.equal((html.match(/data-admin-view=/g) || []).length, 11);
+  assert.equal((html.match(/data-admin-view=/g) || []).length, 12);
   assert.match(html, /data-admin-view="transfer"[^>]*>[\s\S]*?<span class="nav-label">数据摆渡<\/span>/);
   assert.match(html, />文件管理</);
   assert.match(html, />权限管理</);
+  assert.match(html, />分类归属</);
   assert.match(html, />通知公告</);
   assert.match(html, />界面管理</);
   assert.match(html, />权限审核</);

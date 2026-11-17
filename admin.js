@@ -3,8 +3,9 @@
 
   const INTERFACE_SRC = "pages/interface-admin.html?embed=admin&v=20261109-diagram-tools";
   const views = {
-    files: { src: "pages/library-admin.html?embed=admin&view=files&v=20261109-library-original", title: "文件管理" },
-    perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261109-library-original", title: "权限管理" },
+    files: { src: "pages/library-admin.html?embed=admin&view=files&v=20261117-types", title: "文件管理" },
+    perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261117-types", title: "权限管理" },
+    category: { src: "pages/library-category.html?embed=admin&v=20261117-types", title: "分类归属" },
     transfer: { src: "pages/data-transfer.html?embed=admin", title: "数据摆渡" },
     notices: { src: "pages/notice-admin.html?embed=admin&v=20261029-notice", title: "通知公告" },
     "portal-news": { src: "pages/portal-news-admin.html?embed=admin&v=20261111-news-admin", title: "动态发布" },
@@ -60,6 +61,7 @@
     frame.title = title;
     let src = entry.src;
     if (next === "role-approval" && requestId) src += `&request=${encodeURIComponent(requestId)}`;
+    if (next === "category") src += `&actor=${encodeURIComponent(iam.actor().id)}&kind=${encodeURIComponent(iam.actor().kind)}&by=${encodeURIComponent(iam.actor().name)}`;
     if (next === "transfer") {
       const environment = new URLSearchParams(location.search).get("environment");
       if (environment === "internal" || environment === "external") src += `&environment=${environment}`;

@@ -14,6 +14,12 @@
   const page = window.BaigePage;
 
   const catByName = new Map(categories.map((cat) => [cat.name, cat]));
+  /* 前台分类以前台数据为底；后台「类型管理」有配置时以类型库为准，新增与删除都跟着变。 */
+  const categoryNames = () => {
+    const store = window.BaigeLibraryCategoryStore;
+    const list = store ? (store.types ? store.types() : store.categories?.()) : null;
+    return Array.isArray(list) && list.length ? list.slice() : categories.map((cat) => cat.name);
+  };
   const TAG_CLS = {
     "智库成果": "t-blue", "船舶标准": "t-orange", "行业专利": "t-red",
     "三方研报": "t-green", "规则规范": "t-purple", "专业书籍": "t-brown",
@@ -143,7 +149,7 @@
   }
 
   function renderCategories() {
-    const names = ["全部", ...categories.map((cat) => cat.name)];
+    const names = ["全部", ...categoryNames()];
     ui.categoryRow.innerHTML = names.map((name) => {
       const active = name === state.category;
       const color = name === "全部" ? "linear-gradient(135deg,#3b82f6,#1a56db)" : categoryColor(name);
@@ -182,7 +188,7 @@
   }
 
   function renderTypes() {
-    const names = ["全部", ...categories.map((cat) => cat.name)];
+    const names = ["全部", ...categoryNames()];
     ui.typeMenu.innerHTML = names.map((name) => `<button type="button" role="option" aria-selected="${name === state.type}" class="${name === state.type ? "sel" : ""}" data-action="pick-type" data-type="${text(name)}">${text(name)}${name === state.type ? " ✓" : ""}</button>`).join("");
   }
 
