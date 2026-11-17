@@ -33,7 +33,7 @@
     "disable-user": "停用用户", "disable-role": "停用角色",
     "delete-user": "删除用户", "delete-role": "删除角色",
   };
-  const { grantedGroups, groups: menuGroups, label: menuLabel } = window.BaigeIamMenuCatalog;
+  const { grantedGroups } = window.BaigeIamMenuCatalog;
   const { difference, render: renderMenuComparison } = window.BaigeIamMenuComparison;
   const MESSAGES = {
     approved: "申请已通过，变更已生效。",
@@ -54,6 +54,7 @@
   let displayedReviewToken = null;
   let returnToAssignment = null;
   const pager = window.BaigeAdminPagination.create($("approvalPager"), render);
+  const memberPager = window.BaigeAdminPagination.create($("approvalRoleMemberPager"), () => render());
 
   function visibleRequests() {
     const actor = store.actor();
@@ -99,30 +100,42 @@
     return membershipHas(request, "remove") ? "更换角色授权" : "新增角色授权";
   }
 
+  function renderRoleGroup(label, tone, roles) {
+    const names = [...roles.values()].map(escape);
+    if (!names.length) return "";
+    const preview = `<span class="approval-change-kind" data-change="${tone}">${label}</span>
+      <span class="approval-change-roles">
+        <span class="approval-change-name" title="${names[0]}">${names[0]}</span>
+        ${names.length > 1 ? `<span class="approval-change-name approval-change-second" title="${names[1]}">${names[1]}</span>` : ""}
+      </span>`;
+    if (names.length === 1) return `<div class="approval-change-line">${preview}</div>`;
+
+    const count = remaining => remaining ? `<span aria-hidden="true">+${remaining}</span><span class="sr-only">展开其余 ${remaining} 个角色</span>` : "展开";
+    return `<details class="approval-change-group">
+      <summary class="approval-change-line">${preview}
+        <span class="approval-change-more approval-change-narrow-count">${count(names.length - 1)}</span>
+        <span class="approval-change-more approval-change-wide-count">${count(names.length - 2)}</span>
+        <span class="approval-change-less">收起</span>
+      </summary>
+      <ul class="approval-change-full">${names.map(name => `<li>${name}</li>`).join("")}</ul>
+    </details>`;
+  }
+
   function renderListChange(request) {
-    const changes = new Map();
-    const targets = new Set();
     if (request.type === "membership") {
+      const groups = { add: new Map(), remove: new Map() };
       for (const item of request.items) {
-        if (item.operation !== "add" && item.operation !== "remove") continue;
+        if (!Object.hasOwn(groups, item.operation)) continue;
         const roleName = item.roleName || item.roleId || "角色名称未记录";
-        const key = JSON.stringify([item.operation, item.roleId || roleName]);
-        if (!changes.has(key)) changes.set(key, { operation: item.operation, roleName, users: new Map() });
-        if (item.userId) {
-          targets.add(item.userId);
-          changes.get(key).users.set(item.userId, item.userName || item.userId);
-        }
+        const roles = groups[item.operation];
+        const key = item.roleId || roleName;
+        if (!roles.has(key)) roles.set(key, roleName);
+      }
+      if (groups.add.size || groups.remove.size) {
+        return `<div class="approval-list-changes">${renderRoleGroup("新增", "added", groups.add)}${renderRoleGroup("撤销", "removed", groups.remove)}</div>`;
       }
     }
-    if (!changes.size) return `<span class="approval-type">${escape(requestLabel(request))}</span>`;
-
-    return `<ul class="approval-list-changes">${[...changes.values()].map(({ operation, roleName, users }) => {
-      const adding = operation === "add";
-      const affectedUsers = users.size && users.size < targets.size
-        ? `<span class="approval-change-people">适用用户 · ${[...users.values()].map(escape).join("、")}</span>`
-        : "";
-      return `<li><span data-change="${adding ? "added" : "removed"}">${adding ? "新增角色" : "撤销角色"} ${escape(roleName)}</span>${affectedUsers}</li>`;
-    }).join("")}</ul>`;
+    return `<span class="approval-type">${escape(requestLabel(request))}</span>`;
   }
 
   function matchesType(request, type) {
@@ -204,10 +217,10 @@
       </section>`).join("");
   }
 
-  function compareMenus(currentMenus, requestedMenus, status) {
+  function compareMenus(currentMenus, requestedMenus, status, options) {
     const resultLabel = status === "pending" ? "审核通过后" : status === "approved" ? "变更后" : "申请方案";
-    const beforeLabel = status === "pending" ? "当前权限" : status === "approved" ? "变更前" : "提交时权限";
-    return renderMenuComparison(currentMenus, requestedMenus, resultLabel, beforeLabel);
+    const beforeLabel = options?.beforeLabel || (status === "pending" ? "当前权限" : status === "approved" ? "变更前" : "提交时权限");
+    return renderMenuComparison(currentMenus, requestedMenus, resultLabel, beforeLabel, options);
   }
 
   function peopleFor(request, preview) {
@@ -249,8 +262,9 @@
     return people.some(person => {
       const before = submittedById.get(person.id);
       return !before || before.status !== person.status || before.requestedStatus !== person.requestedStatus
-        || menuSetsDiffer(before.currentMenus, person.currentMenus)
-        || menuSetsDiffer(before.requestedMenus, person.requestedMenus);
+        || before.name !== person.name || before.username !== person.username || before.department !== person.department
+        || (hasMenuSnapshot(person) && (menuSetsDiffer(before.currentMenus, person.currentMenus)
+          || menuSetsDiffer(before.requestedMenus, person.requestedMenus)));
     });
   }
 
@@ -309,12 +323,12 @@
     return { html, note };
   }
 
-  function renderPersonRow(person, submitted, items, requestStatus, expanded, showImpact) {
+  function renderPersonRow(person, submitted, items, requestStatus, expanded) {
     const { html, note } = compareUser(person, items, requestStatus);
     const impact = describeImpact(person);
     const identity = personIdentity(person, submitted);
     const impactLabel = `<span class="approval-impact-label" data-tone="${impact.tone}">${impact.text}</span>`;
-    const change = showImpact ? impactLabel : `<span class="approval-person-summary">${personChanges(person, items)}${impactLabel}</span>`;
+    const change = `<span class="approval-person-summary">${personChanges(person, items)}${impactLabel}</span>`;
     const preview = previewButton(person.id, personName(person));
     return `<li class="approval-person">
       ${html ? `<details class="approval-person-comparison" data-user-id="${escape(person.id)}"${expanded ? " open" : ""}>
@@ -324,47 +338,24 @@
           ${note ? `<p class="approval-details-note">${note}</p>` : ""}${html}
         </div>
       </details>` : `<div class="approval-person-row">${identity}${change}${preview}</div>
-        ${!showImpact && note ? `<p class="approval-person-legacy approval-details-note">${note}</p>` : ""}`}
+        ${note ? `<p class="approval-person-legacy approval-details-note">${note}</p>` : ""}`}
     </li>`;
   }
 
-  function renderRoleMenuChanges(role) {
-    const current = role.currentConfiguredMenus || role.currentMenus;
-    const requested = role.requestedConfiguredMenus || role.requestedMenus;
-    const { added, removed } = difference(current, requested);
-    if (!added.size && !removed.size) return "";
-    const names = new Map(menuGroups().flatMap(group => group.items.map(item =>
-      [item.key, [item.parentLabel, item.label].filter(Boolean).join(" / ")])));
-    const list = (keys, tone, heading) => keys.size ? `<div data-change="${tone}">
-      <dt>${heading} ${keys.size} 项</dt>
-      <dd><ul>${[...keys].map(key => `<li>${escape(names.get(key) || menuLabel(key))}</li>`).join("")}</ul></dd>
-    </div>` : "";
-    return `<dl class="approval-menu-changes">${list(added, "added", "新增菜单")}${list(removed, "removed", "移除菜单")}</dl>`;
-  }
-
-  function renderRoleSubject(request, people) {
+  function renderRoleSubject(request) {
     const role = request.items.find(item => item.roleId && !item.userId);
-    const impact = people.map(person => describeImpact(person));
-    const changed = impact.filter(person => person.tone === "changed").length;
-    const unknown = impact.filter(person => person.tone === "unknown").length;
-    const summary = unknown === people.length && unknown > 0
-      ? ["历史申请未记录实际权限"]
-      : [`${changed} 人实际权限变化`, unknown ? `${unknown} 人缺少历史快照` : ""].filter(Boolean);
+    const { added, removed } = difference(role.currentConfiguredMenus || role.currentMenus, role.requestedConfiguredMenus || role.requestedMenus);
+    const summary = [added.size ? `新增 ${added.size} 项菜单` : "", removed.size ? `移除 ${removed.size} 项菜单` : ""].filter(Boolean);
     const transition = statusTransitions[role.operation];
     return `<h3>${escape(role.roleName || role.roleId)}</h3>
       ${transition ? `<span class="approval-account-change">${transition}</span>` : ""}
-      <p class="approval-role-impact" id="approvalRoleImpact"><strong>涉及 <span id="approvalPeopleCount">${people.length} 人</span></strong><span>${summary.join(" · ")}</span></p>
-      ${renderRoleMenuChanges(role)}`;
+      ${summary.length ? `<p class="approval-role-impact">${summary.join(" · ")}</p>` : ""}`;
   }
 
-  function renderRoleComparisons(request, status, preserveExpanded) {
-    const open = preserveExpanded ? [...$("approvalItems").querySelectorAll(".approval-config-comparison")].map(details => details.open) : [];
-    return request.items.map((item, index) => `<li class="approval-item">
-      ${compareMenus(item.currentMenus, item.requestedMenus, status)}
-      ${Array.isArray(item.currentConfiguredMenus) && Array.isArray(item.requestedConfiguredMenus) ? `<details class="approval-config-comparison"${open[index] ? " open" : ""}>
-        <summary>角色菜单配置对比</summary>
-        ${compareMenus(item.currentConfiguredMenus, item.requestedConfiguredMenus, status)}
-      </details>` : ""}
+  function renderRoleComparisons(request, status) {
+    return request.items.map(item => `<li class="approval-item">
+      ${compareMenus(item.currentConfiguredMenus || item.currentMenus, item.requestedConfiguredMenus || item.requestedMenus,
+        status, { collapseUnchanged: true, beforeLabel: "变更前" })}
     </li>`).join("");
   }
 
@@ -374,21 +365,19 @@
     const itemsFor = person => request.items.filter(item => item.userId === person.id);
     const submitted = new Map((request.impact || []).map(person => [person.id, person]));
     $("approvalPeopleSection").hidden = Boolean(singleUser);
-    $("approvalPeopleTitle").textContent = roleRequest ? "涉及用户" : "变更用户";
-    $("approvalPeopleNote").textContent = roleRequest ? "实际权限合并该用户的全部角色计算。" : "";
-    $("approvalPeopleNote").hidden = !roleRequest || people.length === 0 || !people.some(hasMenuSnapshot);
+    $("approvalPeopleTitle").textContent = roleRequest ? `涉及用户（${people.length} 人）` : "变更用户";
     $("approvalPeopleEmpty").hidden = people.length > 0;
     $("approvalPeopleEmpty").textContent = roleRequest ? "此角色暂无成员。" : "历史申请未记录变更用户。";
     const changes = $("approvalChanges");
-    if (!preserveExpanded) changes.open = false;
+    if (!preserveExpanded) changes.open = roleRequest;
     changes.hidden = !roleRequest && !singleUser;
-    $("approvalChangesTitle").textContent = roleRequest ? "查看完整角色权限对比" : "查看完整账号权限对比";
+    $("approvalChangesTitle").textContent = roleRequest ? "角色权限对比" : "查看完整账号权限对比";
     const changesNote = $("approvalChangesNote");
     changesNote.hidden = true;
 
     if (roleRequest) {
-      $("approvalSubject").innerHTML = renderRoleSubject(request, people);
-      $("approvalItems").innerHTML = renderRoleComparisons(request, status, preserveExpanded);
+      $("approvalSubject").innerHTML = renderRoleSubject(request);
+      $("approvalItems").innerHTML = renderRoleComparisons(request, status);
     } else if (singleUser) {
       const items = itemsFor(singleUser);
       const impact = describeImpact(singleUser);
@@ -408,10 +397,19 @@
     $("approvalSubject").hidden = !roleRequest && !people.length;
 
     const peopleList = $("approvalPeople");
+    $("approvalRoleMembers").hidden = !roleRequest || !people.length;
+    if (roleRequest) {
+      peopleList.innerHTML = "";
+      $("approvalRoleMemberRows").innerHTML = memberPager.slice(people).map(person => `<tr>
+        <td>${escape(personName(person))}</td><td>${escape(person.username || "—")}</td>
+        <td>${escape(person.department || "—")}</td><td>${person.status === "normal" ? "正常" : person.status === "disabled" ? "停用" : "—"}</td>
+      </tr>`).join("");
+      return;
+    }
     const opened = preserveExpanded ? [...peopleList.querySelectorAll("details[data-user-id][open]")] : [];
     const expanded = new Set(opened.map(details => details.dataset.userId));
     const moreOpen = preserveExpanded && $("approvalMorePeople")?.open;
-    const rows = singleUser ? [] : people.map(person => renderPersonRow(person, submitted.get(person.id), itemsFor(person), status, expanded.has(person.id), roleRequest));
+    const rows = singleUser ? [] : people.map(person => renderPersonRow(person, submitted.get(person.id), itemsFor(person), status, expanded.has(person.id)));
     const previewLimit = 6;
     const rest = rows.slice(previewLimit);
     peopleList.innerHTML = rows.slice(0, previewLimit).join("") + (rest.length ? `<li class="approval-people-more">
@@ -442,12 +440,14 @@
 
   function renderActions(request) {
     const mayReview = canReview(request);
+    const needsRecusal = reviewer && request.status === "pending" && !mayReview;
     const mayWithdraw = request.status === "pending" && store.actor().kind === "admin" && store.actor().id === request.applicant.id;
-    const blockReason = store.approvalBlockReason(request)
-      || (request.status === "pending" && !displayedReviewToken ? "申请依据已变化，请撤回后重新提交。" : "");
+    const blockReason = needsRecusal ? "当前审核员是申请发起人或涉及用户，请切换其他审核员。"
+      : store.approvalBlockReason(request)
+        || (request.status === "pending" && !displayedReviewToken ? "申请依据已变化，请撤回后重新提交。" : "");
     approvalBlock.textContent = blockReason;
     approvalBlock.hidden = !blockReason;
-    const blockingRole = blockReason && displayedReviewToken ? store.blockingRoleChange(request) : null;
+    const blockingRole = !needsRecusal && blockReason && displayedReviewToken ? store.blockingRoleChange(request) : null;
     const canOpenBlocker = blockingRole && (reviewer || blockingRole.applicant.id === store.actor().id);
     blockingRoleButton.hidden = !canOpenBlocker;
     blockingRoleButton.disabled = busy;
@@ -482,7 +482,9 @@
     $("approvalReason").textContent = request.reason || "—";
     const update = $("approvalImpactUpdate");
     const refreshed = Boolean(preview && impactUpdated(request.impact, people));
-    update.textContent = refreshed ? "与提交时相比，涉及账号的权限影响已更新。请核对当前预览。" : "";
+    update.textContent = refreshed ? requestCategory(request) === "role"
+      ? "与提交时相比，涉及用户的信息已更新。请核对当前列表。"
+      : "与提交时相比，涉及账号的权限影响已更新。请核对当前预览。" : "";
     update.hidden = !refreshed;
     $("approvalMeta").innerHTML = `<div><dt>申请编号</dt><dd>${escape(request.id)}</dd></div>
       <div><dt>申请来源</dt><dd>${escape(request.source || "—")}</dd></div>`;
@@ -529,6 +531,7 @@
       notify("未找到可查看的授权申请。");
       return false;
     }
+    if (activeId !== id) memberPager.reset();
     activeId = id;
     confirmingWithdrawal = false;
     comment.value = "";
@@ -536,9 +539,6 @@
     notify();
     setFeedback();
     renderDetail(request);
-    if (request.status === "pending" && store.actor().kind === "reviewer" && !canReview(request)) {
-      setFeedback("此申请需由其他审核员处理。");
-    }
     backButton.hidden = !panelMode && !returnToAssignment;
     backButton.textContent = returnToAssignment ? "返回授权申请" : "返回申请列表";
     if (!drawer.open) drawer.showModal();

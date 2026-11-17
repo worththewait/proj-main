@@ -6,7 +6,6 @@
   if (!store || !management?.requireAdministrator()) return;
   const { goToRequest, requestLifecycle, askPermissionChange, requestLink, showRequestError, statusSwitch, pendingItemsBy, toast } = management;
   const { escapeHtml: escape, icon } = window.BaigeUI;
-  const { render: renderMenuComparison } = window.BaigeIamMenuComparison;
   const $ = (id) => document.getElementById(id);
   const dialog = $("iamRoleDialog");
   const usersDialog = $("iamRoleUsersDialog");
@@ -15,6 +14,7 @@
   let editingRole = null;
   let menuPicker = null;
   let rolePreview;
+  let reviewMembersPager;
   let usersRoleId = "";
   let usersSelected = new Set();
   let addUsersSelected = new Set();
@@ -93,17 +93,15 @@
     ${pending ? `<div class="iam-menu-pending">该角色已有待审核申请。可保存资料；如需变更权限或状态，请先处理原申请。${requestLink(pending.requestId, "查看原申请")}</div>` : ""}
     <div id="iamRoleReviewFields" class="iam-role-review-fields" hidden>
       <p class="iam-dialog-note">审核通过后，角色变更才会生效。</p>
-      <details class="iam-role-impact" id="iamRoleReviewImpact">
+      <details class="iam-role-impact" id="iamRoleReviewImpact" open>
         <summary id="iamRoleReviewImpactSummary">涉及用户</summary>
-        <ul id="iamRoleReviewImpactList"></ul>
-      </details>
-      <details class="iam-role-impact">
-        <summary>查看角色权限对比</summary>
-        <div class="iam-role-impact-compare" id="iamRoleReviewMenus"></div>
-      </details>
-      <details class="iam-role-impact" id="iamRoleReviewConfig" hidden>
-        <summary>查看同时修改的菜单配置</summary>
-        <div class="iam-role-impact-compare" id="iamRoleReviewConfiguredMenus"></div>
+        <div class="iam-table-wrap">
+          <table class="iam-table iam-review-members-table">
+            <thead><tr><th scope="col">姓名</th><th scope="col">账号</th><th scope="col">部门</th><th scope="col">状态</th></tr></thead>
+            <tbody id="iamRoleReviewImpactList"></tbody>
+          </table>
+        </div>
+        <nav class="admin-pagination" id="iamRoleReviewMembersPager" aria-label="提交前涉及用户分页"></nav>
       </details>
       <label class="iam-form-field"><span>申请原因 <em>*</em></span><textarea class="iam-input iam-reason-input" id="iamRoleReviewReason" maxlength="240" placeholder="请说明本次变更的原因"></textarea></label>
     </div>
@@ -127,6 +125,7 @@
     $("iamRoleSaveWarning").textContent = "";
     $("iamRoleDialogBody").innerHTML = role ? editForm(role, readOnly) : roleForm();
     if (role) {
+      reviewMembersPager = window.BaigeAdminPagination.create($("iamRoleReviewMembersPager"), renderReviewMembers);
       menuPicker = window.BaigeIamRoleMenuPicker.mount($("iamRoleMenuPicker"), {
         selected: role.menuPermissions || [], disabled: readOnly, onChange: syncRoleReview,
       });
@@ -135,6 +134,15 @@
     if (!dialog.open) dialog.showModal();
     const focus = focusMenu ? $("iamRoleMenuPicker")?.querySelector('input[type="search"]') : $("iamEditRoleName");
     focus?.focus({ preventScroll: true });
+  }
+
+  function renderReviewMembers() {
+    const users = rolePreview?.impact || [];
+    $("iamRoleReviewImpactSummary").textContent = `涉及用户（${users.length} 人）`;
+    $("iamRoleReviewImpactList").innerHTML = reviewMembersPager.slice(users).map(user => `<tr>
+      <td>${escape(user.name)}</td><td>${escape(user.username || "—")}</td><td>${escape(user.department || "—")}</td>
+      <td>${user.status === "normal" ? "正常" : "停用"}</td>
+    </tr>`).join("") || '<tr><td colspan="4">该角色暂无成员。</td></tr>';
   }
 
   function syncRoleReview() {
@@ -152,8 +160,6 @@
     $("iamRoleReviewReason").required = false;
     $("iamRoleSave").textContent = "保存资料";
     if (!changed) return;
-    const impact = $("iamRoleReviewImpact");
-    $("iamRoleReviewConfig").hidden = true;
     try {
       const preview = store.previewRoleChange(editingId, menuPicker.keys(), status);
       rolePreview = preview;
@@ -169,20 +175,7 @@
       $("iamRoleReviewFields").hidden = false;
       $("iamRoleReviewReason").required = true;
       $("iamRoleSave").textContent = "提交审核";
-      const users = preview.impact;
-      $("iamRoleReviewMenus").innerHTML = renderMenuComparison(preview.currentMenus, preview.requestedMenus, "审核通过后");
-      if (preview.currentConfiguredMenus && preview.requestedConfiguredMenus) {
-        $("iamRoleReviewConfiguredMenus").innerHTML = renderMenuComparison(preview.currentConfiguredMenus, preview.requestedConfiguredMenus, "审核通过后");
-        $("iamRoleReviewConfig").hidden = false;
-      }
-      const changed = users.filter(user => JSON.stringify(user.currentMenus) !== JSON.stringify(user.requestedMenus)).length;
-      $("iamRoleReviewImpactSummary").textContent = `涉及 ${users.length} 位用户，${changed} 位的实际权限会变更`;
-      $("iamRoleReviewImpactList").innerHTML = users.map(user => {
-        const different = JSON.stringify(user.currentMenus) !== JSON.stringify(user.requestedMenus);
-        return `<li><strong>${escape(user.name)}</strong><span>${[user.username, user.department, different ? "权限会变更" : "权限无变化"].filter(Boolean).map(escape).join(" · ")}</span></li>`;
-      }).join("") || "<li>该角色暂无成员。</li>";
-      if (users.length && !impact.dataset.loaded) impact.open = true;
-      impact.dataset.loaded = "true";
+      renderReviewMembers();
     } catch (error) {
       rolePreview = null;
       showRequestError($("iamRoleFeedback"), error);

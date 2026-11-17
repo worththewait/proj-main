@@ -29,7 +29,10 @@ function viewElement() {
   };
 }
 
-function approvalView({ blockReason = "", impact, approvedImpact, overrides, status = "pending", actor = "reviewer", review, blocker } = {}) {
+function approvalView({
+  blockReason = "", impact, approvedImpact, overrides, status = "pending",
+  actor = "reviewer", activeActorId = actor, canReview = () => true, review, blocker,
+} = {}) {
   const request = {
     id: "iam-1", type: "membership", status, createdAt: "2026-11-13", applicant: { id: "admin", name: "管理员" },
     items: [{ userId: "u-1", userName: "原昵称", operation: "add", roleId: "r-1", roleName: "知识库角色" }],
@@ -50,8 +53,8 @@ function approvalView({ blockReason = "", impact, approvedImpact, overrides, sta
   const window = {
     BaigeUI: { escapeHtml: String, hydrate() {} },
     BaigeIamStore: {
-      actor: () => ({ id: actor, kind: actor }), requests: () => blocker ? [request, blocker] : [request],
-      canReviewRequest: () => true, subscribe(callback) { onStoreChange = callback; },
+      actor: () => ({ id: activeActorId, kind: actor }), requests: () => blocker ? [request, blocker] : [request],
+      canReviewRequest: () => canReview(activeActorId), subscribe(callback) { onStoreChange = callback; },
       approvalBlockReason: selected => selected.id === request.id && (!blocker || currentBlocker) ? blockReason : "",
       blockingRoleChange: selected => selected.id === request.id ? currentBlocker : null,
       reviewPreview: id => id === request.id ? ((blockReason && !blocker) || status !== "pending" ? null : preview) : { impact: [], token: "role-preview" },
@@ -68,6 +71,10 @@ function approvalView({ blockReason = "", impact, approvedImpact, overrides, sta
     closest: selector => selector === targetSelector ? target : null,
   } });
   get.clickApprove = () => get.click("[data-approval-decision]", { dataset: { approvalDecision: "approved" } });
+  get.switchReviewer = id => {
+    activeActorId = id;
+    onStoreChange();
+  };
   get.replacePreview = (latest, notify = false) => {
     preview = latest;
     if (notify) onStoreChange();
@@ -93,31 +100,42 @@ test("a route with an ungranted child appears partially authorized", () => {
   assert.match(after, /3 项/);
 });
 
-test("申请列表直接列出新增和撤销的每个角色", () => {
+test("申请列表按动作分组，显示角色预览并可展开完整名单", () => {
   const items = [
     { userId: "u-1", userName: "林明", operation: "add", roleId: "r-1", roleName: "行业知识库上传" },
     { userId: "u-1", userName: "林明", operation: "add", roleId: "r-2", roleName: "百舸库审核员" },
-    { userId: "u-1", userName: "林明", operation: "remove", roleId: "r-3", roleName: "企业库审核员" },
+    { userId: "u-1", userName: "林明", operation: "add", roleId: "r-3", roleName: "企业库审核员" },
+    { userId: "u-1", userName: "林明", operation: "add", roleId: "r-4", roleName: "行业知识库审核" },
+    { userId: "u-1", userName: "林明", operation: "remove", roleId: "r-5", roleName: "旧授权角色" },
   ];
   for (const actor of ["admin", "reviewer"]) {
-    const get = approvalView({ actor, overrides: { items } });
-    const rows = get("approvalRows").innerHTML;
-    assert.match(rows, /新增角色 行业知识库上传/);
-    assert.match(rows, /新增角色 百舸库审核员/);
-    assert.match(rows, /撤销角色 企业库审核员/);
+    const get = approvalView({ actor, overrides: { items, source: "用户管理 · 分配角色" } });
+    const cell = get("approvalRows").innerHTML.split("</td>", 1)[0];
+    assert.equal((cell.match(/>新增<\/span>/g) || []).length, 1);
+    assert.equal((cell.match(/>撤销<\/span>/g) || []).length, 1);
+    assert.match(cell, /<summary[^>]*>[\s\S]*行业知识库上传[\s\S]*百舸库审核员[\s\S]*\+3[\s\S]*\+2[\s\S]*<\/summary>/);
+    assert.match(cell, /<li>企业库审核员<\/li>[\s\S]*<li>行业知识库审核<\/li>/);
+    assert.match(cell, /旧授权角色[\s\S]*用户管理 · 分配角色/);
   }
 });
 
-test("批量申请对部分用户适用的角色变更标明对应用户", () => {
+test("批量申请列表汇总角色和人数，详情为每个用户显示对应变更", () => {
   const items = [
     { userId: "u-1", userName: "林明", operation: "add", roleId: "r-1", roleName: "知识库管理员" },
     { userId: "u-2", userName: "陈宁", operation: "add", roleId: "r-1", roleName: "知识库管理员" },
     { userId: "u-2", userName: "陈宁", operation: "remove", roleId: "r-2", roleName: "企业库审核员" },
   ];
-  const get = approvalView({ actor: "admin", status: "approved", overrides: { items } });
-  const cell = get("approvalRows").innerHTML.split("</td>", 1)[0];
-  assert.equal((cell.match(/新增角色 知识库管理员/g) || []).length, 1);
-  assert.match(cell, /撤销角色 企业库审核员[\s\S]*陈宁/);
+  const people = items.slice(0, 2).map(item => ({
+    id: item.userId, name: item.userName, currentMenus: ["home"], requestedMenus: ["home", "knowledge"],
+  }));
+  const get = approvalView({ actor: "admin", status: "approved", overrides: { items, impact: people } });
+  const rows = get("approvalRows").innerHTML;
+  const cell = rows.split("</td>", 1)[0];
+  assert.equal((cell.match(/>知识库管理员</g) || []).length, 1);
+  assert.match(cell, /撤销[\s\S]*企业库审核员/);
+  assert.doesNotMatch(cell, /适用用户|陈宁/);
+  assert.match(rows, /林明 等 2 人/);
+  assert.match(get("approvalPeople").innerHTML, /data-user-id="u-2"[\s\S]*陈宁[\s\S]*撤销 企业库审核员/);
 });
 
 test("splitting a route across home categories does not turn a partial route into a full grant", () => {
@@ -160,11 +178,44 @@ test("pending details disclose changed impact and approved history uses the appr
   assert.match(approved("approvalItems").innerHTML, /变更前[\s\S]*2 项[\s\S]*变更后[\s\S]*2 项/);
 });
 
-test("role details lead with exact menu changes and affected users before the complete permission comparison", () => {
-  const get = approvalView({ overrides: { type: "menus", items: [{ roleId: "r-1", roleName: "知识库角色", currentMenus: ["home", "knowledge"], requestedMenus: ["home", "writing"] }] } });
-  assert.match(get("approvalSubject").innerHTML, /知识库角色[\s\S]*涉及[\s\S]*1 人[\s\S]*新增[\s\S]*百舸写作[\s\S]*移除[\s\S]*知识库/);
-  assert.match(get("approvalPeople").innerHTML, /原昵称[\s\S]*新增 1 项/);
-  assert.match(get("approvalChangesTitle").textContent, /查看完整角色权限对比/);
+test("role details show one role comparison and a paged member list without individual permission trees", () => {
+  const people = Array.from({ length: 12 }, (_, index) => ({
+    id: `u-${index}`, name: `成员${index}`, username: `account${index}`, department: "技术部", status: index ? "normal" : "disabled",
+  }));
+  const get = approvalView({ impact: people, overrides: {
+    type: "menus", impact: people,
+    items: [{ roleId: "r-1", roleName: "知识库角色", currentMenus: ["home", "knowledge"], requestedMenus: ["home", "writing"] }],
+  } });
+  assert.match(get("approvalSubject").innerHTML, /知识库角色/);
+  assert.doesNotMatch(get("approvalSubject").innerHTML, /实际权限/);
+  assert.equal(get("approvalChanges").open, true);
+  assert.equal(get("approvalChangesTitle").textContent, "角色权限对比");
+  assert.match(get("approvalItems").innerHTML, /变更前[\s\S]*审核通过后/);
+  assert.match(get("approvalItems").innerHTML, /新增/);
+  assert.equal(get("approvalPeopleTitle").textContent, "涉及用户（12 人）");
+  assert.equal(get("approvalPeople").innerHTML, "");
+  assert.match(get("approvalRoleMemberRows").innerHTML, /成员0[\s\S]*account0[\s\S]*技术部[\s\S]*停用/);
+  assert.doesNotMatch(get("approvalRoleMemberRows").innerHTML, /成员10|完整账号权限对比|实际权限|data-approval-preview/);
+  get("approvalRoleMemberPager").handlers.get("click")({ target: { closest: () => ({ dataset: { adminPage: "2" } }) } });
+  assert.match(get("approvalRoleMemberRows").innerHTML, /成员10[\s\S]*成员11/);
+  assert.doesNotMatch(get("approvalRoleMemberRows").innerHTML, />成员0</);
+});
+
+test("closed role history uses submitted member identity without an account permission comparison", () => {
+  const get = approvalView({ status: "approved", approvedImpact: [{ id: "u-1", name: "现名字", username: "new-account", department: "新部门", status: "normal" }], overrides: {
+    type: "menus", items: [{ roleId: "r-1", roleName: "知识库角色", currentMenus: ["knowledge"], requestedMenus: ["writing"] }],
+  } });
+  assert.match(get("approvalRoleMemberRows").innerHTML, /原昵称[\s\S]*old-account[\s\S]*原部门/);
+  assert.doesNotMatch(get("approvalRoleMemberRows").innerHTML, /现名字|new-account|完整账号权限对比/);
+  assert.match(get("approvalItems").innerHTML, /变更后/);
+});
+
+test("the compact role tree expands changed branches while unchanged branches stay collapsed", () => {
+  const window = { BaigeUI: { escapeHtml: String } };
+  const { render } = runComparison(vm.createContext({ window }));
+  const html = render(["knowledge", "smart-tools:文本翻译"], ["knowledge", "smart-tools:文档翻译"], "审核通过后", "变更前", { collapseUnchanged: true });
+  assert.match(html, /<details open>/);
+  assert.match(html, /<details>/);
 });
 
 test("approval sends the displayed preview token and a race requires another click", async () => {
@@ -205,6 +256,32 @@ test("incomplete pending legacy snapshots block approval and still allow rejecti
   assert.match(admin("approvalActions").innerHTML, /data-approval-ask-withdraw/);
 });
 
+test("an open approval reflects reviewer eligibility in both directions when the active reviewer changes", () => {
+  const get = approvalView({ activeActorId: "iam-reviewer", canReview: id => id === "iam-reviewer-2" });
+  const blockedReason = "当前审核员是申请发起人或涉及用户，请切换其他审核员。";
+  const block = get("approvalBlockReason");
+  const actions = get("approvalActions");
+  const drawer = get("approvalDrawer");
+
+  assert.equal(drawer.open, true);
+  assert.equal(block.textContent, blockedReason);
+  assert.equal(block.hidden, false);
+  assert.doesNotMatch(actions.innerHTML, /data-approval-decision=/);
+
+  get.switchReviewer("iam-reviewer-2");
+  assert.equal(drawer.open, true);
+  assert.equal(block.hidden, true);
+  assert.equal(get("approvalFeedback").textContent, "");
+  assert.match(actions.innerHTML, /data-approval-decision="approved">/);
+  assert.match(actions.innerHTML, /data-approval-decision="rejected">/);
+
+  get.switchReviewer("iam-reviewer");
+  assert.equal(drawer.open, true);
+  assert.equal(block.textContent, blockedReason);
+  assert.equal(block.hidden, false);
+  assert.doesNotMatch(actions.innerHTML, /data-approval-decision=/);
+});
+
 test("blocked reviewer can open the role application in the same drawer and return to the original assignment", () => {
   const reason = "请先处理该角色的权限变更申请。";
   const blocker = {
@@ -226,4 +303,15 @@ test("blocked reviewer can open the role application in the same drawer and retu
   assert.equal(get("approvalComment").value, "草拟的审核意见");
   assert.match(get("approvalActions").innerHTML, /data-approval-decision="approved">/);
   assert.equal(get("approvalBlockingRole").hidden, true);
+});
+
+test("simultaneous role status and menu changes show one configured permission comparison", () => {
+  const get = approvalView({ overrides: { type: "disable-role", items: [{
+    roleId: "r-1", roleName: "知识库角色", operation: "disable", currentMenus: ["knowledge"], requestedMenus: [],
+    currentConfiguredMenus: ["knowledge"], requestedConfiguredMenus: ["knowledge", "writing"],
+  }] } });
+  assert.match(get("approvalSubject").innerHTML, /正常 → 停用/);
+  const html = get("approvalItems").innerHTML;
+  assert.equal((html.match(/class="approval-compare"/g) || []).length, 1);
+  assert.match(html, /百舸写作/);
 });

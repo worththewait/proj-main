@@ -33,16 +33,38 @@ body.role-approval-page { min-width: 0; }
 .approval-table { width: 100%; min-width: 660px; border-collapse: collapse; font-size: 13px; }
 .approval-table th, .approval-table td { padding: 11px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
 .approval-table th { background: var(--surface-subtle); color: var(--muted); font-weight: 550; white-space: nowrap; }
+.approval-table th:first-child { width: 40%; }
 .approval-table th:first-child, .approval-table td:first-child { padding-left: 20px; }
 .approval-table th:last-child, .approval-table td:last-child { padding-right: 20px; text-align: right; }
-.approval-table td { height: 58px; overflow-wrap: anywhere; }
+.approval-table td { height: 58px; padding-block: 10px; overflow-wrap: anywhere; }
 .approval-table td:has(time) { min-width: 126px; }
 .approval-table tbody tr:hover { background: var(--canvas); }
 .approval-table td.approval-empty { height: 154px; color: var(--muted); text-align: center; }
 .approval-type { display: block; font-weight: 600; }
-.approval-list-changes { display: grid; gap: 3px; margin: 0; padding: 0; list-style: none; font-weight: 600; }
-.approval-change-people { display: block; color: var(--muted); font-size: 12px; font-weight: 400; }
-.approval-source { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; }
+.approval-list-changes { display: grid; gap: 4px; container-type: inline-size; }
+.approval-change-line { display: flex; align-items: center; gap: 7px; min-height: 24px; }
+summary.approval-change-line { border-radius: 4px; cursor: pointer; list-style: none; }
+summary.approval-change-line::-webkit-details-marker { display: none; }
+.approval-change-kind { flex: none; padding: 1px 6px; border-radius: 4px; font-size: 12px; font-weight: 550; line-height: 18px; }
+.approval-change-kind[data-change="added"] { background: #e9f5ed; color: #187247; }
+.approval-change-kind[data-change="removed"] { background: #fff1f2; color: #b4232c; }
+.approval-change-roles { display: flex; min-width: 0; font-weight: 500; }
+.approval-change-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.approval-change-second, .approval-change-wide-count, .approval-change-less { display: none; }
+.approval-change-second::before { content: "、"; color: var(--muted); }
+.approval-change-more, .approval-change-less {
+  flex: none; padding: 0 5px; border: 1px solid var(--line); border-radius: 5px; background: var(--surface);
+  color: var(--accent-hover); font-size: 12px; font-weight: 550; line-height: 20px; white-space: nowrap;
+}
+summary.approval-change-line:hover :is(.approval-change-more, .approval-change-less) { border-color: var(--accent); background: var(--accent-soft); }
+@container (min-width: 320px) {
+  .approval-change-second, .approval-change-wide-count { display: block; }
+  .approval-change-narrow-count { display: none; }
+}
+.approval-change-group[open] .approval-change-less { display: block; }
+.approval-change-group[open] :is(.approval-change-roles, .approval-change-more) { display: none; }
+.approval-change-full { display: grid; gap: 2px; margin: 3px 0 4px; padding: 0 0 0 43px; list-style: none; }
+.approval-source { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; line-height: 1.35; }
 .approval-table time, .approval-timeline time { color: var(--muted); font-variant-numeric: tabular-nums; }
 .approval-row-action { padding: 6px 2px; border: 0; border-radius: 4px; background: none; color: var(--accent-hover); font: inherit; font-weight: 550; white-space: nowrap; }
 .approval-row-action:hover { text-decoration: underline; text-underline-offset: 3px; }
@@ -72,13 +94,6 @@ body.role-approval-page { min-width: 0; }
 .approval-role-impact { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin: 5px 0 0; color: var(--muted); font-size: 13px; }
 .approval-role-impact strong { color: var(--ink); font-weight: 650; }
 .approval-impact-update { margin: 0 0 14px; padding: 8px 12px; border-radius: 7px; background: var(--accent-soft); color: var(--accent-hover); font-size: 13px; }
-.approval-menu-changes { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
-.approval-menu-changes > div { flex: 1 1 210px; min-width: 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; }
-.approval-menu-changes dt { margin-bottom: 3px; font-size: 12px; font-weight: 600; }
-.approval-menu-changes [data-change="added"] dt { color: #187247; }
-.approval-menu-changes [data-change="removed"] dt { color: #b4232c; }
-.approval-menu-changes dd { margin: 0; }
-.approval-menu-changes ul { display: flex; flex-wrap: wrap; gap: 2px 14px; margin: 0; padding: 0; list-style: none; font-size: 13px; overflow-wrap: anywhere; }
 .approval-reason { margin-top: 12px; padding: 8px 12px; border-radius: 6px; background: var(--canvas); }
 .approval-reason h3 { margin: 0; color: var(--muted); font-size: 12px; font-weight: 550; }
 .approval-reason p { margin: 3px 0 0; color: var(--ink); font-size: 13px; overflow-wrap: anywhere; white-space: pre-wrap; }
@@ -115,10 +130,19 @@ body.role-approval-page { min-width: 0; }
 .approval-people { list-style: none; margin: 0; padding: 0; }
 #approvalPeople { border: 1px solid var(--line); border-radius: 8px; }
 #approvalPeople:empty { display: none; }
-:is(.approval-role-changes, .approval-list-changes) [data-change="added"] { color: #187247; }
-:is(.approval-role-changes, .approval-list-changes) [data-change="removed"] { color: #b4232c; }
+.approval-role-changes [data-change="added"] { color: #187247; }
+.approval-role-changes [data-change="removed"] { color: #b4232c; }
 .approval-details-note { color: var(--muted); font-size: 12px; }
 .approval-details-note { margin: -4px 0 8px; }
+.approval-member-table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+.approval-member-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
+.approval-member-table th, .approval-member-table td { padding: 9px 12px; text-align: left; overflow-wrap: anywhere; }
+.approval-member-table th { color: var(--muted); background: var(--canvas); font-size: 12px; font-weight: 500; }
+.approval-member-table th:nth-child(2) { width: 36%; }
+.approval-member-table th:last-child { width: 58px; }
+.approval-member-table td { border-top: 1px solid var(--line); }
+.approval-member-table tbody tr:hover { background: var(--canvas); }
+#approvalRoleMemberPager { justify-content: flex-end; margin-top: 10px; }
 .approval-person + .approval-person, .approval-people-more { border-top: 1px solid var(--line); }
 .approval-person-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, auto) 9px; align-items: center; gap: 10px; min-height: 48px; padding: 6px 10px; }
 .approval-person-row:not(summary) { grid-template-columns: minmax(0, 1fr) minmax(90px, auto) auto; }
@@ -146,9 +170,6 @@ summary.approval-person-row:hover { background: var(--canvas); }
 .approval-person-row .approval-role-changes { justify-content: flex-end; margin: 0; font-size: 12px; }
 .approval-subject .approval-role-changes { margin-top: 7px; }
 .approval-account-change { display: inline-block; margin-top: 5px; color: var(--ink); font-size: 13px; font-weight: 550; }
-.approval-config-comparison { margin-top: 6px; }
-.approval-config-comparison > summary { width: fit-content; padding: 3px 0; color: var(--accent-hover); font-size: 13px; cursor: pointer; }
-.approval-config-comparison[open] > summary { margin-bottom: 4px; }
 .approval-timeline li { display: grid; grid-template-columns: 7px 1fr; gap: 8px; overflow-wrap: anywhere; }
 .approval-timeline li::before { width: 6px; height: 6px; margin-top: 7px; border-radius: 50%; background: var(--line-strong); content: ""; }
 .approval-timeline li:last-child::before { background: var(--accent); }

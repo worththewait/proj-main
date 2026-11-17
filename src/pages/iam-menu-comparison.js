@@ -38,8 +38,8 @@
     return [client, backend, historical].filter(node => node?.children.length);
   }
 
-  function renderNode(node, scope, keys, changed, change) {
-    const children = node.children?.map(child => renderNode(child, scope, keys, changed, change));
+  function renderNode(node, scope, keys, changed, change, changedScope) {
+    const children = node.children?.map(child => renderNode(child, scope, keys, changed, change, changedScope));
     const granted = children ? children.reduce((sum, child) => sum + child.granted, 0) : Number(keys.has(node.key));
     const total = children ? children.reduce((sum, child) => sum + child.total, 0) : 1;
     const displayedGranted = node.routeKeys ? node.routeKeys.filter(key => keys.has(key)).length : granted;
@@ -48,15 +48,16 @@
     const inScope = children ? children.some(child => child.inScope) : scope.has(node.key);
     const shownChildren = node.routeKeys ? children : children?.filter(child => child.inScope);
     const isChanged = changed.has(node.key);
+    const hasChanges = changedScope?.has(node.key) || children?.some(child => child.hasChanges);
     const label = `<span class="iam-compare-mark" data-state="${state}" role="img" aria-label="${labels[state]}"></span><span class="iam-compare-name">${escape(node.label)}</span>`;
     const content = children
-      ? `<details open><summary class="iam-compare-node">${label}</summary><ul>${shownChildren.map(child => child.html).join("")}</ul></details>`
+      ? `<details${!changedScope || hasChanges ? " open" : ""}><summary class="iam-compare-node">${label}</summary><ul>${shownChildren.map(child => child.html).join("")}</ul></details>`
       : `<div class="iam-compare-node">${label}${isChanged ? `<span class="approval-change-label">${change === "added" ? "新增" : "移除"}</span>` : ""}</div>`;
-    return { granted, total, inScope, html: `<li${isChanged ? ` data-change="${change}"` : ""}>${content}</li>` };
+    return { granted, total, inScope, hasChanges, html: `<li${isChanged ? ` data-change="${change}"` : ""}>${content}</li>` };
   }
 
-  function side(label, tree, scope, keys, changed, change) {
-    const nodes = tree.map(node => renderNode(node, scope, keys, changed, change)).filter(node => node.inScope);
+  function side(label, tree, scope, keys, changed, change, changedScope) {
+    const nodes = tree.map(node => renderNode(node, scope, keys, changed, change, changedScope)).filter(node => node.inScope);
     return `<section class="approval-compare-side" aria-label="${escape(label)}">
       <div class="approval-compare-head"><strong>${escape(label)}</strong><span>${keys.size} 项</span></div>
       ${nodes.length ? `<ul class="iam-compare-tree">${nodes.map(node => node.html).join("")}</ul>`
@@ -64,13 +65,14 @@
     </section>`;
   }
 
-  function render(current, requested, resultLabel, beforeLabel = "变更前") {
+  function render(current, requested, resultLabel, beforeLabel = "变更前", { collapseUnchanged = false } = {}) {
     const { before, after, added, removed } = difference(current, requested);
     const scope = new Set([...before, ...after]);
     const tree = comparisonTree(scope);
+    const changedScope = collapseUnchanged ? new Set([...added, ...removed]) : null;
     return `<div class="approval-compare">
-      ${side(beforeLabel, tree, scope, before, removed, "removed")}
-      ${side(resultLabel, tree, scope, after, added, "added")}
+      ${side(beforeLabel, tree, scope, before, removed, "removed", changedScope)}
+      ${side(resultLabel, tree, scope, after, added, "added", changedScope)}
     </div>`;
   }
 

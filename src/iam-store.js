@@ -22,6 +22,7 @@
   const isProtectedUser = (id) => Boolean(id) && actors.some((person) => person.userId === id);
   const reservedRoleCode = (code) => ["superadmin", "iam-admin", "iam-reviewer", "iam-reviewer-2"].includes(text(code).toLowerCase());
   const protectedRole = (role) => role.id === "1" || reservedRoleCode(role.code);
+  const roleChangeTypes = new Set(["menus", "enable-role", "disable-role", "delete-role"]);
   let fallbackActor = actors[0].id;
 
   const DEPARTMENT_TREE = [
@@ -238,7 +239,7 @@
   }
 
   function userIdentity(user) {
-    return { id: user.id, name: userName(user), username: user.username || "", department: user.department || "" };
+    return { id: user.id, name: userName(user) || user.id, username: user.username || "", department: user.department || "" };
   }
 
   function changedUserIdentities(request) {
@@ -254,6 +255,12 @@
   }
 
   function impact(value, type, items) {
+    if (roleChangeTypes.has(type)) {
+      return affectedUserIds(value, items).map(id => {
+        const user = findUser(value, id);
+        return { ...userIdentity(user), status: user.status };
+      });
+    }
     const proposed = { users: clone(value.users), roles: clone(value.roles) };
     applyRequest(proposed, { type, items });
     return affectedUserIds(value, items).map(id => {
@@ -275,15 +282,19 @@
 
   function snapshotBlockReason(request) {
     if (request.status !== "pending") return "";
-    if (![2, 3].includes(request.snapshotVersion)) return "旧版申请缺少完整权限快照，请撤回后重新提交。";
+    const roleSnapshot = request.snapshotVersion === 4 && roleChangeTypes.has(request.type);
+    if (!roleSnapshot && ![2, 3].includes(request.snapshotVersion)) return "旧版申请缺少完整权限快照，请撤回后重新提交。";
     const affected = ids(request.items.flatMap(item => item.userId ? [item.userId] : item.affectedUserIds || []));
+    if (roleSnapshot && !request.items.every(item => Array.isArray(item.currentMenus) && Array.isArray(item.requestedMenus))) {
+      return "申请缺少完整角色菜单快照，请撤回后重新提交。";
+    }
     const complete = recordedDependencies(request) && Array.isArray(request.impact) && request.impact.length === affected.length
       && affected.every(id => request.impact.some(person => person?.id === id
-        && Array.isArray(person.currentMenus) && Array.isArray(person.requestedMenus)));
+        && (roleSnapshot ? isState(person.status) && typeof person.name === "string"
+          && typeof person.username === "string" && typeof person.department === "string"
+          : Array.isArray(person.currentMenus) && Array.isArray(person.requestedMenus))));
     return complete ? "" : "申请缺少完整权限快照，请撤回后重新提交。";
   }
-
-  const roleChangeTypes = new Set(["menus", "enable-role", "disable-role", "delete-role"]);
 
   function findPendingRoleChange(value, roleIds) {
     if (!roleIds.size) return null;
@@ -360,7 +371,8 @@
     const request = {
       id: uid("iam"), type, status: "pending", source: text(source) || "角色授权", reason: explanation,
       createdAt: now(), applicant: { id: person.id, name: person.name }, items,
-      snapshotVersion: 3, snapshot: JSON.stringify(directDependencies(value, type, items)), impact: impact(value, type, items),
+      snapshotVersion: roleChangeTypes.has(type) ? 4 : 3,
+      snapshot: JSON.stringify(directDependencies(value, type, items)), impact: impact(value, type, items),
     };
     value.requests.unshift(request);
     return request;
@@ -601,19 +613,43 @@
     return saveRoleEdit(roleId, {}, menuPermissions, meta);
   }
 
+  function userStatusRequiresApproval(user) {
+    return !Array.isArray(user.roleIds) || user.roleIds.length > 0;
+  }
+
   function requestLifecycle(kind, id, operation, meta) {
-    requireActor("admin");
+    const person = requireActor("admin");
     if (!["enable", "disable", "delete"].includes(operation)) throw new Error("状态变更类型无效。");
     const value = read();
     const enabling = operation === "enable";
     const deleting = operation === "delete";
     const nextStatus = enabling ? "normal" : "disabled";
+    const type = `${operation}-${kind}`;
     let items;
     if (kind === "user") {
       const user = findUser(value, id);
       if (!user) throw new Error("所选用户不存在。");
       if (!enabling && isProtectedUser(id)) throw new Error("预设审核员不能停用或删除。");
       if (!deleting && user.status === nextStatus) throw new Error(enabling ? "用户已启用。" : "用户已停用。");
+      if (!deleting) {
+        const requiresApproval = userStatusRequiresApproval(user);
+        if (meta?.expectedApproval !== undefined && meta.expectedApproval !== requiresApproval) {
+          throw new Error("用户的角色已变更，请按当前状态重新操作。");
+        }
+        if (!requiresApproval) {
+          const targets = [{ userId: id }];
+          invalidateStale(value);
+          checkRequestConflict(value, targets);
+          const previousStatus = user.status;
+          applyRequest(value, { type, items: targets });
+          value.events.push({
+            id: uid("iam-event"), type: "user-status-saved", createdAt: now(),
+            actor: { id: person.id, name: person.name }, userId: id, previousStatus, nextStatus,
+          });
+          write(value);
+          return null;
+        }
+      }
       items = [{
         userId: id, userName: userName(user), operation,
         currentMenus: accountMenus(value, user), requestedMenus: enabling ? accountMenus(value, { ...user, status: nextStatus }) : [],
@@ -625,7 +661,7 @@
     } else {
       throw new Error("状态变更对象类型无效。");
     }
-    const request = recordRequest(value, `${operation}-${kind}`, items, meta);
+    const request = recordRequest(value, type, items, meta);
     write(value);
     return clone(request);
   }
@@ -774,7 +810,7 @@
     KEY, ACTOR_KEY, DEPARTMENT_TREE, actors, actor, setActor, withWriteLock,
     users, roles, requests, effectiveMenus, changedUserIdentities, isProtectedRole, isProtectedUser, isPrivilegedMenu,
     addUser, createUserWithRequest, updateUser, saveUserEdit, removeUser, toggleUser, addRole, updateRole, removeRole, toggleRole,
-    requestMembership, changeRoleMenus, previewRoleChange, saveRoleEdit, requestLifecycle, requestEnable, pendingRoleChange,
+    requestMembership, changeRoleMenus, previewRoleChange, saveRoleEdit, requestLifecycle, requestEnable, userStatusRequiresApproval, pendingRoleChange,
     canReviewRequest, approvalBlockReason, blockingRoleChange, reviewPreview, reviewRequest, withdrawRequest, revokeMembership, subscribe,
   });
 })();

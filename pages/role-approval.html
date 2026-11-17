@@ -6,7 +6,7 @@
   <title>角色授权审核 · 百舸后台</title>
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="../admin.css" />
-  <link rel="stylesheet" href="../role-approval.css?v=20261114-role-list" />
+  <link rel="stylesheet" href="../role-approval.css?v=20261116-role-summary" />
   <link rel="stylesheet" href="../iam-menu-comparison.css?v=20261113" />
   <link rel="stylesheet" href="../admin-pagination.css?v=20261114" />
 </head>
@@ -75,12 +75,6 @@
       <p class="approval-impact-update" id="approvalImpactUpdate" role="status" hidden></p>
       <section class="approval-subject" id="approvalSubject" aria-label="申请对象"></section>
       <div class="approval-reason"><h3>申请原因</h3><p id="approvalReason"></p></div>
-      <section class="approval-details" id="approvalPeopleSection" aria-labelledby="approvalPeopleTitle">
-        <h3 id="approvalPeopleTitle">涉及用户</h3>
-        <p class="approval-details-note" id="approvalPeopleNote" hidden></p>
-        <ul class="approval-people" id="approvalPeople"></ul>
-        <p class="approval-details-note" id="approvalPeopleEmpty" hidden>当前没有用户使用这个角色。</p>
-      </section>
       <details class="approval-comparison" id="approvalChanges">
         <summary id="approvalChangesTitle">查看完整权限对比</summary>
         <div class="approval-comparison-content">
@@ -88,6 +82,20 @@
           <ul class="approval-items" id="approvalItems"></ul>
         </div>
       </details>
+      <section class="approval-details" id="approvalPeopleSection" aria-labelledby="approvalPeopleTitle">
+        <h3 id="approvalPeopleTitle">涉及用户</h3>
+        <div id="approvalRoleMembers" hidden>
+          <div class="approval-member-table-wrap">
+            <table class="approval-member-table">
+              <thead><tr><th scope="col">姓名</th><th scope="col">账号</th><th scope="col">部门</th><th scope="col">状态</th></tr></thead>
+              <tbody id="approvalRoleMemberRows"></tbody>
+            </table>
+          </div>
+          <nav class="admin-pagination" id="approvalRoleMemberPager" aria-label="涉及用户分页"></nav>
+        </div>
+        <ul class="approval-people" id="approvalPeople"></ul>
+        <p class="approval-details-note" id="approvalPeopleEmpty" hidden>当前没有用户使用这个角色。</p>
+      </section>
       <section class="approval-details" aria-labelledby="approvalTimelineTitle">
         <h3 id="approvalTimelineTitle">处理记录</h3>
         <dl class="approval-meta" id="approvalMeta"></dl>
@@ -120,9 +128,9 @@
   <script src="../src/data.js?v=20261113-role-editor"></script>
   <script src="../src/feature-config.js?v=20261109-diagram-tools"></script>
   <script src="../src/iam-menu-catalog.js?v=20261113-menu-comparison"></script>
-  <script src="../src/pages/iam-menu-comparison.js?v=20261113-review-checks"></script>
-  <script src="../src/iam-store.js?v=20261113-role-pending"></script>
+  <script src="../src/pages/iam-menu-comparison.js?v=20261116-role-simple"></script>
+  <script src="../src/iam-store.js?v=20261116-role-simple"></script>
   <script src="../src/pages/admin-pagination.js?v=20261114"></script>
-  <script src="../src/pages/role-approval.js?v=20261114-role-list"></script>
+  <script src="../src/pages/role-approval.js?v=20261116-role-summary"></script>
 </body>
 </html>

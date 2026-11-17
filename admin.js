@@ -11,8 +11,8 @@
     consult: { src: "pages/consult-admin.html?embed=admin&v=20261111-consult", title: "留言咨询" },
     interface: { src: INTERFACE_SRC, title: "界面管理" },
     users: { src: "pages/user-admin.html?embed=admin&v=20261114-pagination", title: "用户管理" },
-    roles: { src: "pages/role-admin.html?embed=admin&v=20261114-pagination", title: "角色管理" },
-    "role-approval": { src: "pages/role-approval.html?embed=admin&v=20261114-role-list", title: "角色授权审核" },
+    roles: { src: "pages/role-admin.html?embed=admin&v=20261116-role-simple", title: "角色管理" },
+    "role-approval": { src: "pages/role-approval.html?embed=admin&v=20261116-role-simple", title: "角色授权审核" },
     access: { src: "pages/permission-review.html?embed=admin&v=20261114-pagination", title: "权限审核" },
   };
   // 旧的 #features / #settings 仍可用，落到界面管理的对应页签。

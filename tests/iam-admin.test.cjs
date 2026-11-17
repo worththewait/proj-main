@@ -78,6 +78,41 @@ function approve(store, request) {
 const meta = { source: "分配角色", reason: "工作需要" };
 const pair = (userId, roleId = KNOWLEDGE) => ({ userId, roleId });
 
+test("无角色账号启停立即生效，保留操作记录，删除仍走审批", () => {
+  const storage = new Map();
+  const store = setup(storage);
+  const userId = "u-wu";
+  const current = () => store.users().find(user => user.id === userId);
+  assert.equal(store.toggleUser(userId), null);
+  assert.equal(current().status, "disabled");
+  assert.throws(() => store.requestMembership({ add: [pair(userId)], ...meta }), /启用/);
+  assert.equal(store.requestEnable("user", userId), null);
+  assert.equal(current().status, "normal");
+  assert.equal(current().stateRevision, 2);
+  assert.equal(store.requests().length, 0);
+  const events = JSON.parse(storage.get(store.KEY)).events;
+  assert.deepEqual(events.map(event => [event.userId, event.previousStatus, event.nextStatus, event.actor.id]), [
+    [userId, "normal", "disabled", "iam-admin"], [userId, "disabled", "normal", "iam-admin"],
+  ]);
+  assert.equal(store.removeUser(userId, meta).status, "pending");
+});
+
+test("无角色账号有待审授权时启停返回原申请，已有角色时审批口径按最新关系校验", () => {
+  const store = setup();
+  const userId = "u-wu";
+  const initial = store.requestMembership({ add: [pair(userId)], ...meta });
+  assert.throws(() => store.toggleUser(userId), error => error.requestId === initial.id);
+  assert.equal(store.users().find(user => user.id === userId).status, "normal");
+  approve(store, initial);
+  assert.throws(() => store.toggleUser(userId, { expectedApproval: false }), /角色已变更/);
+  const granted = store.toggleUser(userId, { ...meta, expectedApproval: true });
+  assert.equal(granted.status, "pending");
+  store.withdrawRequest(granted.id);
+  approve(store, store.revokeMembership([pair(userId)], meta));
+  assert.throws(() => store.toggleUser(userId, { ...meta, expectedApproval: true }), /角色已变更/);
+  assert.equal(store.toggleUser(userId), null);
+});
+
 test("角色授权双向同步仅在审核通过后生效，同一用户角色关系禁止重复送审", () => {
   const storage = new Map();
   const store = setup(storage);
@@ -444,7 +479,7 @@ test("移除旧版整组权限的其中一项和重新添加均须审批", () =>
   assert.deepEqual([...store.effectiveMenus("u-demo")], ["frontier:全球鹰"]);
 });
 
-test("角色变更保留所有涉及用户，并展示各账号从其他角色继承的菜单", () => {
+test("角色变更保存角色前后菜单及涉及用户身份，不计算账号实际权限", () => {
   const store = setup();
   approve(store, store.requestMembership({ add: [pair("u-lp", "27644551053344")], ...meta }));
   const before = JSON.stringify(store.roles());
@@ -456,9 +491,18 @@ test("角色变更保留所有涉及用户，并展示各账号从其他角色�
   const retains = request.impact.find(user => user.id === "u-lp");
   assert.equal(retains.username, "lp@cimtec.net.cn");
   assert.equal(retains.department, "技术部");
-  assert.deepEqual([...retains.currentMenus], ["home", "knowledge"]);
-  assert.deepEqual([...retains.requestedMenus], ["home", "knowledge"]);
-  assert.deepEqual([...request.impact.find(user => user.id === "u-yym").requestedMenus], ["home"]);
+  assert.equal(request.snapshotVersion, 4);
+  for (const person of [...draft.impact, ...request.impact]) {
+    assert.equal(Object.hasOwn(person, "currentMenus"), false);
+    assert.equal(Object.hasOwn(person, "requestedMenus"), false);
+    assert.equal(person.status, "normal");
+  }
+  reviewer(store);
+  const approved = store.reviewRequest(request.id, "approved", "", store.reviewPreview(request.id).token);
+  assert.equal(approved.approvedImpact.length, 5);
+  assert.equal(Object.hasOwn(approved.approvedImpact[0], "currentMenus"), false);
+  assert.deepEqual([...store.effectiveMenus("u-lp")], ["home", "knowledge"]);
+  assert.deepEqual([...store.effectiveMenus("u-yym")], []);
   assert.deepEqual([...request.items[0].currentMenus], ["knowledge"]);
   assert.deepEqual([...request.items[0].requestedMenus], []);
 });
@@ -477,7 +521,7 @@ test("角色预览确认后，修改所选菜单或成员范围须重新预览",
   assert.doesNotThrow(() => store.updateRole(KNOWLEDGE, { remark: "资料仍可修改" }));
 });
 
-test("角色送审前展示的实际权限变化须重新核对，提交后同类变化只刷新比对", () => {
+test("角色送审确认成员状态，提交后显示最新状态且保留身份快照", () => {
   const store = setup();
   const menus = ["knowledge", "analysis"];
   const draft = store.previewRoleChange(KNOWLEDGE, menus);
@@ -513,15 +557,15 @@ test("其他角色带来的权限变化只刷新审核比对，并记录批准�
   assert.deepEqual([...store.effectiveMenus("u-lp")], ["frontier", "knowledge", "writing"]);
 });
 
-test("角色变更只依赖成员关系，成员停用时刷新比对，移出成员时失效", () => {
+test("角色变更只核对成员名单，成员停用时更新状态，移出成员时失效", () => {
   const store = setup();
   const change = store.changeRoleMenus(KNOWLEDGE, ["knowledge", "writing"], meta);
   approve(store, store.requestLifecycle("user", "u-lp", "disable", meta));
   const preview = store.reviewPreview(change.id);
   const user = preview.impact.find(person => person.id === "u-lp");
   assert.equal(user.status, "disabled");
-  assert.deepEqual([...user.currentMenus], []);
-  assert.deepEqual([...user.requestedMenus], []);
+  assert.equal(Object.hasOwn(user, "currentMenus"), false);
+  assert.equal(Object.hasOwn(user, "requestedMenus"), false);
   approve(store, store.requestMembership({ remove: [pair("u-lp")], ...meta }));
   assert.equal(store.reviewPreview(change.id), null);
   assert.equal(store.requests().find(request => request.id === change.id).status, "invalid");
@@ -761,4 +805,65 @@ test("user and role admin pages are wired into back office navigation", () => {
   assert.match(roleJs, /function renderRoleUsers/);
   assert.match(roleJs, /data-iam-role-user-remove/);
   assert.match(read("user-role-admin.css"), /\.iam-role-users-table/);
+});
+
+
+test("角色菜单审批不受成员其他角色权限变更影响，审核记录保留成员身份", () => {
+  const store = setup();
+  approve(store, store.requestMembership({ add: [pair("u-lp", TOOL)], ...meta }));
+  const draft = store.previewRoleChange(KNOWLEDGE, ["knowledge", "writing"]);
+  approve(store, store.changeRoleMenus(TOOL, ["analysis"], meta));
+  const request = store.changeRoleMenus(KNOWLEDGE, ["knowledge", "writing"], { ...meta, expectedImpact: draft.token });
+  const preview = store.reviewPreview(request.id);
+  approve(store, store.changeRoleMenus(TOOL, ["intel"], meta));
+  assert.equal(store.reviewPreview(request.id).token, preview.token);
+  reviewer(store);
+  const approved = store.reviewRequest(request.id, "approved", "", preview.token);
+  admin(store);
+  store.updateUser("u-lp", { nickname: "后续新名字" });
+  const saved = store.requests().find(entry => entry.id === request.id);
+  assert.equal(saved.approvedImpact.find(person => person.id === "u-lp").name, "lp");
+  assert.deepEqual([...store.effectiveMenus("u-lp")], ["intel", "knowledge", "writing"]);
+  assert.equal(approved.status, "approved");
+});
+
+test("角色轻量申请缺少成员或角色菜单快照时禁止批准", () => {
+  for (const missing of ["people", "menus"]) {
+    const storage = new Map();
+    const store = setup(storage);
+    const request = store.changeRoleMenus(KNOWLEDGE, ["writing"], meta);
+    const data = JSON.parse(storage.get(store.KEY));
+    if (missing === "people") data.requests[0].impact = [];
+    else delete data.requests[0].items[0].requestedMenus;
+    storage.set(store.KEY, JSON.stringify(data));
+    reviewer(store);
+    assert.throws(() => store.reviewRequest(request.id, "approved"), /缺少完整/);
+    assert.equal(store.reviewRequest(request.id, "rejected", "退回补充").status, "rejected");
+    assert.deepEqual([...store.effectiveMenus("u-lp")], ["knowledge"]);
+  }
+});
+
+test("旧 V2 与 V3 角色申请可沿用角色菜单与成员审核，历史数据保持原样", () => {
+  for (const version of [2, 3]) {
+    const storage = new Map();
+    const store = setup(storage);
+    const request = store.changeRoleMenus(KNOWLEDGE, ["knowledge", "writing"], meta);
+    const data = JSON.parse(storage.get(store.KEY));
+    const saved = data.requests[0];
+    saved.snapshotVersion = 3;
+    saved.impact.forEach(person => {
+      person.currentMenus = ["home", "knowledge"];
+      person.requestedMenus = ["home", "knowledge", "writing"];
+    });
+    storage.set(store.KEY, JSON.stringify(data));
+    if (version === 2) writeV2Request(store, storage, request);
+    reviewer(store);
+    assert.equal(store.approvalBlockReason(store.requests()[0]), "");
+    const preview = store.reviewPreview(request.id);
+    assert.equal(Object.hasOwn(preview.impact[0], "currentMenus"), false);
+    const approved = store.reviewRequest(request.id, "approved", "", preview.token);
+    assert.equal(approved.status, "approved");
+    assert.deepEqual([...approved.impact[0].currentMenus], ["home", "knowledge"]);
+    assert.deepEqual([...store.effectiveMenus("u-lp")], ["knowledge", "writing"]);
+  }
 });

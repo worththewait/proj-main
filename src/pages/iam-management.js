@@ -70,7 +70,7 @@
       window.parent.postMessage({ type: "baige:iam-request", requestId }, "*");
       return;
     }
-    localRequests ||= mountRequestsDrawer("./role-approval.html?v=20261114-role-list", restoreRequestFocus);
+    localRequests ||= mountRequestsDrawer("./role-approval.html?v=20261116-role-simple", restoreRequestFocus);
     localRequests.open(requestId, document.body.dataset.page === "iam-roles" ? "role" : "user");
   }
 
@@ -90,7 +90,9 @@
   function statusSwitch(kind, item, disabled) {
     const normal = item.status === "normal";
     const name = item.username || item.name;
-    const hint = disabled ? "当前状态" : normal ? "申请停用" : "申请启用";
+    const action = normal ? "停用" : "启用";
+    const appliesDirectly = kind === "user" && !store.userStatusRequiresApproval(item);
+    const hint = disabled ? "当前状态" : appliesDirectly ? `直接${action}` : `申请${action}`;
     return `<button class="iam-status-switch" type="button" role="switch" aria-checked="${normal}"
       data-iam-${kind}-toggle="${escape(item.id)}" aria-label="${escape(name)}的启用状态"
       title="${hint}"${disabled ? " disabled" : ""}>
@@ -187,7 +189,7 @@
     reasonInput.focus();
   }
 
-  function requestLifecycle(kind, item, operation) {
+  async function requestLifecycle(kind, item, operation) {
     const pending = (pendingItemsBy(kind === "user" ? "userId" : "roleId").get(item.id) || [])
       .find(change => kind === "user" || !change.userId);
     if (pending) {
@@ -198,10 +200,20 @@
     const type = kind === "user" ? "用户" : "角色";
     const action = { enable: "恢复启用", disable: "停用", delete: "删除" }[operation];
     const source = `${type}管理 · ${action}`;
+    const expectedApproval = kind === "user" && operation !== "delete" ? store.userStatusRequiresApproval(item) : undefined;
+    if (expectedApproval === false) {
+      try {
+        await store.withWriteLock(() => store.requestLifecycle(kind, item.id, operation, { expectedApproval }));
+        toast(operation === "enable" ? "账号已启用" : "账号已停用");
+      } catch (error) {
+        toast(error.message, error.requestId ? { id: error.requestId } : null, "查看原申请");
+      }
+      return;
+    }
     askPermissionChange({
       title: `申请${action}${type}`,
       summary: `审核通过后${action}「${name}」。`,
-      submitRequest: reason => store.requestLifecycle(kind, item.id, operation, { source, reason }),
+      submitRequest: reason => store.requestLifecycle(kind, item.id, operation, { source, reason, expectedApproval }),
     });
   }
 
