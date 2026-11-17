@@ -17,4 +17,5 @@
 
 - `pages/smart-tools.html`、`tools-visual.css`、`src/pages/smart-tools.js`、`src/tool-workspace.js`、`src/data.js`、`src/feature-config.js`。导航子项、首页目的地需与 `src/iam-menu-catalog.js` 的授权菜单一致。
 - `tests/feature-tools.test.cjs` 覆盖角色范围及撤权、配置刷新、空分类、线性图标、占位和独立流程图保留状态。改工具接入时从首页和工具目录各打开一次，检查切换和关闭后状态以及角色限制。
+- 十项工具的功能大图（720×380 画布、导出 1440×760 PNG，文档处理蓝／写作创作紫／研究辅助青）在 `docs/智能工具大图/`，含 SVG 源文件、PNG 与总览；热门区仍只使用其中「文档翻译、OCR识别、思维导图生成」三张。
 - 具体交互见 [纠错校对](proofread.md)、[文档翻译](document-translation.md)、[文本翻译](text-translation.md)、[OCR 识别](ocr.md)、[文献伴读](literature.md)、[思维导图](mindmap.md)、[流程图](flowchart.md)。

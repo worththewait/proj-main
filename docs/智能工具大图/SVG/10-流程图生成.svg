@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#1a3a58"/><stop offset="1" stop-color="#0b1734"/></linearGradient>
+    <linearGradient id="sheet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b5eeed" stop-opacity=".9"/><stop offset=".48" stop-color="#59c9d5" stop-opacity=".64"/><stop offset="1" stop-color="#078b98" stop-opacity=".24"/></linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d5f9f6"/><stop offset="1" stop-color="#55bfda" stop-opacity=".4"/></linearGradient>
+    <marker id="arw" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="5.2" markerHeight="5.2" orient="auto-start-reverse"><path d="M0 0 10 5 0 10z" fill="#c2f4f1"/></marker>
+  </defs>
+  <rect width="720" height="380" fill="url(#bg)"/>
+  <g fill="none" stroke="#69cdd6" stroke-width="1.2" opacity=".24">
+    <path d="M58 316C146 306 180 262 262 250"/>
+    <path d="M486 56C558 72 600 102 666 110"/>
+  </g>
+  <rect x="78" y="158" width="88" height="48" rx="24" fill="#050d23" opacity=".2"/>
+  <rect x="72" y="152" width="88" height="48" rx="24" fill="url(#sheet)" stroke="url(#edge)" stroke-width="1.4"/>
+  <path d="M160 176H200" stroke="#c2f4f1" stroke-width="2.6" stroke-linecap="round" marker-end="url(#arw)"/>
+  <path d="M272 126 328 182 272 238 216 182Z" fill="#050d23" opacity=".2"/>
+  <path d="M266 120 322 176 266 232 210 176Z" fill="url(#sheet)" stroke="url(#edge)" stroke-width="1.4"/>
+  <path d="M322 176C350 176 346 121 372 121" fill="none" stroke="#c2f4f1" stroke-width="2.6" stroke-linecap="round" marker-end="url(#arw)"/>
+  <path d="M322 176C350 176 346 231 372 231" fill="none" stroke="#c2f4f1" stroke-width="2.6" stroke-linecap="round" marker-end="url(#arw)"/>
+  <rect x="378" y="100" width="126" height="54" rx="10" fill="#050d23" opacity=".2"/>
+  <rect x="372" y="94" width="126" height="54" rx="10" fill="url(#sheet)" stroke="url(#edge)" stroke-width="1.4"/>
+  <rect x="378" y="206" width="126" height="54" rx="10" fill="#050d23" opacity=".2"/>
+  <rect x="372" y="200" width="126" height="54" rx="10" fill="url(#sheet)" stroke="url(#edge)" stroke-width="1.4"/>
+  <g fill="none" stroke="#eefefb" stroke-linecap="round" opacity=".8">
+    <path d="M394 116h74" stroke-width="4"/>
+    <path d="M394 132h44" stroke-width="3.4" opacity=".7"/>
+    <path d="M394 222h68" stroke-width="4"/>
+    <path d="M394 238h38" stroke-width="3.4" opacity=".7"/>
+  </g>
+  <path d="M498 121C524 121 514 170 532 176" fill="none" stroke="#c2f4f1" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
+  <path d="M498 227C524 227 514 182 532 176" fill="none" stroke="#c2f4f1" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
+  <circle cx="532" cy="176" r="4" fill="#d8fbf4"/>
+  <path d="M536 176H568" stroke="#c2f4f1" stroke-width="2.6" stroke-linecap="round" marker-end="url(#arw)"/>
+  <rect x="570" y="158" width="88" height="48" rx="24" fill="#050d23" opacity=".2"/>
+  <rect x="564" y="152" width="88" height="48" rx="24" fill="url(#sheet)" stroke="url(#edge)" stroke-width="1.4"/>
+  <circle cx="632" cy="304" r="3" fill="#69cdd6" opacity=".6"/>
+</svg>

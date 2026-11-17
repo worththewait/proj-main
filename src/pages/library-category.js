@@ -1,5 +1,5 @@
 /* 后台「分类归属」：一张部门列表 + 一份类型库。
-   部门行的「类型管理」从类型库多选，保存即生效并留痕。 */
+   部门行的「分配类型」从类型库多选，保存即生效并留痕。 */
 (() => {
   "use strict";
 
@@ -56,7 +56,7 @@
           ${label(dept) !== dept ? `<small>${escapeHtml(dept)}</small>` : ""}
         </td>
         <td>${owned.length ? `<span class="lc-chips">${chips(owned)}</span>` : '<span class="lc-muted">暂未负责类型</span>'}</td>
-        <td class="col-ops"><button class="lc-adjust" type="button" data-manage="${escapeHtml(dept)}">类型管理</button></td>
+        <td class="col-ops"><button class="lc-adjust" type="button" data-manage="${escapeHtml(dept)}">分配类型</button></td>
       </tr>`;
     });
     const idle = snapshot.types.filter((name) => !snapshot.owners[name]);
@@ -68,7 +68,7 @@
       </tr>`);
     }
     body.innerHTML = rows.join("");
-    note.textContent = `共 ${snapshot.types.length} 个类型，已分配 ${snapshot.types.length - idle.length} 个${idle.length ? `，未分配 ${idle.length} 个` : ""}；部门「类型管理」与类型库共用同一份配置。`;
+    note.textContent = `共 ${snapshot.types.length} 个类型，已分配 ${snapshot.types.length - idle.length} 个${idle.length ? `，未分配 ${idle.length} 个` : ""}；部门「分配类型」与类型库共用同一份配置。`;
     renderHistory();
   }
 
@@ -155,7 +155,7 @@
       $("#lcTypeError").textContent = `「${name}」下还有 ${count} 篇文档，暂不能删除；可先调整文档类型。`;
       return;
     }
-    if (!window.confirm(`删除类型「${name}」？删除后不再出现在部门类型管理与上传向导中。`)) return;
+    if (!window.confirm(`删除类型「${name}」？删除后不再出现在部门分配类型与上传向导中。`)) return;
     try {
       store.removeType(name, { by: actorName, expectedVersion: store.snapshot().version });
     } catch (error) {
@@ -170,13 +170,13 @@
     toast("类型已删除");
   }
 
-  /* 部门「类型管理」：勾选框来自类型库，可多选。 */
+  /* 部门「分配类型」：勾选框来自类型库，可多选。 */
   function openDept(dept) {
     if (!canConfigure) return;
     const snapshot = store.snapshot();
     state.dept = dept;
     state.version = snapshot.version;
-    $("#lcDeptTitle").textContent = `${label(dept)} · 类型管理`;
+    $("#lcDeptTitle").textContent = `${label(dept)} · 分配类型`;
     $("#lcDeptError").textContent = "";
     $("#lcDeptTypes").innerHTML = snapshot.types.length
       ? snapshot.types.map((name) => {

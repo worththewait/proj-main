@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>分类归属 · 后台系统</title>
   <link rel="stylesheet" href="../styles.css?v=20261027-management">
-  <link rel="stylesheet" href="../library-category.css?v=20261117-types">
+  <link rel="stylesheet" href="../library-category.css?v=20261117-assign">
 </head>
 <body class="module-page lc-admin-page">
   <main class="module-main">
@@ -14,7 +14,7 @@
         <header class="lc-head">
           <div>
             <h1>分类归属</h1>
-            <p>维护一份类型库，并为每个部门勾选负责的类型。部门列表里的「类型管理」读取同一份类型库，可多选；保存即生效。</p>
+            <p>维护一份类型库，并为每个部门勾选负责的类型。部门列表里的「分配类型」读取同一份类型库，可多选；保存即生效。</p>
           </div>
         </header>
 
@@ -73,7 +73,7 @@
 
   <form class="lc-modal" id="lcDeptModal" role="dialog" aria-modal="true" aria-labelledby="lcDeptTitle" novalidate hidden>
     <header class="lc-modal-head">
-      <h2 id="lcDeptTitle">类型管理</h2>
+      <h2 id="lcDeptTitle">分配类型</h2>
       <button class="lc-close" type="button" id="lcDeptClose" aria-label="关闭">×</button>
     </header>
     <div class="lc-modal-body">
@@ -90,9 +90,9 @@
   <div class="lc-toast" id="lcToast" role="status" hidden></div>
 
   <script src="../src/ui.js?v=20261109-diagram-tools"></script>
-  <script src="../src/library-category-store.js?v=20261117-types"></script>
+  <script src="../src/library-category-store.js?v=20261117-assign"></script>
   <script src="../src/library-data.js?v=20261117-category"></script>
-  <script src="../src/library-store.js?v=20261117-types"></script>
-  <script src="../src/pages/library-category.js?v=20261117-types"></script>
+  <script src="../src/library-store.js?v=20261117-assign"></script>
+  <script src="../src/pages/library-category.js?v=20261117-assign"></script>
 </body>
 </html>

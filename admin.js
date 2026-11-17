@@ -5,7 +5,7 @@
   const views = {
     files: { src: "pages/library-admin.html?embed=admin&view=files&v=20261117-types", title: "文件管理" },
     perm: { src: "pages/library-admin.html?embed=admin&view=perm&v=20261117-types", title: "权限管理" },
-    category: { src: "pages/library-category.html?embed=admin&v=20261117-types", title: "分类归属" },
+    category: { src: "pages/library-category.html?embed=admin&v=20261117-assign", title: "分类归属" },
     transfer: { src: "pages/data-transfer.html?embed=admin", title: "数据摆渡" },
     notices: { src: "pages/notice-admin.html?embed=admin&v=20261029-notice", title: "通知公告" },
     "portal-news": { src: "pages/portal-news-admin.html?embed=admin&v=20261111-news-admin", title: "动态发布" },

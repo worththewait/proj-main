@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#22386c"/><stop offset="1" stop-color="#0b1634"/></linearGradient>
+    <linearGradient id="sheet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#b6cbff" stop-opacity=".9"/><stop offset=".48" stop-color="#4b7cff" stop-opacity=".72"/><stop offset="1" stop-color="#245bff" stop-opacity=".28"/></linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e3edff"/><stop offset="1" stop-color="#648eff" stop-opacity=".35"/></linearGradient>
+    <linearGradient id="lens" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#dfe9ff" stop-opacity=".55"/><stop offset="1" stop-color="#6f9bff" stop-opacity=".12"/></linearGradient>
+  </defs>
+  <rect width="720" height="380" fill="url(#bg)"/>
+  <g fill="none" stroke="#7fa4ff" stroke-width="1.2" opacity=".26">
+    <path d="M64 316C150 306 186 262 258 252"/>
+    <path d="M508 60C570 74 606 108 668 114"/>
+  </g>
+  <g transform="skewY(-5)">
+    <rect x="266" y="96" width="248" height="198" rx="8" fill="#050d23" opacity=".22"/>
+    <rect x="256" y="84" width="248" height="198" rx="8" fill="url(#sheet)" stroke="url(#edge)" stroke-width="1.4"/>
+    <g fill="none" stroke="#eaf1ff" stroke-linecap="round">
+      <path d="M282 114h176" stroke-width="6" opacity=".85"/>
+      <path d="M282 140h132" stroke-width="4" opacity=".6"/>
+      <path d="M282 162h158" stroke-width="4" opacity=".6"/>
+      <path d="M282 184h104" stroke-width="4" opacity=".55"/>
+      <path d="M282 206h146" stroke-width="4" opacity=".45"/>
+      <path d="M282 228h118" stroke-width="4" opacity=".4"/>
+    </g>
+    <path d="M282 184h104" stroke="#ff9f9f" stroke-width="4" stroke-linecap="round" opacity=".85"/>
+    <path d="M280 194q6-8 12 0t12 0 12 0 12 0 12 0 12 0" fill="none" stroke="#ff9f9f" stroke-width="2" stroke-linecap="round" opacity=".7"/>
+    <path d="M392 202l10 6-10 6" fill="none" stroke="#dbe7ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".6"/>
+  </g>
+  <circle cx="468" cy="206" r="56" fill="url(#lens)" fill-opacity=".35" stroke="#d9ebff" stroke-width="6"/>
+  <g fill="none" stroke="#f2f7ff" stroke-linecap="round" opacity=".9">
+    <path d="M438 186h58" stroke-width="6"/>
+    <path d="M438 208h40" stroke-width="5" opacity=".8"/>
+    <path d="M438 228h50" stroke-width="5" opacity=".6"/>
+  </g>
+  <path d="M508 248L562 302" stroke="#d9ebff" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="282" cy="300" r="26" fill="#0d1e42" stroke="#a3dfff" stroke-width="1.6"/>
+  <path d="M269 300l9 10 17-20" fill="none" stroke="#a3dfff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="612" cy="286" r="3" fill="#9fc0ff" opacity=".6"/>
+</svg>

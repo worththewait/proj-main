@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 380">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#263766"/><stop offset="1" stop-color="#0c1634"/></linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#9ac8ff"/><stop offset=".5" stop-color="#a496ff"/><stop offset="1" stop-color="#6d5ef7" stop-opacity=".18"/></linearGradient>
+    <linearGradient id="sheet" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#cfcdff" stop-opacity=".88"/><stop offset=".5" stop-color="#9b91ff" stop-opacity=".68"/><stop offset="1" stop-color="#6d5ef7" stop-opacity=".3"/></linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#eeecff"/><stop offset="1" stop-color="#8e9dff" stop-opacity=".4"/></linearGradient>
+  </defs>
+  <rect width="720" height="380" fill="url(#bg)"/>
+  <g fill="none" stroke="url(#wave)" stroke-width="1.4">
+    <path d="M170 71C289 15 266 261 440 211S569 58 719 112" opacity=".15"/>
+    <path d="M164 83C283 27 272 267 446 217S575 64 725 124" opacity=".2"/>
+    <path d="M158 95C277 39 278 273 452 223S581 70 731 136" opacity=".3"/>
+    <path d="M152 107C271 51 284 279 458 229S587 76 737 148" opacity=".4"/>
+    <path d="M146 119C265 63 290 285 464 235S593 82 743 160" opacity=".5"/>
+    <path d="M140 131C259 75 296 291 470 241S599 88 749 172" opacity=".6"/>
+    <path d="M134 143C253 87 302 297 476 247S605 94 755 184" opacity=".55"/>
+    <path d="M128 155C247 99 308 303 482 253S611 100 761 196" opacity=".4"/>
+    <path d="M122 167C241 111 314 309 488 259S617 106 767 208" opacity=".25"/>
+  </g>
+  <path d="M347 92 462 80 462 240 347 252Z" fill="#050d23" opacity=".2"/>
+  <path d="M337 79 452 67 452 227 337 239Z" fill="url(#sheet)" stroke="url(#edge)" stroke-width="1.4"/>
+  <path d="M480 53 595 41 595 201 480 213Z" fill="#050d23" opacity=".2"/>
+  <path d="M470 40 585 28 585 188 470 200Z" fill="url(#sheet)" stroke="url(#edge)" stroke-width="1.4"/>
+  <text x="395" y="183" fill="#f3f1ff" font-size="68" font-family="PingFang SC,Microsoft YaHei,sans-serif" text-anchor="middle" transform="skewY(-6)">文</text>
+  <text x="528" y="174" fill="#f3f1ff" font-size="78" font-family="Arial,sans-serif" text-anchor="middle" transform="skewY(-6)">A</text>
+  <path d="M356 97 430 89M489 58 563 50" fill="none" stroke="#e6e5ff" stroke-width="3" stroke-linecap="round" opacity=".6"/>
+  <path d="M444 250h91l-13-13M535 262h-91l13 13" fill="none" stroke="#b8c9ff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
