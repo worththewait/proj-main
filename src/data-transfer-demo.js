@@ -23,95 +23,95 @@
   const kinds = new Set(catalogKinds.map(({ id }) => id));
   const departmentKeys = new Set(["research", "standards", "patents", "intelligence"]);
   const ownerTypes = { department: "部门", enterprise: "企业", personal: "用户", library: "管理部门" };
-  const file = (name, text) => ({ name, text });
+  const file = (name, text, recordedAt) => ({ name, text, recordedAt });
   const grant = (personKey, name, department) => ({ personKey, name, department });
 
   const items = [
     {
       id: "research-market", name: "船舶市场研究库", kind: "department", owner: owners.research, ownerKey: "research",
-      files: [file("船舶市场观察.txt", "演示资料：船舶市场研究框架和资料目录。"), file("航运指数说明.txt", "演示资料：航运指数口径和数据来源说明。"), file("船队更新调研.txt", "演示资料：船队更新访谈提纲。")],
+      files: [file("船舶市场观察.txt", "演示资料：船舶市场研究框架和资料目录。", "2026-11-08"), file("航运指数说明.txt", "演示资料：航运指数口径和数据来源说明。", "2026-11-10"), file("船队更新调研.txt", "演示资料：船队更新访谈提纲。", "2026-11-17")],
       grants: [grant("class-1", "徐立", owners.standards), grant("intel-1", "罗文", owners.intelligence), grant("ship-4", "周然", "航运研究部")],
     },
     {
       id: "research-international", name: "国际航运专题库", kind: "department", owner: owners.research, ownerKey: "research",
-      files: [file("国际航运观察.txt", "演示资料：国际航运专题的资料索引。"), file("航运指数说明.txt", "演示资料：航运指数口径和数据来源说明。")],
+      files: [file("国际航运观察.txt", "演示资料：国际航运专题的资料索引。", "2026-11-11"), file("航运指数说明.txt", "演示资料：航运指数口径和数据来源说明。", "2026-11-06")],
     },
     {
       id: "research-green", name: "绿色造船专题库", kind: "department", owner: owners.research, ownerKey: "research",
       files: [
-        file("绿色造船访谈纪要.txt", "演示资料：绿色造船主题访谈纪要。"),
-        file("甲醇与氨燃料新造船订单观察.txt", "演示资料：按燃料和船型记录订单，区分已签署合同与意向订单。"),
+        file("绿色造船访谈纪要.txt", "演示资料：绿色造船主题访谈纪要。", "2026-11-13"),
+        file("甲醇与氨燃料新造船订单观察.txt", "演示资料：按燃料和船型记录订单，区分已签署合同与意向订单。", "2026-11-18"),
       ],
     },
     {
       id: "standards-safety", name: "船舶规范与标准库", kind: "department", owner: owners.standards, ownerKey: "standards",
       files: [
-        file("船舶替代燃料管系审图检查表.txt", "演示资料：汇总燃料供给管路、应急切断和泄漏监测的审图检查点。"),
-        file("船舶电池舱通风设计要点.txt", "演示资料：整理机械通风与气体探测设备的布置和核对事项。"),
-        file("无人机辅助船体检验记录模板.txt", "演示资料：记录拍摄位置、检验范围和图像编号。"),
+        file("船舶替代燃料管系审图检查表.txt", "演示资料：汇总燃料供给管路、应急切断和泄漏监测的审图检查点。", "2026-11-05"),
+        file("船舶电池舱通风设计要点.txt", "演示资料：整理机械通风与气体探测设备的布置和核对事项。", "2026-11-12"),
+        file("无人机辅助船体检验记录模板.txt", "演示资料：记录拍摄位置、检验范围和图像编号。", "2026-11-16"),
       ],
       grants: [grant("eco-1", "张海宁", owners.research), grant("qa-6", "顾悦", "质量技术部")],
     },
     {
       id: "standards-alt-fuel", name: "低闪点燃料船舶专题库", kind: "department", owner: owners.standards, ownerKey: "standards",
       files: [
-        file("甲醇燃料加注接口检验清单.txt", "演示资料：列出接口标记、惰化程序和紧急脱离装置的检查项目。"),
-        file("船用氨燃料泄漏报警联动核对表.txt", "演示资料：记录报警、通风、隔离和人工确认的联动关系。"),
+        file("甲醇燃料加注接口检验清单.txt", "演示资料：列出接口标记、惰化程序和紧急脱离装置的检查项目。", "2026-11-09"),
+        file("船用氨燃料泄漏报警联动核对表.txt", "演示资料：记录报警、通风、隔离和人工确认的联动关系。", "2026-11-14"),
       ],
     },
     {
       id: "old-ship-project", name: "船型项目资料库", kind: "department", owner: "船型项目组", ownerKey: "ship-project",
-      files: [file("船型项目目录.txt", "演示资料：船型项目往期资料目录。")],
+      files: [file("船型项目目录.txt", "演示资料：船型项目往期资料目录。", "2026-11-03")],
     },
     {
       id: "cimtec-rules", name: "企业制度库", kind: "enterprise", owner: owners.cimtec, ownerKey: "cimtec",
       files: [
-        file("制度资料清单.txt", "演示资料：企业制度资料的分类清单。"),
-        file("科研项目成果归档指南.txt", "演示资料：归档范围包括验收材料、项目摘要和成果登记表。"),
+        file("制度资料清单.txt", "演示资料：企业制度资料的分类清单。", "2026-11-10"),
+        file("科研项目成果归档指南.txt", "演示资料：归档范围包括验收材料、项目摘要和成果登记表。", "2026-11-18"),
       ],
     },
     {
       id: "zhang-notes", name: "个人工作资料", kind: "personal", owner: owners["eco-1"], ownerKey: "eco-1",
       files: [
-        file("调研提纲.txt", "演示资料：行业调研的个人提纲。"),
-        file("散货船更新需求访谈笔记.txt", "演示资料：访谈拟追问船龄结构、环保改造成本和融资安排。"),
+        file("调研提纲.txt", "演示资料：行业调研的个人提纲。", "2026-11-04"),
+        file("散货船更新需求访谈笔记.txt", "演示资料：访谈拟追问船龄结构、环保改造成本和融资安排。", "2026-11-15"),
       ],
     },
     {
       id: "zhou-notes", name: "个人航运笔记", kind: "personal", owner: "周然", ownerKey: "ship-4",
-      files: [file("航运阅读笔记.txt", "演示资料：航运主题的个人阅读笔记。")],
+      files: [file("航运阅读笔记.txt", "演示资料：航运主题的个人阅读笔记。", "2026-11-17")],
     },
     {
       id: "library-market-outlook", name: "2026年全球造船业市场展望", kind: "library", owner: owners.research, ownerKey: "research", accessMode: "public",
-      files: [file("2026年全球造船业市场展望.txt", "演示资料：梳理主要船型的订单、交付和在手订单趋势。")],
+      files: [file("2026年全球造船业市场展望.txt", "演示资料：梳理主要船型的订单、交付和在手订单趋势。", "2026-11-10")],
     },
     {
       id: "library-fleet-renewal", name: "重点船型船队更新与新造船需求分析", kind: "library", owner: owners.research, ownerKey: "research", accessMode: "limited",
-      files: [file("重点船型船队更新与新造船需求分析.txt", "演示资料：对照船龄、拆解和替代燃料的应用情况，归纳更新需求。")],
+      files: [file("重点船型船队更新与新造船需求分析.txt", "演示资料：对照船龄、拆解和替代燃料的应用情况，归纳更新需求。", "2026-11-17")],
     },
     {
       id: "library-standards", name: "绿色船舶标准摘要", kind: "library", owner: owners.standards, ownerKey: "standards", accessMode: "limited",
-      files: [file("绿色船舶标准摘要.txt", "演示资料：绿色船舶标准的主要主题与术语。")],
+      files: [file("绿色船舶标准摘要.txt", "演示资料：绿色船舶标准的主要主题与术语。", "2026-11-09")],
     },
     {
       id: "library-shore-power", name: "船舶高压岸电系统接口标准对照", kind: "library", owner: owners.standards, ownerKey: "standards", accessMode: "public",
-      files: [file("船舶高压岸电系统接口标准对照.txt", "演示资料：对照高压岸电接口、电压等级、控制联锁和试验项目。")],
+      files: [file("船舶高压岸电系统接口标准对照.txt", "演示资料：对照高压岸电接口、电压等级、控制联锁和试验项目。", "2026-11-11")],
     },
     {
       id: "library-methanol-patents", name: "甲醇双燃料发动机技术专利导航", kind: "library", owner: owners.patents, ownerKey: "patents", accessMode: "limited",
-      files: [file("甲醇双燃料发动机技术专利导航.txt", "演示资料：以燃料供给、喷射机构和控制方案为主题整理专利检索结果。")],
+      files: [file("甲醇双燃料发动机技术专利导航.txt", "演示资料：以燃料供给、喷射机构和控制方案为主题整理专利检索结果。", "2026-11-14")],
     },
     {
       id: "library-mooring-patents", name: "自动系泊系统专利技术综述", kind: "library", owner: owners.patents, ownerKey: "patents", accessMode: "public",
-      files: [file("自动系泊系统专利技术综述.txt", "演示资料：梳理真空吸附、自动导引和安全联锁等技术路线。")],
+      files: [file("自动系泊系统专利技术综述.txt", "演示资料：梳理真空吸附、自动导引和安全联锁等技术路线。", "2026-11-18")],
     },
     {
       id: "library-imo-emissions", name: "IMO船舶温室气体减排规则导读", kind: "library", owner: owners.intelligence, ownerKey: "intelligence", accessMode: "public",
-      files: [file("IMO船舶温室气体减排规则导读.txt", "演示资料：区分能效指标、燃油消耗数据收集与后续减排措施。")],
+      files: [file("IMO船舶温室气体减排规则导读.txt", "演示资料：区分能效指标、燃油消耗数据收集与后续减排措施。", "2026-11-12")],
     },
     {
       id: "library-port-operations", name: "港口到泊预测与船岸数据协同研究", kind: "library", owner: owners.intelligence, ownerKey: "intelligence", accessMode: "limited",
-      files: [file("港口到泊预测与船岸数据协同研究.txt", "演示资料：整理到港预测、泊位计划与船岸数据交换场景。")],
+      files: [file("港口到泊预测与船岸数据协同研究.txt", "演示资料：整理到港预测、泊位计划与船岸数据交换场景。", "2026-11-16")],
     },
   ];
 
@@ -182,7 +182,7 @@
       const indices = fileSelections.get(item.id);
       const selectedFiles = indices ? files.filter((_, index) => indices.has(index)) : files;
       if (indices && !selectedFiles.length) return [];
-      const included = { ...item, files: selectedFiles };
+      const included = { ...item, files: selectedFiles.map(({ name, text }) => ({ name, text })) };
       if (item.kind === "department" && grants) included.grants = grants;
       return [included];
     });
@@ -221,7 +221,7 @@
     return bundle;
   }
 
-  function planImport(bundle, choices = {}) {
+  function planImport(bundle) {
     const activeTargets = new Map([...destinations, ...readImportedTargets()].map(target => [target.id, target]));
     const plannedTargets = new Map([...activeTargets.values()].map(target => [target.id, {
       files: new Set(target.files.map(nameKey)),
@@ -230,58 +230,33 @@
 
     return bundle.items.map(item => {
       const candidates = [...activeTargets.values()].filter(target => target.kind === item.kind && target.ownerKey === item.ownerKey);
-      const targets = candidates.filter(target => target.kind === "department" || target.kind === "enterprise")
-        .map(({ id, name }) => ({ id, name }));
-      const ownerFound = hasOwner(item);
-      const sameName = candidates.find(target => nameKey(target.name) === nameKey(item.name));
-      const isDepartment = item.kind === "department";
-      const canCreate = isDepartment && ownerFound && !sameName;
       const row = {
-        item, targetId: "", targetName: "", targetOwnerKey: "", targetOwner: "", targets, state: "pending", reason: canCreate
-          ? "未找到同名部门库，请选择已有库或新建。" : "未找到同名企业库，请选择已有库。",
+        item, targetId: "", targetName: "", targetOwnerKey: "", targetOwner: "",
+        state: "blocked", reason: "没有对应库名，无法导入",
         files: item.files.map(({ name }) => ({ name, duplicate: false })),
-        missing: [], grantsAdded: [], newLibrary: false, existingLibrary: false, canCreate,
+        missing: [], grantsAdded: [],
       };
-      const choice = Object.hasOwn(choices, item.id) ? choices[item.id] : "";
-      if (choice === "skip") return { ...row, state: "skipped", reason: "跳过此项。" };
 
-      if (!ownerFound) {
-        return { ...row, state: "blocked", reason: `内网找不到对应的${ownerTypes[item.kind]}，无法确定导入位置。` };
+      if (!hasOwner(item)) {
+        row.reason = `内网找不到对应的${ownerTypes[item.kind]}，无法确定导入位置。`;
+        return row;
       }
 
-      let automaticTarget = sameName;
-      let automaticReason = "已匹配同归属的同名库。";
+      let target = candidates.find(candidate => nameKey(candidate.name) === nameKey(item.name));
       if (item.kind === "library") {
-        automaticTarget = candidates[0] || { id: `library-${item.ownerKey}`, name: owners[item.ownerKey] };
-        automaticReason = "已匹配文库管理部门，沿用源端公开方式。";
+        target = candidates[0] || { id: `library-${item.ownerKey}`, name: owners[item.ownerKey] };
       } else if (item.kind === "personal") {
-        automaticTarget = { id: `personal-${item.ownerKey}`, name: `${people.get(item.ownerKey).name}的个人文档` };
-        automaticReason = "已匹配内网账号，文件仅归该用户。";
-      }
-      const chosenTarget = candidates.find(target => targets.some(option => option.id === choice && option.id === target.id));
-      let target = chosenTarget || automaticTarget;
-
-      if (choice === "new" && canCreate) {
-        const id = JSON.stringify([item.kind, item.ownerKey, nameKey(item.name)]);
-        target = { id, name: item.name };
-        row.newLibrary = !plannedTargets.has(id);
-        row.state = "selected";
-        row.reason = row.newLibrary ? "将在原归属下新建此库。" : "并入本次导入中新建的同名库。";
-      } else if (chosenTarget) {
-        row.state = "selected";
-        row.reason = "已选择内网的目标库。";
-      } else if (automaticTarget) {
-        row.state = "matched";
-        row.reason = automaticReason;
+        target = { id: `personal-${item.ownerKey}`, name: `${people.get(item.ownerKey).name}的个人文档` };
       }
 
       let planned;
       if (target) {
+        row.state = "matched";
+        row.reason = "";
         row.targetId = target.id;
         row.targetName = target.name;
         row.targetOwnerKey = item.ownerKey;
         row.targetOwner = item.kind === "personal" ? people.get(item.ownerKey).name : owners[item.ownerKey];
-        row.existingLibrary = isDepartment && candidates.some(candidate => candidate.id === target.id);
         if (!plannedTargets.has(target.id)) plannedTargets.set(target.id, { files: new Set(), grants: new Set() });
         planned = plannedTargets.get(target.id);
         for (const entry of row.files) {
@@ -294,7 +269,7 @@
         });
       }
 
-      if (!isDepartment) return row;
+      if (item.kind !== "department") return row;
       const peopleSeen = new Set();
       for (const entry of item.grants || []) {
         if (peopleSeen.has(entry.personKey)) continue;
@@ -312,7 +287,7 @@
   }
 
   function applyImport(rows) {
-    const counts = { files: 0, grants: 0, newLibraries: 0 };
+    const counts = { files: 0, grants: 0 };
     const importedTargets = new Map(readImportedTargets().map(target => [target.id, target]));
     const activeTargets = new Map([...destinations, ...importedTargets.values()].map(target => [target.id, target]));
 
@@ -337,10 +312,6 @@
         counts.grants++;
         changed = true;
       }
-      if (!existing && change.kind === "department") {
-        counts.newLibraries++;
-        changed = true;
-      }
       if (!changed) continue;
 
       const updated = { ...change, files: [...files.values()], grants: [...grants] };
@@ -348,7 +319,7 @@
       importedTargets.set(updated.id, updated);
     }
 
-    if (counts.files || counts.grants || counts.newLibraries) {
+    if (counts.files || counts.grants) {
       const records = [...importedTargets.values()];
       window.localStorage?.setItem(storageKey, JSON.stringify(records));
       sessionTargets = records;

@@ -58,8 +58,7 @@
 }
 .transfer-tabs button:hover, .transfer-tabs button[aria-pressed="true"] { color: var(--accent-hover); }
 .transfer-tabs button[aria-pressed="true"] { border-bottom-color: var(--accent); font-weight: 600; }
-.transfer-page :is(button, input, select):focus-visible,
-.transfer-dialog :is(button, input):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.transfer-page :is(button, input, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .transfer-package {
   display: flex;
   align-items: center;
@@ -92,15 +91,6 @@
   pointer-events: none;
 }
 .transfer-search .iam-input { padding-left: 32px; width: min(216px, 100%); }
-.transfer-bulk {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 7px 16px;
-  background: var(--accent-soft);
-  color: var(--accent-hover);
-  font-size: 13px;
-}
 .transfer-link {
   border: 0;
   background: transparent;
@@ -112,18 +102,10 @@
 }
 .transfer-status { font-weight: 600; }
 .transfer-status.is-success { color: var(--success); }
-.transfer-status.is-pending { color: var(--pending); }
 .transfer-status.is-blocked, .transfer-status.is-failed { color: var(--danger); }
 .transfer-empty { text-align: center !important; color: var(--muted); padding: 24px 12px !important; }
 .transfer-feedback { padding: 9px 12px; border-radius: 6px; background: var(--success-soft); color: var(--success); margin: 0 0 12px !important; }
 .transfer-feedback.is-error { background: #fff1f2; color: #b4232c; }
-.transfer-dialog { width: min(480px, calc(100% - 24px)); max-height: calc(100% - 24px); }
-.transfer-dialog .iam-dialog-body { overflow: auto; }
-.transfer-dialog .iam-input { width: 100%; }
-.transfer-target-source { margin: 0 0 8px; color: var(--muted); }
-.transfer-target-options { display: grid; gap: 6px; margin-top: 10px; }
-.transfer-target-options .iam-btn { justify-content: flex-start; }
-.transfer-dialog-footer { flex-wrap: wrap; }
 @media (max-width: 680px) {
   .transfer-page { padding: 8px; }
   .transfer-workspace { min-height: calc(100dvh - 16px); padding: 12px 10px 18px; }
@@ -134,7 +116,6 @@
   .transfer-page .iam-btn, .transfer-tabs button { min-height: 44px; }
 }
 body.transfer-body { min-width: 0; }
-.transfer-dialog [hidden] { display: none !important; }
 
 .transfer-tab-count {
   margin-left: 7px;
@@ -241,7 +222,7 @@ body.transfer-body { min-width: 0; }
 .transfer-result-permissions li + li { margin-top: 4px; }
 
 @media (max-width: 680px) {
-  .transfer-bulk, .transfer-progress-body { padding-inline: 10px; }
+  .transfer-progress-body { padding-inline: 10px; }
   .transfer-queues button { padding-inline: 7px; }
 }
 @media (pointer: coarse) {
@@ -278,7 +259,6 @@ body.transfer-body { min-width: 0; }
 }
 .transfer-review-metric strong { font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
 button.transfer-review-metric:not(:disabled):hover { text-decoration: underline; text-underline-offset: 3px; }
-.transfer-review-metric.is-pending:not(:disabled) { color: var(--pending); }
 .transfer-review-metric.is-blocked:not(:disabled) { color: var(--danger); }
 .transfer-review-notes { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 .transfer-review-impact, .transfer-link.transfer-review-impact { color: var(--pending); }
@@ -369,19 +349,12 @@ button.transfer-review-metric:not(:disabled):hover { text-decoration: underline;
 }
 .transfer-route-columns > :last-child { text-align: right; }
 .transfer-task h2[tabindex="-1"]:focus { outline: none; }
-.transfer-route-source {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
 .transfer-route-source, .transfer-route-target { min-width: 0; overflow-wrap: anywhere; }
 .transfer-route-title { margin: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
 .transfer-route-title > .icon { width: 16px; height: 16px; color: var(--muted); margin-inline-end: 6px; vertical-align: -3px; }
-.transfer-route-source input { accent-color: var(--accent); }
 .transfer-route-arrow { color: var(--muted); }
 .transfer-route-arrow .icon { width: 16px; height: 16px; vertical-align: -3px; }
-.transfer-route-actions { display: grid; justify-items: end; gap: 3px; }
-.transfer-route-actions button { color: var(--accent-hover); font-size: 12px; }
+.transfer-route-actions { text-align: right; }
 .transfer-route-reason { color: var(--muted); font-size: 13px; }
 .transfer-review-state {
   display: inline-flex;
@@ -393,7 +366,6 @@ button.transfer-review-metric:not(:disabled):hover { text-decoration: underline;
 }
 .transfer-review-state::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .transfer-review-state.is-success { color: var(--success); }
-.transfer-review-state.is-pending { color: var(--pending); }
 .transfer-review-state.is-blocked { color: var(--danger); }
 .transfer-route-body {
   display: grid;
@@ -486,15 +458,11 @@ button.transfer-review-metric:not(:disabled):hover { text-decoration: underline;
 }
 .transfer-result-location small, .transfer-result-reason { color: var(--muted); font-size: 12px; }
 .transfer-result-filename { display: flex; align-items: baseline; gap: 5px; font-size: 13px; }
-#transferBulk { flex-wrap: wrap; justify-content: space-between; padding: 7px 12px; margin-bottom: 6px; }
-#transferBulk label { display: inline-flex; align-items: center; gap: 4px; }
-#transferBulk input { accent-color: var(--accent); }
-#transferBulk > div { display: flex; gap: 5px; }
 
 @media (max-width: 760px) {
   .transfer-route-map { grid-template-columns: minmax(0, 1fr) 18px minmax(0, 1fr); column-gap: 6px; }
   .transfer-route-columns > :last-child { display: none; }
-  .transfer-route-actions { grid-column: 1 / -1; grid-template-columns: max-content max-content; gap: 6px 12px; justify-content: start; }
+  .transfer-route-actions { grid-column: 1 / -1; text-align: left; }
   .transfer-result-file-list li { grid-template-columns: minmax(0, 1fr); }
   .transfer-route-body:has(.transfer-route-permissions) { grid-template-columns: minmax(0, 1fr); }
   .transfer-route-permissions { padding: 8px 0 0; border-inline-start: 0; border-top: 1px solid var(--line); }

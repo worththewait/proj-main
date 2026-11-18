@@ -1,6 +1,18 @@
 (() => {
   "use strict";
 
+  const dateFormat = new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit",
+  });
+
+  function recordedDate(value) {
+    if (!value) return "";
+    const timestamp = new Date(value);
+    if (!Number.isFinite(timestamp.getTime())) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value) && timestamp.toISOString().slice(0, 10) !== value) return "";
+    return dateFormat.format(timestamp);
+  }
+
   function mount({ onExport }) {
     const root = document.getElementById("transferExport");
     const { icon, escapeHtml } = window.BaigeUI;
@@ -13,6 +25,8 @@
     const fileNodes = [];
     let activeKind = kinds[0].id;
     let query = "";
+    let startDate = "";
+    let endDate = "";
     let exporting = false;
 
     function makeFile(item, index, kind) {
@@ -20,6 +34,7 @@
       const node = {
         id: "file-" + fileNodes.length,
         name: file.name,
+        recordedDate: recordedDate(file.recordedAt),
         item,
         index,
         path: [kind.label, item.owner, item.kind !== "library" ? item.name : ""].filter(Boolean).join(" / "),
@@ -65,18 +80,27 @@
           ${kinds.map((kind) => `<button id="transferCatalogTab-${kind.id}" type="button" role="tab"
             data-catalog-kind="${kind.id}" aria-controls="transferCatalogPane">${kind.label}</button>`).join("")}
         </div>
+        <form class="transfer-catalog-dates" id="transferCatalogDates" aria-label="按录入日期筛选">
+          <span>录入日期</span>
+          <input type="date" class="iam-input" id="transferDateFrom" aria-label="录入开始日期" />
+          <span aria-hidden="true">至</span>
+          <input type="date" class="iam-input" id="transferDateTo" aria-label="录入结束日期" />
+          <button class="iam-btn" type="submit" id="transferApplyDates" disabled>筛选</button>
+          <button class="transfer-link" type="button" id="transferClearDates" hidden>清除日期</button>
+        </form>
         <label class="transfer-search transfer-catalog-search">${icon("search")}
           <input type="search" class="iam-input" id="transferCatalogSearch"
             aria-label="搜索导出目录" placeholder="搜索部门、库名或文档" autocomplete="off" />
         </label>
       </div>
+      <p class="transfer-date-feedback" id="transferDateFeedback" role="status" hidden></p>
       <div class="transfer-export-workspace">
         <section id="transferCatalogPane" class="transfer-catalog" role="tabpanel">
           <div class="transfer-catalog-toolbar">
             <label class="transfer-catalog-all"><input id="transferCatalogAll" type="checkbox" />
               <span id="transferCatalogAllLabel">全选当前列表</span>
             </label>
-            <span id="transferCatalogColumn">文档数</span>
+            <span class="transfer-catalog-totals"><strong id="transferCatalogCount" role="status"></strong><span>录入日期</span></span>
           </div>
           <div id="transferCatalogTree" class="transfer-catalog-tree"></div>
         </section>
@@ -95,7 +119,13 @@
 
     const search = root.querySelector("#transferCatalogSearch");
     const tree = root.querySelector("#transferCatalogTree");
-    const column = root.querySelector("#transferCatalogColumn");
+    const countLabel = root.querySelector("#transferCatalogCount");
+    const dateForm = root.querySelector("#transferCatalogDates");
+    const from = root.querySelector("#transferDateFrom");
+    const to = root.querySelector("#transferDateTo");
+    const applyDates = root.querySelector("#transferApplyDates");
+    const clearDates = root.querySelector("#transferClearDates");
+    const dateFeedback = root.querySelector("#transferDateFeedback");
     const all = root.querySelector("#transferCatalogAll");
     const allLabel = root.querySelector("#transferCatalogAllLabel");
     const manifest = root.querySelector("#transferManifestRows");
@@ -125,21 +155,43 @@
       });
     }
 
+    function inDateRange(node) {
+      return !startDate || (node.recordedDate >= startDate && node.recordedDate <= endDate);
+    }
+
+    function hasDateChanges() {
+      return from.value !== startDate || to.value !== endDate;
+    }
+
+    function syncDownload() {
+      download.disabled = exporting || !selected.size || hasDateChanges();
+    }
+
+    function announceDates(text, error = false) {
+      dateFeedback.textContent = text;
+      dateFeedback.classList.toggle("is-error", error);
+      dateFeedback.hidden = !text;
+    }
+
     function renderNode(node, depth = 0) {
       const indent = `style="--catalog-depth: ${depth}"`;
       if (!node.children) {
         return `<li><label class="transfer-catalog-file" ${indent}>
           <input type="checkbox" data-catalog-file="${node.id}" />
           ${icon("file")}<span>${escapeHtml(node.name)}</span>
-          ${node.access ? `<small>${node.access}</small>` : ""}
+          <small class="transfer-catalog-meta">
+            ${node.access ? `<span>${node.access}</span>` : ""}
+            ${node.recordedDate ? `<time datetime="${node.recordedDate}">${node.recordedDate}</time>` : "<span>未记录</span>"}
+          </small>
         </label></li>`;
       }
-      const open = query ? !collapsedSearch.has(node.id) : expanded.has(node.id);
+      const filtered = Boolean(query || startDate);
+      const open = filtered ? !collapsedSearch.has(node.id) : expanded.has(node.id);
       const files = leaves(node);
       branchFiles.set(node.id, files);
       return `<li class="transfer-catalog-branch">
         <div class="transfer-catalog-branch-line" ${indent}>
-          <input type="checkbox" data-catalog-branch="${node.id}" aria-label="选择${escapeHtml(node.name)}内${query ? "匹配的" : "的"}文档" />
+          <input type="checkbox" data-catalog-branch="${node.id}" aria-label="选择${escapeHtml(node.name)}内${filtered ? "匹配的" : "的"}文档" />
           <button type="button" data-catalog-toggle="${node.id}" aria-expanded="${open}" aria-controls="transferBranch-${node.id}">
             ${icon("chevron")}${icon(node.icon)}<span>${escapeHtml(node.name)}</span>
           </button>
@@ -152,14 +204,18 @@
     }
 
     function renderCatalog() {
-      const groups = catalog.get(activeKind);
+      const allGroups = catalog.get(activeKind);
+      const groups = startDate ? filterNodes(allGroups, (node) => !node.children && inDateRange(node)) : allGroups;
       const nodes = query ? filterNodes(groups, (node) => node.name.toLowerCase().includes(query)) : groups;
       visibleFiles = nodes.flatMap(leaves);
-      allLabel.textContent = query ? "全选匹配文档" : "全选当前列表";
+      const filtered = Boolean(query || startDate);
+      allLabel.textContent = filtered ? "全选匹配文档" : "全选当前列表";
+      const count = `${filtered ? "匹配 " : ""}${visibleFiles.length} 篇`;
+      countLabel.textContent = startDate ? count : `不限日期 · ${count}`;
       branchFiles = new Map();
       tree.innerHTML = nodes.length
         ? `<ul>${nodes.map((node) => renderNode(node)).join("")}</ul>`
-        : `<p class="transfer-catalog-empty">${query ? "未找到匹配的文档。" : "此分类暂无可导出的文档。"}</p>`;
+        : `<p class="transfer-catalog-empty">${filtered ? "当前筛选条件下没有文档。" : "此分类暂无可导出的文档。"}</p>`;
       updateSelections();
     }
 
@@ -223,7 +279,7 @@
       }
       total.textContent = `已选 ${files.length} 篇文档`;
       clear.disabled = files.length === 0;
-      download.disabled = exporting || files.length === 0;
+      syncDownload();
     }
 
     function changeSelection(files, checked) {
@@ -241,7 +297,6 @@
 
     function selectKind(kind) {
       activeKind = kind;
-      column.textContent = kind === "library" ? "文档数 / 公开方式" : "文档数";
       search.value = "";
       query = "";
       collapsedSearch.clear();
@@ -273,13 +328,61 @@
       renderCatalog();
     });
 
+    function updateDateControls() {
+      const changed = hasDateChanges();
+      applyDates.disabled = !changed;
+      clearDates.hidden = !from.value && !to.value && !startDate && !endDate;
+      syncDownload();
+    }
+
+    function applyDateRange() {
+      startDate = from.value;
+      endDate = to.value;
+      collapsedSearch.clear();
+      tree.scrollTop = 0;
+      const removed = fileNodes.filter((node) => isSelected(node) && !inDateRange(node));
+      changeSelection(removed, false);
+      renderCatalog();
+      updateDateControls();
+      announceDates(removed.length ? `已从摆渡包清单移除 ${removed.length} 篇超出日期范围的文档。` : "");
+    }
+
+    dateForm.addEventListener("input", () => {
+      updateDateControls();
+      announceDates(hasDateChanges() ? "日期已修改，点击「筛选」应用。" : "");
+    });
+
+    dateForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!hasDateChanges()) return;
+      if (Boolean(from.value) !== Boolean(to.value)) {
+        announceDates("请选择完整的起止日期。", true);
+        (from.value ? to : from).focus();
+        return;
+      }
+      if (from.valueAsNumber > to.valueAsNumber) {
+        announceDates("结束日期须在开始日期当天或之后。", true);
+        to.focus();
+        return;
+      }
+      applyDateRange();
+      from.focus();
+    });
+
+    clearDates.addEventListener("click", () => {
+      dateForm.reset();
+      applyDateRange();
+      from.focus();
+    });
+
     tree.addEventListener("click", (event) => {
       const button = event.target.closest("[data-catalog-toggle]");
       if (!button) return;
       const id = button.dataset.catalogToggle;
       const open = button.getAttribute("aria-expanded") !== "true";
-      const state = query ? collapsedSearch : expanded;
-      if (open !== Boolean(query)) state.add(id);
+      const filtered = Boolean(query || startDate);
+      const state = filtered ? collapsedSearch : expanded;
+      if (open !== filtered) state.add(id);
       else state.delete(id);
       button.setAttribute("aria-expanded", String(open));
       document.getElementById(button.getAttribute("aria-controls")).hidden = !open;
@@ -316,7 +419,7 @@
     });
 
     download.addEventListener("click", async () => {
-      if (exporting || !selected.size) return;
+      if (exporting || !selected.size || hasDateChanges()) return;
       exporting = true;
       download.disabled = true;
       message.hidden = true;

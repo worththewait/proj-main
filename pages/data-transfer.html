@@ -6,8 +6,8 @@
   <title>数据摆渡 · 百舸后台</title>
   <link rel="stylesheet" href="../styles.css" />
   <link rel="stylesheet" href="../user-role-admin.css?v=20261114-pagination" />
-  <link rel="stylesheet" href="../data-transfer.css?v=20261114-library-separators" />
-  <link rel="stylesheet" href="../data-transfer-export.css?v=20261114-export-categories" />
+  <link rel="stylesheet" href="../data-transfer.css?v=20261118-import-match" />
+  <link rel="stylesheet" href="../data-transfer-export.css?v=20261118-export-dates" />
   <link rel="stylesheet" href="../data-transfer-history.css?v=20261114-export-manifest" />
 </head>
 <body class="module-page transfer-body">
@@ -67,7 +67,6 @@
                 <div class="transfer-review-list-head">
                   <span id="transferVisibleCount" role="status"></span>
                   <button type="button" class="transfer-link" id="transferPreviewAll" hidden>查看全部</button>
-                  <button type="button" class="transfer-link" id="transferBulkToggle" hidden>批量新建</button>
                 </div>
                 <div class="transfer-review-filters">
                   <label class="transfer-search">
@@ -76,14 +75,6 @@
                   </label>
                   <select id="transferQueues" class="iam-input" aria-label="筛选导入状态"></select>
                 </div>
-              </div>
-              <div class="transfer-bulk" id="transferBulk" hidden>
-                <label><input id="transferSelectPending" type="checkbox" /> 全选当前清单中可新建的库</label>
-                <div>
-                  <button class="iam-btn" id="transferBulkCancel" type="button">取消</button>
-                  <button class="iam-btn is-primary" id="transferNewSelected" type="button" disabled>设为新建</button>
-                </div>
-                <span class="transfer-subline" id="transferBulkCount"></span>
               </div>
               <div class="transfer-review-items" id="transferImportRows"></div>
             </section>
@@ -124,26 +115,10 @@
     </div>
   </main>
 
-  <dialog class="iam-dialog transfer-dialog" id="transferTargetDialog" aria-labelledby="transferTargetTitle">
-    <header class="iam-dialog-head">
-      <h2 id="transferTargetTitle">选择导入位置</h2>
-      <button class="iam-dialog-close" type="button" id="transferCloseTarget" aria-label="关闭"><span data-icon="close" aria-hidden="true"></span></button>
-    </header>
-    <div class="iam-dialog-body">
-      <p class="transfer-target-source" id="transferTargetSource"></p>
-      <input class="iam-input" id="transferTargetSearch" type="search" placeholder="搜索同归属下的内网知识库" aria-label="搜索同归属下的内网知识库" />
-      <div id="transferTargetOptions" class="transfer-target-options"></div>
-    </div>
-    <footer class="iam-dialog-foot transfer-dialog-footer">
-      <button class="iam-btn" type="button" data-target-choice="skip">本次跳过</button>
-      <button class="iam-btn" type="button" id="transferNewTarget" data-target-choice="new">新建同名库</button>
-    </footer>
-  </dialog>
-
   <script src="../src/ui.js"></script>
-  <script src="../src/data-transfer-demo.js?v=20261114-permission-examples"></script>
-  <script src="../src/pages/data-transfer-export.js?v=20261114-transfer-categories"></script>
+  <script src="../src/data-transfer-demo.js?v=20261118-import-match"></script>
+  <script src="../src/pages/data-transfer-export.js?v=20261118-export-dates"></script>
   <script src="../src/pages/data-transfer-history.js?v=20261114-export-manifest"></script>
-  <script src="../src/pages/data-transfer.js?v=20261114-unmatched-people"></script>
+  <script src="../src/pages/data-transfer.js?v=20261118-import-match"></script>
 </body>
 </html>

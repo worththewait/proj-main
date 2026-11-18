@@ -23,6 +23,27 @@
   margin-bottom: 8px;
 }
 
+.transfer-catalog-dates {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin-inline-start: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.transfer-catalog-dates .iam-input {
+  width: 136px;
+  max-width: 100%;
+  min-width: 0;
+  padding-inline: 8px;
+}
+
+.transfer-catalog-dates .transfer-link { min-height: 34px; }
+.transfer-page .transfer-date-feedback { margin: 0 0 8px; color: var(--muted); font-size: 12px; }
+.transfer-page .transfer-date-feedback.is-error { color: var(--danger); }
+
 .transfer-catalog-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -79,6 +100,8 @@
 }
 
 .transfer-catalog-all:has(:disabled) { cursor: default; }
+.transfer-catalog-totals { display: flex; align-items: baseline; gap: 12px; }
+.transfer-catalog-totals strong { color: var(--ink); font-variant-numeric: tabular-nums; }
 
 .transfer-catalog-tree {
   min-height: 250px;
@@ -162,13 +185,17 @@
 .transfer-catalog-branch-line button[aria-expanded="true"] > .icon:first-child { transform: rotate(90deg); }
 
 .transfer-catalog-num,
-.transfer-catalog-file small {
+.transfer-catalog-meta {
   flex: 0 0 auto;
   margin-inline-start: auto;
   color: var(--muted);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
+
+.transfer-catalog-file > span { flex: 1 1 auto; min-width: 0; }
+.transfer-catalog-file > .icon { flex: 0 0 auto; }
+.transfer-catalog-meta { display: grid; justify-items: end; gap: 1px; }
 
 .transfer-catalog-empty {
   padding: 46px 16px;
@@ -294,6 +321,7 @@
 @media (max-width: 820px) {
   .transfer-export-workspace { grid-template-columns: minmax(0, 1fr); }
   .transfer-export-manifest { position: static; border-left: 0; padding-left: 0; }
+  .transfer-catalog-dates { margin-inline-start: 0; }
 }
 
 @media (max-width: 500px) {

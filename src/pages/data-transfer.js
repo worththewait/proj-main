@@ -11,28 +11,20 @@
   const previewStates = {
     all: "全部状态",
     ready: "可导入",
-    pending: "待选去向",
     blocked: "无法导入",
     duplicate: "同名已存在",
-    skipped: "已设为跳过",
     missing: "人员未匹配",
     grants: "新增授权覆盖已有文档"
   };
-  const previewTones = { ready: "is-success", pending: "is-pending", blocked: "is-blocked" };
+  const previewTones = { ready: "is-success", blocked: "is-blocked" };
   const resultStates = { success: "已新增", skipped: "已跳过", failed: "无法导入" };
   const tabs = ["Export", "Import", "History"];
-  const selectedNew = new Set();
+  const unavailableTab = deployment === "internal" ? "Export" : deployment === "external" ? "Import" : "";
   let bundle;
-  let choices;
-  let previewRows = [];
   let previewQueue = "all";
-  let visibleRows = [];
   let resultQueue = "success";
-  let bulkMode = false;
   let activeTab = deployment === "external" ? "Export" : "Import";
   let displayEnvironment = deployment === "external" ? "外网" : "内网";
-  let targetRow;
-  let targetTrigger;
   let activeJob;
   let taskNumber = 0;
   let readingPackage = false;
@@ -45,15 +37,16 @@
   const queueSelect = $("transferQueues");
   const previewAll = $("transferPreviewAll");
   const confirm = $("transferConfirm");
-  const dialog = $("transferTargetDialog");
-  const targetSearch = $("transferTargetSearch");
   const fileInput = $("transferFile");
   const chooseFile = $("transferChooseFile");
-  const history = window.BaigeTransferHistory.mount({ onDownload: downloadPackage, onManifest: downloadManifest });
+  const history = window.BaigeTransferHistory.mount(unavailableTab === "Export"
+    ? {} : { onDownload: downloadPackage, onManifest: downloadManifest });
 
   function setTab(name) {
+    if (name === unavailableTab) return;
     activeTab = name;
     tabs.forEach((tab) => {
+      $(`transfer${tab}Tab`).hidden = tab === unavailableTab;
       $(`transfer${tab}Tab`).setAttribute("aria-pressed", String(tab === name));
       $(`transfer${tab}`).hidden = tab !== name;
     });
@@ -186,8 +179,8 @@
   }
 
   function queueOf(row) {
-    if (row.state !== "matched" && row.state !== "selected") return row.state;
-    if (!row.newLibrary && !row.grantsAdded.length && row.files.length && row.files.every((file) => file.duplicate)) return "duplicate";
+    if (row.state !== "matched") return row.state;
+    if (!row.grantsAdded.length && row.files.length && row.files.every((file) => file.duplicate)) return "duplicate";
     return "ready";
   }
 
@@ -197,13 +190,9 @@
     return {
       add: countFiles(ready) - readyDuplicates,
       duplicates: readyDuplicates + countFiles(rows.filter((row) => queueOf(row) === "duplicate")),
-      pending: rows.filter((row) => row.state === "pending").length,
       blocked: rows.filter((row) => row.state === "blocked").length,
-      skipped: rows.filter((row) => row.state === "skipped").length,
       grants: ready.reduce((sum, row) => sum + row.grantsAdded.length, 0),
       missing: rows.reduce((sum, row) => sum + row.missing.length, 0),
-      existingGrants: ready.filter((row) => row.existingLibrary).reduce((sum, row) => sum + row.grantsAdded.length, 0),
-      newLibraries: ready.filter((row) => row.newLibrary).length
     };
   }
 
@@ -245,8 +234,7 @@
     if (row.item.kind === "enterprise") return "企业成员可见";
     if (row.item.kind === "personal") return "仅本人可见";
     if (row.item.kind === "library") return row.item.accessMode === "limited" ? "有限公开" : "全部公开";
-    if (row.newLibrary || !row.existingLibrary) return "新建知识库";
-    return row.state === "matched" ? "同名匹配" : "";
+    return "同名匹配";
   }
 
   function statusLabel(state) {
@@ -254,7 +242,7 @@
   }
 
   function hasExistingGrants(row) {
-    return row.existingLibrary && row.grantsAdded.length > 0;
+    return row.grantsAdded.length > 0;
   }
 
   function previewItems(label, entries, renderItem, note = "", more = "") {
@@ -301,7 +289,7 @@
     const personItem = ({ name, department }) => `<li><span>${escape(name)}</span><small>${escape(department)}</small></li>`;
     const { grantsAdded, missing } = row;
     const showPermissions = grantsAdded.length > 0 || missing.length > 0;
-    const fileAction = row.targetName ? "将新增" : { pending: "涉及文件", blocked: "无法导入", skipped: "本次跳过" }[row.state];
+    const fileAction = row.state === "matched" ? "将新增" : "无法导入";
     return `<div class="transfer-route-body">
       <section class="transfer-route-documents">
         <h5>文档处理</h5>
@@ -314,7 +302,7 @@
         <h5>权限处理</h5>
         <dl class="transfer-route-outcomes">
           ${previewItems(`将恢复授权 ${grantsAdded.length} 人`, grantsAdded, personItem,
-            hasExistingGrants(row) ? '<strong class="transfer-review-impact">整库授权，含内网已有文档</strong>' : "按整库授权")}
+            '<strong class="transfer-review-impact">整库授权，含内网已有文档</strong>')}
           ${previewUnmatched(row, personItem, query, openGroups)}
         </dl>
       </section>` : ""}
@@ -322,17 +310,13 @@
   }
 
   function previewRow(row, query, openGroups, libraryFile) {
-    const id = escape(row.item.id);
-    const canSelect = bulkMode && row.state === "pending" && row.canCreate;
     const note = row.targetName ? permitNote(row) : "";
-    const canChoose = ["pending", "selected", "skipped"].includes(row.state);
     const destination = row.item.kind === "library" ? "百舸文库" : row.targetName;
     const title = libraryFile?.name || row.item.name;
     const sourceTitle = libraryFile && row.item.name !== title && row.item.name !== title.replace(/\.[^.]+$/, "") ? row.item.name : "";
     return `<article class="transfer-route">
       <div class="transfer-route-map">
         <div class="transfer-route-source">
-          ${canSelect ? `<input type="checkbox" data-new-id="${id}" aria-label="选择${escape(row.item.name)}进行批量新建"${selectedNew.has(row.item.id) ? " checked" : ""} />` : ""}
           <div><h4 class="transfer-route-title">${icon(libraryFile ? "file" : "folder")}${escape(title)}</h4>
             ${sourceTitle ? `<span class="transfer-subline">${escape(sourceTitle)}</span>` : ""}</div>
         </div>
@@ -343,7 +327,6 @@
         </div>
         <div class="transfer-route-actions">
           ${statusLabel(libraryFile?.duplicate ? "duplicate" : queueOf(row))}
-          ${canChoose ? `<button type="button" class="transfer-link" aria-haspopup="dialog" data-choose-id="${id}">${row.state === "selected" ? "更改去向" : "选择去向"}</button>` : ""}
         </div>
       </div>
       ${libraryFile ? "" : previewChanges(row, query, openGroups)}
@@ -353,7 +336,7 @@
   function renderPreview(resetGroups = false) {
     const openGroups = new Map(resetGroups ? [] : [...importRows.querySelectorAll("[data-preview-group]")]
       .map((group) => [group.dataset.previewGroup, group.open]));
-    previewRows = demo.planImport(bundle, choices);
+    const previewRows = demo.planImport(bundle);
     const counts = {
       all: previewRows.length,
       missing: previewRows.filter((row) => row.missing.length).length,
@@ -367,49 +350,35 @@
       `<option value="${key}">${label}（${counts[key] || 0}）</option>`).join("");
     queueSelect.value = previewQueue;
     const query = search.value.trim().toLowerCase();
-    visibleRows = previewRows.filter((row) => {
+    const visibleRows = previewRows.filter((row) => {
       const matches = previewQueue === "all" || queueOf(row) === previewQueue
         || (previewQueue === "missing" && row.missing.length) || (previewQueue === "grants" && hasExistingGrants(row));
       const fields = [kindLabels[row.item.kind], row.item.name, row.item.owner, row.targetName, row.targetOwner,
         ...row.files.map((file) => file.name), ...row.missing.map((person) => person.name), ...row.grantsAdded.map((person) => person.name)];
       return matches && fields.some((value) => value.toLowerCase().includes(query));
     });
-    const selectable = visibleRows.filter((row) => row.state === "pending" && row.canCreate);
-    $("transferBulkToggle").hidden = previewQueue !== "pending" || bulkMode || !selectable.length;
-    $("transferBulk").hidden = !bulkMode;
-    $("transferBulkCount").textContent = `已选 ${selectedNew.size} 个待新建库`;
-    $("transferNewSelected").disabled = selectedNew.size === 0;
-    const selectAll = $("transferSelectPending");
-    selectAll.checked = selectable.length > 0 && selectable.every((row) => selectedNew.has(row.item.id));
-    selectAll.indeterminate = !selectAll.checked && selectable.some((row) => selectedNew.has(row.item.id));
-    selectAll.disabled = selectable.length === 0;
-
-    importRows.innerHTML = renderPreviewList(query, openGroups);
+    importRows.innerHTML = renderPreviewList(visibleRows, query, openGroups);
     $("transferVisibleCount").textContent = `显示 ${visibleRows.length} / ${previewRows.length} 项来源`;
     previewAll.hidden = previewQueue === "all" && !query;
 
     const summary = countPreview(previewRows);
-    const showQueue = (queue, text, tone = "") => `<button type="button" class="transfer-review-metric ${tone}" data-summary-queue="${queue}"${counts[queue] ? "" : " disabled"}>${text}</button>`;
     $("transferImportCount").innerHTML = [
       `<span class="transfer-review-metric"><strong>${summary.add}</strong> 份将新增</span>`,
       `<span class="transfer-review-metric"><strong>${summary.duplicates}</strong> 份同名跳过</span>`,
-      showQueue("pending", `<strong>${summary.pending}</strong> 项待选去向`, "is-pending"),
-      showQueue("blocked", `<strong>${summary.blocked}</strong> 项无法导入`, "is-blocked"),
-      summary.skipped ? showQueue("skipped", `<strong>${summary.skipped}</strong> 项已设为跳过`) : ""
+      `<button type="button" class="transfer-review-metric is-blocked" data-summary-queue="blocked"${summary.blocked ? "" : " disabled"}>
+        <strong>${summary.blocked}</strong> 项无法导入</button>`
     ].join("");
     $("transferReviewNotes").innerHTML = [
-      `<span>新建 ${summary.newLibraries} 个库</span>`,
       `<span>恢复 ${summary.grants} 条授权</span>`,
-      summary.existingGrants ? `<button type="button" class="transfer-link transfer-review-impact" data-summary-queue="grants">${summary.existingGrants} 条授权涉及已有文档</button>` : "",
-      summary.missing ? `<button type="button" class="transfer-link transfer-review-impact" data-summary-queue="missing">${summary.missing} 条授权未匹配人员</button>` : "<span>未匹配人员授权 0 条</span>",
-      summary.pending ? "未选去向的条目本次将跳过" : ""
+      summary.grants ? `<button type="button" class="transfer-link transfer-review-impact" data-summary-queue="grants">${summary.grants} 条授权涉及已有文档</button>` : "",
+      summary.missing ? `<button type="button" class="transfer-link transfer-review-impact" data-summary-queue="missing">${summary.missing} 条授权未匹配人员</button>` : "<span>未匹配人员授权 0 条</span>"
     ].filter(Boolean).join(" · ");
-    const hasChanges = summary.add + summary.newLibraries + summary.grants > 0;
+    const hasChanges = summary.add + summary.grants > 0;
     confirm.disabled = readingPackage || !hasChanges;
-    confirm.title = hasChanges ? "" : "当前没有新增文件、新库或可恢复授权";
+    confirm.title = hasChanges ? "" : "当前没有新增文件或可恢复授权";
   }
 
-  function renderPreviewList(query, openGroups) {
+  function renderPreviewList(visibleRows, query, openGroups) {
     if (!visibleRows.length) return `<p class="transfer-empty">${query ? "没有符合搜索条件的条目。" : "此状态暂无条目。"}</p>`;
     const groups = groupByKind(visibleRows, ({ item }) => item.kind);
     const expandKinds = groups.length === 1 || Boolean(query) || previewQueue !== "all";
@@ -419,7 +388,6 @@
       const count = [
         `${countFiles(kind.entries)} 份文件`,
         summary.add ? `将新增 ${summary.add} 份` : "",
-        summary.pending ? `${summary.pending} 项待选去向` : "",
         summary.blocked ? `${summary.blocked} 项无法导入` : ""
       ].filter(Boolean).join(" · ");
       const owners = groupBy(kind.entries, ({ item }) => item.ownerKey).map((rows) => {
@@ -444,25 +412,14 @@
     </div>${sections}`;
   }
 
-  function focusButton(root, data, value) {
-    const button = [...root.querySelectorAll(`[data-${data}]`)].find((candidate) => candidate.getAttribute(`data-${data}`) === value);
-    if (!button) return null;
-    for (let group = button.closest("details"); group; group = group.parentElement.closest("details")) group.open = true;
-    button.focus();
-    return button;
-  }
-
   function setQueue(queue) {
     previewQueue = queue;
-    bulkMode = false;
-    selectedNew.clear();
     importRows.scrollTop = 0;
     renderPreview(true);
   }
 
   function loadPackage(next, name) {
     bundle = next;
-    choices = Object.create(null);
     activeJob = null;
     importRows.scrollTop = 0;
     search.value = "";
@@ -475,32 +432,10 @@
     setQueue("all");
   }
 
-  function renderTargets() {
-    const query = targetSearch.value.trim().toLowerCase();
-    const targets = targetRow.targets.filter((target) => target.name.toLowerCase().includes(query));
-    $("transferTargetOptions").innerHTML = targets.length
-      ? targets.map((target) => `<button class="iam-btn" type="button" data-target-choice="${escape(target.id)}">${escape(target.name)}</button>`).join("")
-      : '<p class="transfer-subline">没有符合条件的内网库。</p>';
-  }
-
-  function openTargets(trigger) {
-    targetRow = previewRows.find((row) => row.item.id === trigger.dataset.chooseId);
-    if (!targetRow) return;
-    targetTrigger = trigger;
-    $("transferTargetSource").textContent = `${targetRow.item.owner} / ${targetRow.item.name}`;
-    $("transferNewTarget").hidden = !targetRow.canCreate;
-    targetSearch.value = "";
-    renderTargets();
-    dialog.showModal();
-    targetSearch.focus();
-  }
-
   function importFiles(rows) {
     return rows.flatMap((row) => row.files.map((file) => {
-      const ready = Boolean(row.targetName);
-      const finalState = row.state === "blocked" ? "failed" : ready && !file.duplicate ? "success" : "skipped";
-      const reason = row.state === "blocked" ? row.reason : row.state === "pending" ? "未选择内网去向"
-        : row.state === "skipped" ? "本次选择跳过" : file.duplicate ? "内网同名文件已存在" : "";
+      const finalState = row.state === "blocked" ? "failed" : file.duplicate ? "skipped" : "success";
+      const reason = row.state === "blocked" ? row.reason : file.duplicate ? "内网同名文件已存在" : "";
       return {
         ...fileSource(row.item), name: file.name, target: row.targetName, state: "queued", finalState, reason,
         targetOwner: row.targetOwner, targetOwnerKey: row.targetOwnerKey,
@@ -579,32 +514,27 @@
     $("transferResultQueues").innerHTML = queueButtons(resultStates, resultQueue, counts, "result");
     $("transferResultMeta").textContent = `${activeJob.name} · ${bundle.items.length} 项内容 · 已处理 ${activeJob.processed} 份文件`;
     $("transferResultFeedback").textContent = activeJob.error ||
-      `导入成功 ${counts.success} 份，跳过 ${counts.skipped} 份，无法导入 ${counts.failed} 份。新建 ${activeJob.newLibraries} 个库，恢复 ${activeJob.grantsRestored} 条授权，${activeJob.missingGrants} 条授权因人员未匹配而未恢复。`;
+      `导入成功 ${counts.success} 份，跳过 ${counts.skipped} 份，无法导入 ${counts.failed} 份。恢复 ${activeJob.grantsRestored} 条授权，${activeJob.missingGrants} 条授权因人员未匹配而未恢复。`;
     const rows = activeJob.files.filter((file) => file.state === resultQueue);
     $("transferResultRows").innerHTML = rows.length ? `<div class="transfer-result-destinations">${renderResultFiles(rows)}</div>`
       : '<p class="transfer-empty">此结果清单暂无文件。</p>';
-    if (activeJob.newLibrariesDetails.length) {
-      $("transferResultRows").insertAdjacentHTML("beforeend", `<details class="transfer-result-permissions"><summary>已新建的库（${activeJob.newLibrariesDetails.length}）</summary><ul>
-        ${activeJob.newLibrariesDetails.map((item) => `<li>${escape(item.owner)} / ${escape(item.name)}</li>`).join("")}
-      </ul></details>`);
-    }
     const missing = activeJob.unmatchedPeople;
     if (missing.length) {
       $("transferResultRows").insertAdjacentHTML("beforeend", `<details class="transfer-result-permissions"><summary>未恢复的人员授权（${missing.length} 条）</summary><ul>
         ${missing.map((entry) => `<li>${escape(entry.name)} · ${escape(entry.department)}<span class="transfer-subline">${escape(entry.source)}</span></li>`).join("")}
       </ul></details>`);
     }
-    if (focus) focusButton($("transferResultQueues"), "result-queue", resultQueue);
+    if (focus) $("transferResultQueues").querySelector('[aria-pressed="true"]')?.focus();
   }
 
   async function startImport() {
     if (readingPackage || activeJob?.state === "running") return;
-    const rows = demo.planImport(bundle, choices);
+    const rows = demo.planImport(bundle);
     const files = importFiles(rows);
     const task = {
       id: taskId("import"), kind: "import", name: $("transferPackageName").textContent, startedAt: new Date().toISOString(),
       state: "running", total: files.length, processed: 0, files, phase: "校验摆渡包", currentFile: "",
-      newLibraries: 0, newLibrariesDetails: [], grantsRestored: 0, missingGrants: 0, unmatchedPeople: []
+      grantsRestored: 0, missingGrants: 0, unmatchedPeople: []
     };
     activeJob = task;
     chooseFile.disabled = true;
@@ -633,14 +563,11 @@
     task.currentFile = "";
     progress();
     await wait(350);
-    const currentRows = demo.planImport(bundle, choices);
+    const currentRows = demo.planImport(bundle);
     const results = importFiles(currentRows);
     task.files = results;
     try {
       const applied = demo.applyImport(currentRows);
-      task.newLibraries = applied.newLibraries;
-      task.newLibrariesDetails = currentRows.filter((row) => row.newLibrary)
-        .map((row) => ({ owner: row.targetOwner, name: row.targetName }));
       task.grantsRestored = applied.grants;
       task.unmatchedPeople = unmatchedPeople(currentRows);
       task.missingGrants = task.unmatchedPeople.length;
@@ -654,7 +581,7 @@
     }
 
     const result = resultCounts();
-    task.state = task.error ? "failed" : result.failed ? (result.success || task.newLibraries || task.grantsRestored ? "partial" : "failed")
+    task.state = task.error ? "failed" : result.failed ? (result.success || task.grantsRestored ? "partial" : "failed")
       : result.skipped || task.missingGrants ? "partial" : "complete";
     task.finishedAt = new Date().toISOString();
     task.currentFile = "";
@@ -692,59 +619,10 @@
     resultQueue = button.dataset.resultQueue;
     renderResult(true);
   });
-  $("transferBulkToggle").addEventListener("click", () => {
-    bulkMode = true;
-    renderPreview();
-    $("transferSelectPending").focus();
-  });
-  $("transferBulkCancel").addEventListener("click", () => {
-    setQueue("pending");
-    $("transferBulkToggle").focus();
-  });
-  $("transferNewSelected").addEventListener("click", () => {
-    selectedNew.forEach((id) => { choices[id] = "new"; });
-    setQueue("ready");
-    queueSelect.focus();
-  });
-  $("transferSelectPending").addEventListener("change", (event) => {
-    importRows.querySelectorAll("[data-new-id]").forEach((item) => {
-      if (event.target.checked) selectedNew.add(item.dataset.newId);
-      else selectedNew.delete(item.dataset.newId);
-    });
-    renderPreview();
-  });
   search.addEventListener("input", () => {
     importRows.scrollTop = 0;
     renderPreview(true);
   });
-  importRows.addEventListener("change", (event) => {
-    const id = event.target.dataset.newId;
-    if (id === undefined) return;
-    if (event.target.checked) selectedNew.add(id);
-    else selectedNew.delete(id);
-    renderPreview();
-    focusButton(importRows, "new-id", id);
-  });
-  importRows.addEventListener("click", (event) => {
-    const trigger = event.target.closest("[data-choose-id]");
-    if (trigger) openTargets(trigger);
-  });
-  targetSearch.addEventListener("input", renderTargets);
-  $("transferCloseTarget").addEventListener("click", () => dialog.close());
-  dialog.addEventListener("close", () => {
-    if (targetTrigger?.isConnected) targetTrigger.focus();
-    else focusButton(importRows, "choose-id", targetRow?.item.id) || queueSelect.focus();
-  });
-  dialog.addEventListener("click", (event) => {
-    const button = event.target.closest("[data-target-choice]");
-    if (!button || !targetRow || button.hidden) return;
-    choices[targetRow.item.id] = button.dataset.targetChoice;
-    selectedNew.delete(targetRow.item.id);
-    dialog.close();
-    renderPreview();
-    if (previewQueue === "pending" && !visibleRows.length) setQueue("all");
-  });
-
   chooseFile.addEventListener("click", () => fileInput.click());
   fileInput.addEventListener("change", async () => {
     const [file] = fileInput.files;
@@ -769,7 +647,7 @@
   });
 
   confirm.addEventListener("click", startImport);
-  window.BaigeTransferExport.mount({ onExport: exportTask });
+  if (unavailableTab !== "Export") window.BaigeTransferExport.mount({ onExport: exportTask });
   hydrate();
   syncHistoryCount();
   loadPackage(demo.examplePackage, "外网摆渡示例包");
