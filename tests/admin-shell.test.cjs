@@ -192,3 +192,39 @@ test("client shell keeps the back-office entry in the personal center and hides 
   assert.match(read("pages/library-admin.html"), /embed.*admin/);
   assert.match(read("pages/home-settings.html"), /embed.*admin/);
 });
+
+
+test('后台只接收当前摆渡页面的有效环境切换消息', () => {
+  const listeners = {};
+  const iframe = { src: '', contentWindow: {}, getAttribute() { return this.src; } };
+  const navigations = [];
+  const location = {
+    href: 'file:///demo/admin.html?other=keep#transfer', search: '?other=keep', hash: '#transfer',
+    assign: url => navigations.push(url),
+  };
+  const document = {
+    body: { classList: { toggle() {} } },
+    querySelector: selector => ({
+      '#adminNav': { querySelectorAll: () => [], addEventListener() {} },
+      '#adminFrame': iframe, '#iamActor': { replaceChildren() {}, addEventListener() {} },
+    })[selector],
+  };
+  const window = {
+    BaigeIamStore: { actor: () => ({ id: 'admin', kind: 'admin' }), actors: [] },
+    BaigeIamManagement: { mountRequestsDrawer: () => ({ open() {}, close() {} }) },
+    addEventListener: (type, listener) => { listeners[type] = listener; },
+  };
+  vm.runInNewContext(read('admin.js'), { window, document, location, history: {}, URL, URLSearchParams });
+  const send = (environment, source = iframe.contentWindow) => listeners.message({
+    source, data: { type: 'baige:transfer-environment', environment },
+  });
+  send('external', {});
+  send('unrecognized');
+  assert.equal(navigations.length, 0);
+  send('external');
+  assert.deepEqual(navigations, ['file:///demo/admin.html?other=keep&environment=external#transfer']);
+  location.hash = '#users';
+  listeners.hashchange();
+  send('internal');
+  assert.equal(navigations.length, 1);
+});

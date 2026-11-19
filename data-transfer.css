@@ -34,6 +34,8 @@
 .transfer-title h1, .transfer-panel-header h2, .transfer-page p { margin: 0; }
 .transfer-title h1 { font-size: 24px; font-weight: 600; line-height: 1.4; }
 .transfer-title p, .transfer-panel-header p { margin-top: 4px; color: var(--muted); font-size: 13px; }
+#transferHistory, #transferExport { margin-top: 20px; }
+.transfer-back { margin-top: 16px; }
 .transfer-environment {
   background: var(--canvas);
   color: var(--muted);

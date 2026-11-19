@@ -437,7 +437,7 @@
         const note = skipped ? `跳过 ${skipped} 篇文档，可在摆渡记录中查看原因。` : "";
         message.textContent = result?.downloaded === false
           ? `${result.error || "本次未生成摆渡包。"}${note || "可在摆渡记录中查看详情。"}`
-          : `已生成 ${filename}。${note || "可在导入页选用此文件。"}`;
+          : `已提交导出任务 ${filename}。${note || "打包完成后，可在导出记录中下载。"}`;
       } catch (error) {
         message.classList.add("is-error");
         message.textContent = error.message || "生成摆渡包失败，请重试。";

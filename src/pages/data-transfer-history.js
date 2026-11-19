@@ -55,12 +55,12 @@
   }
 
   function statusChip(label, tone) {
-    return `<span class="transfer-history-status is-${tone}">${label}</span>`;
+    return `<span class="transfer-history-status is-${tone}">${escapeHtml(label)}</span>`;
   }
 
   function renderStatus(record) {
     const [label, tone] = taskStates[record.state] || taskStates.interrupted;
-    return statusChip(record.state === "running" ? (record.kind === "import" ? "导入中" : "导出中") : label, tone);
+    return statusChip(record.state === "running" ? (record.phase || (record.kind === "import" ? "导入中" : "导出中")) : label, tone);
   }
 
   const taskType = (record) => record.kind === "import" ? "导入" : "导出";
@@ -69,23 +69,26 @@
     const total = Math.max(Number(record.total) || 0, 0);
     const processed = Math.min(Math.max(Number(record.processed) || 0, 0), total);
     const percent = total > 0 ? Math.floor(processed * 100 / total) : 0;
+    const uploading = record.phase === "上传中";
+    const unknownLabel = record.phase === "排队中" ? "等待处理" : record.kind === "export" ? "正在准备文档" : "正在识别文档数量";
     return `<div class="transfer-history-progress">
-      <progress max="100" value="${percent}" aria-label="${taskType(record)}进度"></progress>
-      <span>${processed} / ${total} 份</span>
+      <progress max="100" ${uploading ? `value="${record.uploadPercent || 0}"` : record.totalKnown === false ? "" : `value="${Math.min(99, percent)}"`} aria-label="${taskType(record)}进度"></progress>
+      <span>${uploading ? `${record.uploadPercent || 0}%` : record.totalKnown === false ? unknownLabel : `${processed} / ${total} 份`}</span>
     </div>`;
   }
 
   function renderOutcome(record) {
     if (record.state === "running") return renderProgress(record);
+    if (record.error && !record.files.length) return `<span class="transfer-history-error">${escapeHtml(record.error)}</span>`;
     const { success, skipped, failed, queued } = fileCounts(record.files);
     const successLabel = record.kind === "export" ? "已打包" : "成功";
-    return `<span class="transfer-history-outcome">${successLabel} ${success} · 跳过 ${skipped} · 失败 ${failed}${queued ? ` · 未处理 ${queued}` : ""}</span>`;
+    return `<span class="transfer-history-outcome">${record.error ? escapeHtml(record.error) + " · " : ""}${successLabel} ${success} · 跳过 ${skipped} · 失败 ${failed}${queued ? ` · 未处理 ${queued}` : ""}${record.missingGrants ? ` · ${record.missingGrants} 条授权未恢复` : ""}</span>`;
   }
 
   function renderFile(file, kind) {
     const [label, tone] = fileStates[file.state] || fileStates.queued;
     return `<tr>
-      <td data-label="文件名称"><strong>${escapeHtml(file.name)}</strong></td>
+      <td data-label="文件名称"><strong>${escapeHtml(file.name)}</strong>${file.kind === "library" && file.accessMode ? `<small>初始权限：${file.accessMode === "public" ? "全部公开" : "有限公开"}</small>` : ""}</td>
       ${kind === "import" ? `<td data-label="来源">${escapeHtml(file.source || [file.sourceOwner, file.sourceName].filter(Boolean).join(" / ") || "—")}</td>` : ""}
       <td data-label="处理结果">${statusChip(kind === "export" && file.state === "success" ? "已打包" : label, tone)}
         ${file.reason ? `<small>${escapeHtml(file.reason)}</small>` : ""}</td>
@@ -96,13 +99,13 @@
     const owners = new Map();
     for (const file of files) {
       const targetName = file.targetName || file.target;
-      const ownerName = file.targetOwner || (targetName ? "内网归属未记录" : "未确定内网去向");
-      const ownerKind = file.kind === "personal" || file.kind === "enterprise" ? file.kind : "department";
-      const ownerKey = JSON.stringify([ownerKind, file.targetOwnerKey || ownerName]);
+      const ownerName = [sourceKindLabels[file.kind], file.targetOwner || file.sourceOwner || "归属未记录"].filter(Boolean).join(" / ");
+      const ownerKind = file.kind;
+      const ownerKey = JSON.stringify([ownerKind, file.targetOwnerKey || file.sourceOwnerKey || ownerName]);
       if (!owners.has(ownerKey)) owners.set(ownerKey, { name: ownerName, destinations: new Map() });
       const { destinations } = owners.get(ownerKey);
-      const targetKey = file.targetKey || targetName || "";
-      if (!destinations.has(targetKey)) destinations.set(targetKey, { name: targetName, files: [] });
+      const targetKey = file.targetKey || file.sourceKey || targetName || "";
+      if (!destinations.has(targetKey)) destinations.set(targetKey, { name: targetName || file.sourceName, files: [] });
       destinations.get(targetKey).files.push(file);
     }
 
@@ -164,18 +167,18 @@
     }).join("");
   }
 
-  function mount({ onDownload, onManifest }) {
+  function mount({ onDownload, onManifest, kind = "" }) {
     const root = document.getElementById("transferHistory");
     const recordsById = new Map(loadSavedRecords().map((record) => [String(record.id), record]));
     const activeIds = new Set();
     // Every unfinished record loaded into a new page stays viewable with the completed file outcomes.
     for (const record of recordsById.values()) {
-      if (record.state === "running") record.state = "interrupted";
+      if (record.state === "running" && !(record.engineVersion === 1 && typeof record.inputText === "string")) record.state = "interrupted";
     }
 
     root.innerHTML = `<section class="transfer-history-panel" aria-labelledby="transferHistoryTitle">
       <header class="transfer-history-header">
-        <h2 id="transferHistoryTitle">导入导出记录</h2>
+        <h2 id="transferHistoryTitle">${kind === "import" ? "导入记录" : kind === "export" ? "导出记录" : "导入导出记录"}</h2>
       </header>
       <div class="transfer-history-toolbar">
         <div class="transfer-history-filters" role="group" aria-label="筛选摆渡记录">
@@ -195,7 +198,7 @@
       <div class="transfer-history-table-wrap">
         <table class="transfer-history-table" role="table">
           <thead><tr>
-            <th scope="col">摆渡包</th><th scope="col">任务类型</th><th scope="col">开始时间</th>
+            <th scope="col">摆渡包</th><th scope="col">提交人</th><th scope="col">开始时间</th>
             <th scope="col">状态</th><th scope="col">文件处理情况</th><th scope="col">操作</th>
           </tr></thead>
           <tbody id="transferHistoryRows"></tbody>
@@ -224,13 +227,15 @@
       <footer class="iam-dialog-foot">
         <button class="iam-btn" type="button" data-history-close>关闭</button>
         <button class="iam-btn" type="button" id="transferHistoryManifest" hidden>${icon("download")} 下载文件清单</button>
-        <button class="iam-btn is-primary" type="button" id="transferHistoryDownload" hidden>${icon("download")} 重新下载摆渡包</button>
+        <button class="iam-btn is-primary" type="button" id="transferHistoryDownload" hidden>${icon("download")} 下载摆渡包</button>
       </footer>
     </dialog>`;
 
     const get = (id) => root.querySelector(`#${id}`);
     const queryInput = get("transferHistorySearch");
     const kindInput = get("transferHistoryKind");
+    kindInput.hidden = Boolean(kind);
+    kindInput.value = kind;
     const stateInput = get("transferHistoryState");
     const rows = get("transferHistoryRows");
     const detail = get("transferHistoryDialog");
@@ -240,7 +245,7 @@
     let openId = null;
 
     function records() {
-      return [...recordsById.values()].sort((left, right) => new Date(right.startedAt) - new Date(left.startedAt));
+      return [...recordsById.values()].filter((record) => !kind || record.kind === kind).sort((left, right) => new Date(right.startedAt) - new Date(left.startedAt));
     }
 
     function renderFileRows(record) {
@@ -259,8 +264,7 @@
       const summary = record.kind === "import"
         ? [
           record.newLibraries ? `新建库 ${Number(record.newLibraries)} 个` : "",
-          record.grantsRestored ? `恢复授权 ${Number(record.grantsRestored)} 条` : "",
-          record.missingGrants ? `未匹配授权 ${Number(record.missingGrants)} 条` : ""
+          record.grantsRestored ? `恢复授权 ${Number(record.grantsRestored)} 条` : ""
         ].filter(Boolean).join(" · ")
         : "";
       get("transferHistoryMeta").innerHTML = `<div class="transfer-history-detail-title">
@@ -277,19 +281,21 @@
         ${record.state === "running" && record.phase ? `<span>${escapeHtml(record.phase)}</span>` : ""}
         ${record.state === "running" && record.currentFile ? `<span>${escapeHtml(record.currentFile)}</span>` : ""}
         ${record.state === "interrupted" ? "<span>上次离开页面时任务尚未完成。</span>" : ""}
-        ${record.error ? `<span class="transfer-history-error">${escapeHtml(record.error)}</span>` : ""}
         ${record.packageUnavailable && !record.package ? "<span>此记录保留了文件清单。如需下载摆渡包，请重新导出。</span>" : ""}
       </div>
       ${newLibraries.length ? `<details class="transfer-history-new-libraries">
         <summary>新建知识库（${newLibraries.length} 个）</summary>
         <ul>${newLibraries.map((library) => `<li>${escapeHtml([library.owner, library.name].filter(Boolean).join(" / "))}</li>`).join("")}</ul>
       </details>` : ""}
-      ${unmatchedPeople.length ? `<section class="transfer-history-unmatched" aria-labelledby="transferHistoryPeopleTitle">
-        <h3 id="transferHistoryPeopleTitle">未匹配的授权人员（${unmatchedPeople.length}）</h3>
+      ${record.restoredPeople?.length ? `<details class="transfer-history-unmatched" ${record.restoredPeople.length <= 3 ? "open" : ""}>
+        <summary>已恢复的人员授权（${record.restoredPeople.length} 条）</summary><ul>${record.restoredPeople.map((person) => `<li>${escapeHtml(person.name)} · ${escapeHtml(person.department)}
+          <small>${escapeHtml(person.source)} · ${escapeHtml(person.scope)}</small></li>`).join("")}</ul></details>` : ""}
+      ${unmatchedPeople.length ? `<details class="transfer-history-unmatched" ${unmatchedPeople.length <= 3 ? "open" : ""}>
+        <summary>未匹配的授权人员（${unmatchedPeople.length} 条） · 本次未恢复</summary>
         <ul>${unmatchedPeople.map((person) => `<li><strong>${escapeHtml(person.name)}</strong>
           <span>外网部门 ${escapeHtml(person.department || "—")}</span>
           <span>来源知识库 ${escapeHtml(person.source || "—")}</span></li>`).join("")}</ul>
-      </section>` : ""}`;
+      </details>` : ""}`;
       const filter = fileFilter.value;
       fileFilter.innerHTML = `<option value="">全部文件（${record.files.length}）</option>${Object.entries(fileStates).map(([value, [label]]) => (
         `<option value="${value}">${record.kind === "export" && value === "success" ? "已打包" : label}（${counts[value]}）</option>`
@@ -317,11 +323,11 @@
         <td><div class="transfer-history-file-copy">${icon("file")}<div>
           <strong title="${escapeHtml(record.name)}">${escapeHtml(record.name)}</strong><small>${escapeHtml(record.id)}</small>
         </div></div></td>
-        <td data-label="任务类型">${taskType(record)}</td>
+        <td data-label="提交人">${escapeHtml(record.submittedBy || "—")}</td>
         <td data-label="开始时间" class="transfer-history-date">${formatDate(record.startedAt)}</td>
         <td data-label="状态">${renderStatus(record)}</td>
         <td data-label="文件处理情况">${renderOutcome(record)}</td>
-        <td><button class="transfer-history-link" type="button" data-history-detail="${escapeHtml(record.id)}">查看详情</button></td>
+        <td><div class="transfer-history-actions">${record.kind === "export" && record.state !== "running" && record.package && onDownload ? `<button class="transfer-history-link" type="button" data-history-download="${escapeHtml(record.id)}">下载摆渡包</button> ` : ""}<button class="transfer-history-link" type="button" data-history-detail="${escapeHtml(record.id)}">${record.state === "running" ? "查看进度" : "查看详情"}</button></div></td>
       </tr>`).join("") : `<tr><td colspan="6" class="transfer-history-empty">${all.length
         ? "没有符合筛选条件的摆渡记录。"
         : "<strong>暂无摆渡记录</strong><small>完成一次导出或开始导入后，可在此查看文件清单与处理结果。</small>"}</td></tr>`;
@@ -362,7 +368,7 @@
 
     function upsert(record) {
       const id = String(record.id);
-      const next = { ...recordsById.get(id), ...record };
+      const next = { ...recordsById.get(id), ...record, updatedAt: new Date().toISOString() };
       recordsById.set(id, next);
       if (next.state === "running") activeIds.add(id);
       else activeIds.delete(id);
@@ -375,6 +381,12 @@
     stateInput.addEventListener("change", render);
     rows.addEventListener("click", (event) => {
       const button = event.target.closest("[data-history-detail]");
+      const downloadButton = event.target.closest("[data-history-download]");
+      if (downloadButton) {
+        const task = recordsById.get(downloadButton.dataset.historyDownload);
+        if (task?.package && onDownload) onDownload(task.package, task.name);
+        return;
+      }
       if (!button) return;
       const record = recordsById.get(button.dataset.historyDetail);
       if (!record) return;
@@ -411,12 +423,24 @@
       if (event.persisted) return;
       for (const id of activeIds) {
         const record = recordsById.get(id);
-        if (record?.state === "running") persist({ ...record, state: "interrupted" });
+        if (record?.state === "running" && !record.inputText) persist({ ...record, state: "interrupted" });
       }
     });
 
+    function refresh() {
+      for (const record of loadSavedRecords()) {
+        const id = String(record.id);
+        const current = recordsById.get(id);
+        // Keep the session copy when persistence failed or only the manifest could be saved.
+        if (!current || (record.updatedAt || "") > (current.updatedAt || "")) recordsById.set(id, record);
+      }
+      render();
+    }
+    window.addEventListener("storage", (event) => {
+      if (event.key === storageKey) refresh();
+    });
     render();
-    return { add: upsert, update: upsert, records, render };
+    return { add: upsert, update: upsert, records, render, refresh };
   }
 
   window.BaigeTransferHistory = { mount };

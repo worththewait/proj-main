@@ -102,6 +102,13 @@
   window.addEventListener("message", (event) => {
     const message = event.data;
     if (event.source !== frame.contentWindow || !message || typeof message !== "object") return;
+    if (message.type === "baige:transfer-environment") {
+      if (activeView !== "transfer" || !["internal", "external"].includes(message.environment)) return;
+      const url = new URL(location.href);
+      url.searchParams.set("environment", message.environment);
+      location.assign(url.href);
+      return;
+    }
     if (message.type === "baige:iam-request" && typeof message.requestId === "string"
       && (activeView === "users" || activeView === "roles")) {
       requests.open(message.requestId, activeView === "roles" ? "role" : "user");
