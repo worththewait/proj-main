@@ -25,21 +25,22 @@ const INTEL_TABS = [
   { id: 'track', label: '情报跟踪' }
 ];
 
-/* ---------------- 定制内容：标签集（样式不变，只换标签内容 ----------------
+/* ---------------- 定制内容：标签集 ----------------
    面板上的标签用于订阅偏好；早报条目的 grp 是发布分类，两者按下表对应。
-   「新船订单」这类发布分类归到「造船」标签下，勾选造船即同时包含新船订单。 */
-const GRP_TO_TAG = { '新船订单': '造船' };
+   「新船订单」这类发布分类归到「造船」标签下，勾选造船即同时包含新船订单；
+   绿色船舶、甲醇燃料、氨燃料同属能源动力范畴，统一归到「能源」。 */
+const GRP_TO_TAG = { '新船订单': '造船', '运价指数': '航运', '绿色船舶': '能源', '甲醇燃料': '能源', '氨燃料': '能源' };
 const tagOfGrp = g => GRP_TO_TAG[g] || g;
 
 const CFG_GROUPS = [
-  { id: 'ship',  name: '船舶领域',   tags: ['造船', '航运', '散货船', '集装箱船', '气体船', '油船', '邮轮', '配套', '海工装备', '修船', '绿色船舶', '智能航行'] },
-  { id: 'power', name: '动力与规则', tags: ['LNG 加注', '甲醇燃料', '氨燃料', '替代燃料', 'IMO 规则', '欧盟碳税', '船用主机', 'VLCC', '新造船价格', '运价指数'] },
-  { id: 'more',  name: '更多领域',   tags: ['部委动向', '政策', '财经', '军事', '人工智能', '能源', '前沿科技', '铁矿石'] }
+  { id: 'ship', name: '船舶领域', tags: ['造船', '航运', '散货船', '集装箱船', '气体船', '油船', '邮轮', '配套', '海工装备', '修船', '科技', '金融'] },
+  { id: 'more', name: '更多领域', tags: ['部委动向', '政治', '财经', '军事', '人工智能', '能源', '前沿科技', '铁矿石'] }
 ];
 
 /* 早报分组顺序仍是发布分类顺序，与改造前一致 */
 const SUB_ORDER = ['绿色船舶', 'LNG 加注', '甲醇燃料', '氨燃料', '运价指数', '新船订单', '新造船价格'];
-const DEFAULT_SUB = ['造船', '绿色船舶', 'LNG 加注', '甲醇燃料', '氨燃料', '运价指数', '新造船价格'];
+/* 默认全选，早报内容完整；取消勾选后才收窄 */
+const DEFAULT_SUB = CFG_GROUPS.reduce((acc, g) => acc.concat(g.tags), []);
 
 /* ---------------- 早报 ---------------- */
 /* 均为真实公开报道：src 为发布媒体，date/time 为真实发布时间（接口不提供原文链接） */
@@ -1772,7 +1773,9 @@ function viewEarly() {
   const body = groups.length ? groups.map((g, gi) => {
     const rows = g.items.map((n, i) => {
       const st = ebStamp(n);
-      return '<div class="eb-row' + (i === 0 ? ' lead' : '') + '" data-early="' + n.id + '">'
+      /* 早报是一整块连续阅读区：只有全块第一条做头条，其余条目字号统一 */
+      const lead = gi === 0 && i === 0 ? ' lead' : '';
+      return '<div class="eb-row' + lead + '" data-early="' + n.id + '">'
         + '<div class="eb-meta"><span class="src">' + n.src + '</span>'
         + (st ? '<span class="sep">·</span><span>' + st + '</span>' : '')
         + '</div>'
@@ -1786,7 +1789,7 @@ function viewEarly() {
   return '<div class="doc">'
     + '<div class="daily">'
     + '<div class="daily-main">'
-    + '<div class="col-head"><span class="ct-line"></span><span class="ct">今日早报</span>'
+    + '<div class="col-head"><span class="ct-line"></span><span class="ct">早报</span>'
     + dateNav()
     + '<button type="button" class="col-btn" id="cfgEntry">定制内容</button></div>'
     + '<div class="eb-card">' + body + '</div>'

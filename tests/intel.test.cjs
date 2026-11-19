@@ -17,7 +17,7 @@ test("intel page reproduces the intel board inside the platform shell", () => {
   assert.match(controller, /今日情报/);
   assert.match(controller, /情报跟踪/);
   assert.match(controller, /7×24 实时/);
-  assert.match(controller, /今日早报/);
+  assert.match(controller, /<span class="ct">早报<\/span>/);
   assert.match(html, /<script src="\.\.\/src\/page-bridge\.js(?:\?[^"]+)?"><\/script>/);
 
   // The standalone prototype had its own topbar and sidebar; the embedded page uses the platform shell.
