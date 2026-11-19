@@ -20,8 +20,10 @@ body { background:var(--canvas); }
 .col-head .ct { font-size:14px; letter-spacing:0; }
 .col-head .ct-line { display:none; }
 .col-btn { height:28px; border-color:#dce3ee; border-radius:6px; }
-.eb-card { gap:16px; padding:0; }
-.eb-group { padding:0 20px; box-shadow:none; border-radius:10px; border-color:#e3e8f0; }
+/* 早报是一整块连续阅读区：卡片由 .eb-card 承担，分组只做内容容器，不再各自成卡 */
+.eb-card { gap:0; padding:0 24px; background:var(--surface); border:1px solid #e3e8f0; border-radius:10px; box-shadow:none; }
+.eb-group { padding:0; background:transparent; border:0; border-radius:0; box-shadow:none; }
+.eb-group + .eb-group .eb-row:first-child { border-top:1px solid #e9edf5; }
 .eb-row, .eb-row.lead { padding:14px 0; }
 .eb-row:last-child { padding-bottom:16px; }
 .eb-row::after { right:-12px; }

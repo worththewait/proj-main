@@ -221,7 +221,7 @@ test('unknown entities remain trackable and future delivery in summaries does no
 
 test('customization cancellation discards draft changes and saving applies the next draft', () => {
   const { nodes, selectors, evaluate } = interactions();
-  const cell = element({ tag: '绿色船舶' });
+  const cell = element({ tag: '造船' });
   const cancel = element();
   const save = element();
   nodes.cfgEntry = element();
@@ -230,17 +230,17 @@ test('customization cancellation discards draft changes and saving applies the n
   selectors['[data-cfgsave]'] = [save];
   evaluate('bind();');
   nodes.cfgEntry.onclick();
-  assert.equal(evaluate('subscribed.includes("绿色船舶")'), true);
+  assert.equal(evaluate('subscribed.includes("造船")'), true);
   cell.onclick();
-  assert.equal(evaluate('draftSubscribed.includes("绿色船舶")'), false);
-  assert.equal(evaluate('subscribed.includes("绿色船舶")'), true);
+  assert.equal(evaluate('draftSubscribed.includes("造船")'), false);
+  assert.equal(evaluate('subscribed.includes("造船")'), true);
   cancel.onclick();
-  assert.equal(evaluate('subscribed.includes("绿色船舶")'), true);
+  assert.equal(evaluate('subscribed.includes("造船")'), true);
   nodes.cfgEntry.onclick();
-  assert.equal(evaluate('draftSubscribed.includes("绿色船舶")'), true);
+  assert.equal(evaluate('draftSubscribed.includes("造船")'), true);
   cell.onclick();
   save.onclick();
-  assert.equal(evaluate('subscribed.includes("绿色船舶")'), false);
+  assert.equal(evaluate('subscribed.includes("造船")'), false);
   assert.equal(evaluate('view'), 'early');
 });
 
