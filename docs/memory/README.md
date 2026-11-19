@@ -30,8 +30,8 @@
 
 - [百舸问答](modules/qa.md) — `qa`、对话历史、通用与知识问答、联网搜索、流式演示、原文引用、智能问数占位。
 - [知识库](modules/knowledge-catalog.md) — `knowledge`、行业/企业/部门/个人资料目录、个人文档、搜索、阅读与问答接入边界。
-- [百舸文库](modules/library.md) — `library`、文库首页、检索阅读、后台文件管理、文库资源权限、批次审核。
-- [分类归属](modules/library-category.md) — `category`、部门列表 + 类型库、类型增删、部门多选、未分配类型、平台权限、管理范围与归属权限计算。
+- [百舸文库](modules/library.md) — `library`、文库首页、检索阅读、后台文件管理、文库资源权限、批次审核；含 2026-11-19 PRD V1.1 需求索引、原型缺口与 P01–P10 待确认项。
+- [分类归属](modules/library-category.md) — `category`、部门列表 + 类型库、类型增删、部门多选、平台配置权；含 C01–C14 目标、分配后果确认、未分配存量管理和授权来源的实现差距。
 - [百舸写作](modules/writing.md) — `writing`、素材管理、模板预览与选用、上传和涉密核查、写作历史。
 - [百舸情报](modules/intel.md) — `intel`、今日早报、日期、7×24、定制、收藏、话题广场、关注及多信源归并。
 - [高质量数据集](modules/datasets.md) — `datasets`、八项卡片/详情、申请使用。
